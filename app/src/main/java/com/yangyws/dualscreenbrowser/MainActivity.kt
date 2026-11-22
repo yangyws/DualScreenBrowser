@@ -20,6 +20,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -383,6 +384,20 @@ private fun DualScreenBrowserApp(
                     secondaryUrl = topUrl
                     presentation?.loadUrl(topUrl)
                     Toast.makeText(context, context.getString(R.string.toast_swapped_screens), Toast.LENGTH_SHORT).show()
+                },
+                isBookmarkedProvider = { url -> bookmarks.any { it.url == url } },
+                onToggleBookmark = { url, title ->
+                    val exists = bookmarks.any { it.url == url }
+                    if (exists) {
+                        bookmarks = bookmarks.filterNot { it.url == url }
+                        prefs.saveBookmarks(bookmarks)
+                        Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
+                    } else {
+                        val entry = BookmarkItem(title = title.ifBlank { url }, url = url)
+                        bookmarks = listOf(entry) + bookmarks
+                        prefs.saveBookmarks(bookmarks)
+                        Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
+                    }
                 },
                 onUrlChanged = { url, title ->
                     secondaryUrl = url
@@ -845,6 +860,26 @@ private fun DualScreenBrowserApp(
                             )
                         }
                     }
+                }
+            }
+
+            if (dualScreenActive && !spanMode) {
+                TactileIconButton(
+                    onClick = {
+                        secondaryUrl = activeTab.url
+                        presentation?.loadUrl(activeTab.url)
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.toast_sent_to_bottom),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_download_bottom),
+                        contentDescription = stringResource(R.string.action_send_to_secondary),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 

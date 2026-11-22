@@ -34,6 +34,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -58,6 +59,8 @@ class SecondaryBrowserPresentation(
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
+    private val isBookmarkedProvider: (String) -> Boolean,
+    private val onToggleBookmark: (url: String, title: String) -> Unit,
     private val onUrlChanged: (String, String) -> Unit,
     private val onRequestClose: () -> Unit
 ) : Presentation(outerContext, display) {
@@ -233,6 +236,46 @@ class SecondaryBrowserPresentation(
         val btnSendUp = navButton(R.drawable.ic_upload_top, context.getString(R.string.action_send_to_primary)) {
             onSendUrlToPrimary(currentUrl)
         }
+        lateinit var btnMore: ImageButton
+        btnMore = navButton(R.drawable.ic_more_vert, context.getString(R.string.action_settings)) {
+            val popup = PopupMenu(context, btnMore)
+            val bookmarked = isBookmarkedProvider(currentUrl)
+            popup.menu.add(0, 1, 0, context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark))
+            val desktopLabel = if (desktopMode) {
+                "✓ ${context.getString(R.string.action_desktop_mode)}"
+            } else {
+                context.getString(R.string.action_desktop_mode)
+            }
+            popup.menu.add(0, 2, 1, desktopLabel)
+            popup.menu.add(0, 3, 2, context.getString(R.string.action_screenshot_bottom))
+            popup.menu.add(0, 4, 3, context.getString(R.string.action_long_screenshot))
+            popup.menu.add(0, 5, 4, context.getString(R.string.action_refresh))
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> onToggleBookmark(currentUrl, webView?.title.orEmpty())
+                    2 -> toggleDesktopMode()
+                    3 -> {
+                        val bmp = captureViewportBitmap()
+                        val saved = bmp?.let { b ->
+                            ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                        } ?: false
+                        val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                    }
+                    4 -> {
+                        val bmp = captureFullPageBitmap()
+                        val saved = bmp?.let { b ->
+                            ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                        } ?: false
+                        val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                    }
+                    5 -> reloadPage()
+                }
+                true
+            }
+            popup.show()
+        }
 
         val btnSize = dp(36)
         val btnGap = dp(2)
@@ -247,6 +290,7 @@ class SecondaryBrowserPresentation(
         )
         topBar.addView(btnSwap, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(btnGap, 0, 0, 0) })
         topBar.addView(btnSendUp, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(btnGap, 0, 0, 0) })
+        topBar.addView(btnMore, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(btnGap, 0, 0, 0) })
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
@@ -611,6 +655,32 @@ class SecondaryBrowserPresentation(
         return Bitmap.createBitmap(wv.width, wv.height, Bitmap.Config.ARGB_8888).also { bmp ->
             wv.draw(Canvas(bmp))
         }
+    }
+
+    fun captureFullPageBitmap(maxHeightPx: Int = 12000): Bitmap? {
+        val wv = webView ?: return null
+        val w = wv.width
+        val vh = wv.height
+        if (w <= 0 || vh <= 0) return null
+        val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+        val totalHeight = (wv.contentHeight * density).toInt().coerceIn(vh, maxHeightPx)
+        val result = Bitmap.createBitmap(w, totalHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val prevX = wv.scrollX
+        val prevY = wv.scrollY
+        var y = 0
+        while (y < totalHeight) {
+            val stepH = minOf(vh, totalHeight - y)
+            wv.scrollTo(0, y)
+            canvas.save()
+            canvas.translate(0f, y.toFloat())
+            canvas.clipRect(0, 0, w, stepH)
+            wv.draw(canvas)
+            canvas.restore()
+            y += vh
+        }
+        wv.scrollTo(prevX, prevY)
+        return result
     }
 
     fun toggleDesktopMode(): Boolean {
