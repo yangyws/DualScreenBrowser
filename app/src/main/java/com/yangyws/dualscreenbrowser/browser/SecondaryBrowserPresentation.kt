@@ -9,7 +9,6 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.SystemClock
 import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
@@ -30,20 +29,19 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import com.yangyws.dualscreenbrowser.R
+import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
     display: Display,
     private val initialUrl: String,
     private val jsEnabled: Boolean,
+    private val spanEngine: SpanEngine,
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
-    private val spanOffsetCssProvider: () -> Double?,
-    private val onSecondarySpanScrollCss: (Double) -> Unit,
-    private val onSpanBottomUrlChanged: (String) -> Unit,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -53,6 +51,7 @@ class SecondaryBrowserPresentation(
 ) : Presentation(outerContext, display) {
 
     private var webView: WebView? = null
+    private var spanViewport: SpanViewportView? = null
     private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
@@ -60,7 +59,6 @@ class SecondaryBrowserPresentation(
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
-    private var lastTopSyncAtMs: Long = 0L
     private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -168,12 +166,6 @@ class SecondaryBrowserPresentation(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                if (spanModeProvider() && SystemClock.uptimeMillis() - lastTopSyncAtMs > 250L) {
-                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                    onSecondarySpanScrollCss(scrollY / density.toDouble())
-                }
-            }
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -200,15 +192,7 @@ class SecondaryBrowserPresentation(
                         urlInput?.setText(url)
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
-                        applySpanStickyHeaderCss(view, spanModeProvider())
                         onUrlChanged(url, view?.title.orEmpty())
-                        if (spanModeProvider()) {
-                            onSpanBottomUrlChanged(url)
-                        }
-                        spanOffsetCssProvider()?.let { targetCssY ->
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
-                        }
                     }
                 }
             }
@@ -227,6 +211,12 @@ class SecondaryBrowserPresentation(
         val contentStack = FrameLayout(context)
         val (b, w) = bottomColorProvider()
         applyColorFilterToWebView(wv, b, w)
+        val spanView = SpanViewportView(context, spanEngine, isBottomViewport = true).apply {
+            visibility = if (spanModeProvider()) View.VISIBLE else View.GONE
+            setColorCalibration(b, w)
+        }
+        spanViewport = spanView
+        wv.visibility = if (spanModeProvider()) View.GONE else View.VISIBLE
 
         contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
@@ -247,6 +237,7 @@ class SecondaryBrowserPresentation(
             }
         }
         restoreBarBtn = btnRestoreBar
+        contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         contentStack.addView(
             btnRestoreBar,
             FrameLayout.LayoutParams(dp(34), dp(34)).apply {
@@ -296,47 +287,25 @@ class SecondaryBrowserPresentation(
     fun updatePresentationMode(barVisible: Boolean, spanActive: Boolean) {
         val barVis = if (barVisible && !spanActive) View.VISIBLE else View.GONE
         val restoreVis = if (!barVisible && !spanActive) View.VISIBLE else View.GONE
+        val spanVis = if (spanActive) View.VISIBLE else View.GONE
+        val webVis = if (spanActive) View.GONE else View.VISIBLE
         topBarView?.post {
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
             restoreBarBtn?.visibility = restoreVis
-            webView?.visibility = View.VISIBLE
-            applySpanStickyHeaderCss(webView, spanActive)
+            spanViewport?.visibility = spanVis
+            webView?.visibility = webVis
+            if (spanActive) {
+                progressBar?.visibility = View.GONE
+            }
             topBarView?.parent?.requestLayout()
         }
     }
 
-    private fun applySpanStickyHeaderCss(wv: WebView?, hideSticky: Boolean) {
-        if (wv == null || !jsEnabled) return
-        val js = if (hideSticky) {
-            """
-            (function() {
-                if (document.getElementById('dsb-span-hide-sticky')) return;
-                var s = document.createElement('style');
-                s.id = 'dsb-span-hide-sticky';
-                s.textContent = 'header, [role="banner"], .sticky, [style*="position: fixed"], [style*="position:sticky"] { display: none !important; }';
-                (document.head || document.documentElement).appendChild(s);
-            })();
-            """.trimIndent()
-        } else {
-            "(function(){ var e = document.getElementById('dsb-span-hide-sticky'); if (e) e.remove(); })();"
-        }
-        wv.evaluateJavascript(js, null)
-    }
-
-    fun syncSpanScrollCssY(targetCssY: Double) {
-        val clamped = targetCssY.coerceAtLeast(0.0)
-        webView?.let { wv ->
-            lastTopSyncAtMs = SystemClock.uptimeMillis()
-            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-            val targetPx = (clamped * density).toInt()
-            if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
-                wv.scrollTo(wv.scrollX, targetPx)
-            }
-        }
-    }
-
     fun updateBottomColor(brightness: Int, warmth: Int) {
+        spanViewport?.post {
+            spanViewport?.setColorCalibration(brightness, warmth)
+        }
         webView?.post {
             webView?.let { wv -> applyColorFilterToWebView(wv, brightness, warmth) }
         }
