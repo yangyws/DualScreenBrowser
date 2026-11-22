@@ -178,9 +178,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = remember { BrowserPrefs(this) }
             var currentTheme by remember { mutableStateOf(prefs.thorTheme) }
+            var customHue by remember { mutableFloatStateOf(prefs.customThemeHue) }
+            val customPrimaryInt = android.graphics.Color.HSVToColor(floatArrayOf(customHue, 0.65f, 0.92f))
+            val effectivePrimary = Color(currentTheme.effectivePrimary(customPrimaryInt))
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                    primary = Color(currentTheme.primaryColor),
+                    primary = effectivePrimary,
                     background = Color(currentTheme.backgroundColor),
                     surface = Color(currentTheme.surfaceColor),
                     surfaceVariant = Color(currentTheme.surfaceVariantColor)
@@ -189,9 +192,15 @@ class MainActivity : ComponentActivity() {
                 DualScreenBrowserApp(
                     externalUrl = launchUrlState,
                     currentTheme = currentTheme,
+                    customHue = customHue,
+                    customPrimaryInt = customPrimaryInt,
                     onThemeSelected = { selected ->
                         currentTheme = selected
                         prefs.thorTheme = selected
+                    },
+                    onCustomHueChanged = { hue ->
+                        customHue = hue
+                        prefs.customThemeHue = hue
                     },
                     onConsumeExternalUrl = { launchUrlState = null },
                     onRegisterGamepad = { actions, enabled, editing ->
@@ -236,7 +245,10 @@ class MainActivity : ComponentActivity() {
 private fun DualScreenBrowserApp(
     externalUrl: String?,
     currentTheme: ThorTheme,
+    customHue: Float,
+    customPrimaryInt: Int,
     onThemeSelected: (ThorTheme) -> Unit,
+    onCustomHueChanged: (Float) -> Unit,
     onConsumeExternalUrl: () -> Unit,
     onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit
 ) {
@@ -1659,28 +1671,30 @@ private fun DualScreenBrowserApp(
                         Text(stringResource(R.string.settings_theme_desc), fontSize = 12.sp, color = Color.Gray)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             val themeLabels = mapOf(
-                                ThorTheme.EMERALD_DARK to R.string.theme_emerald_dark,
-                                ThorTheme.RAINBOW_WHITE to R.string.theme_rainbow_white,
+                                ThorTheme.BLACK to R.string.theme_black,
+                                ThorTheme.WHITE to R.string.theme_white,
+                                ThorTheme.RAINBOW to R.string.theme_rainbow,
                                 ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
-                                ThorTheme.CRIMSON_BLACK to R.string.theme_crimson_black
+                                ThorTheme.CUSTOM to R.string.theme_custom
                             )
                             ThorTheme.entries.forEach { t ->
                                 val selected = t == currentTheme
+                                val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
                                 Surface(
                                     onClick = { onThemeSelected(t) },
-                                    color = if (selected) Color(t.primaryColor).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                                    color = if (selected) chipPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                                     border = BorderStroke(
                                         1.dp,
-                                        if (selected) Color(t.primaryColor) else Color.White.copy(alpha = 0.1f)
+                                        if (selected) chipPrimary else Color.White.copy(alpha = 0.1f)
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 6.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
@@ -1688,11 +1702,11 @@ private fun DualScreenBrowserApp(
                                             modifier = Modifier
                                                 .size(14.dp)
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(Color(t.primaryColor))
+                                                .background(chipPrimary)
                                         )
                                         Text(
-                                            text = stringResource(themeLabels[t] ?: R.string.theme_emerald_dark),
-                                            fontSize = 10.sp,
+                                            text = stringResource(themeLabels[t] ?: R.string.theme_black),
+                                            fontSize = 9.5.sp,
                                             color = Color.White,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -1700,6 +1714,18 @@ private fun DualScreenBrowserApp(
                                     }
                                 }
                             }
+                        }
+                        if (currentTheme == ThorTheme.CUSTOM) {
+                            Text(
+                                text = stringResource(R.string.settings_custom_hue),
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                            Slider(
+                                value = customHue,
+                                onValueChange = onCustomHueChanged,
+                                valueRange = 0f..360f
+                            )
                         }
                     }
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
@@ -1950,6 +1976,7 @@ private fun DualScreenBrowserApp(
     ThorTutorialOverlay(
         visible = showTutorial,
         theme = currentTheme,
+        customPrimaryColor = Color(currentTheme.effectivePrimary(customPrimaryInt)),
         onFinish = {
             showTutorial = false
             prefs.tutorialDone = true

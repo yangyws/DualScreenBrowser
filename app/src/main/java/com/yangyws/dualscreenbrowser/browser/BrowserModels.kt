@@ -20,14 +20,24 @@ enum class ThorTheme(
     val surfaceVariantColor: Int,
     val shellColor: Int
 ) {
-    EMERALD_DARK("emerald_dark", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt()),
-    RAINBOW_WHITE("rainbow_white", 0xFF5B8DEF.toInt(), 0xFF191C24.toInt(), 0xFF232833.toInt(), 0xFF2F3544.toInt(), 0xFFD5DAE5.toInt()),
-    CLEAR_PURPLE("clear_purple", 0xFFB388FF.toInt(), 0xFF14101E.toInt(), 0xFF1F182E.toInt(), 0xFF2C2240.toInt(), 0xFF4B367C.toInt()),
-    CRIMSON_BLACK("crimson_black", 0xFFFF5C72.toInt(), 0xFF121013.toInt(), 0xFF1D191E.toInt(), 0xFF2A232B.toInt(), 0xFF2D1E24.toInt());
+    BLACK("black", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF1D2028.toInt()),
+    WHITE("white", 0xFF4C8DFF.toInt(), 0xFF171A22.toInt(), 0xFF222631.toInt(), 0xFF2E3442.toInt(), 0xFFEAECEF.toInt()),
+    RAINBOW("rainbow", 0xFFF2A93B.toInt(), 0xFF1A1B20.toInt(), 0xFF24262E.toInt(), 0xFF30333E.toInt(), 0xFFDAD7CE.toInt()),
+    CLEAR_PURPLE("clear_purple", 0xFFB388FF.toInt(), 0xFF14101E.toInt(), 0xFF1F182E.toInt(), 0xFF2C2240.toInt(), 0xFF583E91.toInt()),
+    CUSTOM("custom", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt());
+
+    fun effectivePrimary(customColor: Int): Int =
+        if (this == CUSTOM) customColor else primaryColor
 
     companion object {
-        fun fromId(id: String?): ThorTheme =
-            entries.firstOrNull { it.id == id } ?: EMERALD_DARK
+        fun fromId(id: String?): ThorTheme = when (id) {
+            "emerald_dark", "black" -> BLACK
+            "rainbow_white", "rainbow" -> RAINBOW
+            "white" -> WHITE
+            "clear_purple" -> CLEAR_PURPLE
+            "custom" -> CUSTOM
+            else -> BLACK
+        }
     }
 }
 
@@ -159,8 +169,12 @@ class BrowserPrefs(context: Context) {
         set(value) = prefs.edit().putBoolean("tutorial_done", value).apply()
 
     var thorTheme: ThorTheme
-        get() = ThorTheme.fromId(prefs.getString("thor_theme", ThorTheme.EMERALD_DARK.id))
+        get() = ThorTheme.fromId(prefs.getString("thor_theme", ThorTheme.BLACK.id))
         set(value) = prefs.edit().putString("thor_theme", value.id).apply()
+
+    var customThemeHue: Float
+        get() = prefs.getFloat("custom_theme_hue", 155f).coerceIn(0f, 360f)
+        set(value) = prefs.edit().putFloat("custom_theme_hue", value.coerceIn(0f, 360f)).apply()
 
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))

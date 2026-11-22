@@ -56,7 +56,8 @@ private data class TutorialStep(
 @Composable
 fun ThorTutorialOverlay(
     visible: Boolean,
-    theme: ThorTheme = ThorTheme.EMERALD_DARK,
+    theme: ThorTheme = ThorTheme.BLACK,
+    customPrimaryColor: Color = Color(theme.primaryColor),
     onFinish: () -> Unit
 ) {
     val steps = remember {
@@ -98,6 +99,7 @@ fun ThorTutorialOverlay(
                     ThorHandheldDiagram(
                         highlightStep = stepIndex,
                         theme = theme,
+                        accent = customPrimaryColor,
                         modifier = Modifier
                             .width(190.dp)
                             .height(210.dp)
@@ -205,13 +207,14 @@ fun ThorTutorialOverlay(
 private fun ThorHandheldDiagram(
     highlightStep: Int,
     theme: ThorTheme,
+    accent: Color,
     modifier: Modifier = Modifier
 ) {
-    val accent = Color(theme.primaryColor)
+    val isLightShell = theme == ThorTheme.WHITE || theme == ThorTheme.RAINBOW
     val shellFill = Color(theme.shellColor)
-    val shellStroke = if (theme == ThorTheme.RAINBOW_WHITE) Color(0xFF9BA4B8) else Color(0xFF4A5368)
+    val shellStroke = if (isLightShell) Color(0xFF9BA4B8) else Color(0xFF4A5368)
     val screenBg = Color(0xFF12151C)
-    val dimControl = if (theme == ThorTheme.RAINBOW_WHITE) Color(0xFF7D869B) else Color(0xFF5D667B)
+    val dimControl = if (isLightShell) Color(0xFF7D869B) else Color(0xFF5D667B)
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -358,10 +361,17 @@ private fun ThorHandheldDiagram(
         val abxyCx = w * 0.84f
         val abxyCy = h * 0.63f
         val btnR = w * 0.024f
-        drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy - 12f)) // X
-        drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy + 12f)) // B
-        drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx - 12f, abxyCy)) // Y
-        drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx + 12f, abxyCy)) // A
+        if (theme == ThorTheme.RAINBOW) {
+            drawCircle(Color(0xFF3B82F6), radius = btnR, center = Offset(abxyCx, abxyCy - 12f)) // X Blue
+            drawCircle(Color(0xFFEAB308), radius = btnR, center = Offset(abxyCx, abxyCy + 12f)) // B Yellow
+            drawCircle(Color(0xFF22C55E), radius = btnR, center = Offset(abxyCx - 12f, abxyCy)) // Y Green
+            drawCircle(Color(0xFFEF4444), radius = btnR, center = Offset(abxyCx + 12f, abxyCy)) // A Red
+        } else {
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy - 12f)) // X
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy + 12f)) // B
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx - 12f, abxyCy)) // Y
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx + 12f, abxyCy)) // A
+        }
         // Right Analog Stick
         drawCircle(padHighlight, radius = w * 0.055f, center = Offset(w * 0.84f, h * 0.79f))
         // Start pill

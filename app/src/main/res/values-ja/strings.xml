@@ -43,10 +43,12 @@
     <string name="settings_language_desc">アプリの表示言語を選択</string>
     <string name="settings_theme">本体カラーテーマ</string>
     <string name="settings_theme_desc">AYN Thor 本体のカラーに合わせた配色</string>
-    <string name="theme_emerald_dark">クラシックブラック</string>
-    <string name="theme_rainbow_white">レトロホワイト</string>
+    <string name="theme_black">ブラック</string>
+    <string name="theme_white">ホワイト</string>
+    <string name="theme_rainbow">レインボー</string>
     <string name="theme_clear_purple">クリアパープル</string>
-    <string name="theme_crimson_black">オブシディアンレッド</string>
+    <string name="theme_custom">カスタム</string>
+    <string name="settings_custom_hue">カスタムカラー色相</string>
     <string name="language_system_default">システムに従う</string>
     <string name="language_zh_tw">繁體中文 (台灣)</string>
     <string name="language_english">English</string>

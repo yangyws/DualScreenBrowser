@@ -43,10 +43,12 @@
     <string name="settings_language_desc">Choose display language</string>
     <string name="settings_theme">Console Colorway</string>
     <string name="settings_theme_desc">Match your AYN Thor shell color</string>
-    <string name="theme_emerald_dark">Classic Black</string>
-    <string name="theme_rainbow_white">Retro White</string>
-    <string name="theme_clear_purple">Atomic Purple</string>
-    <string name="theme_crimson_black">Obsidian Red</string>
+    <string name="theme_black">Black</string>
+    <string name="theme_white">White</string>
+    <string name="theme_rainbow">Rainbow</string>
+    <string name="theme_clear_purple">Clear Purple</string>
+    <string name="theme_custom">Custom</string>
+    <string name="settings_custom_hue">Custom Accent Hue</string>
     <string name="language_system_default">System Default</string>
     <string name="language_zh_tw">繁體中文 (台灣)</string>
     <string name="language_english">English</string>
