@@ -369,7 +369,7 @@ private fun DualScreenBrowserApp(
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
-                touchpadVisibleProvider = { bottomTouchpad },
+                touchpadVisibleProvider = { spanMode && bottomTouchpad },
                 themeProvider = { currentTheme },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
@@ -417,8 +417,8 @@ private fun DualScreenBrowserApp(
         presentation?.updateBottomColor(bottomBrightness, bottomWarmth)
     }
 
-    LaunchedEffect(bottomTouchpad, presentation) {
-        presentation?.updateTouchpadVisibility(bottomTouchpad)
+    LaunchedEffect(spanMode, bottomTouchpad, presentation) {
+        presentation?.updateTouchpadVisibility(spanMode && bottomTouchpad)
     }
 
     LaunchedEffect(currentTheme, presentation) {
@@ -1076,20 +1076,22 @@ private fun DualScreenBrowserApp(
                                 gamepadActions.setSpanSource(next)
                             }
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_bottom_touchpad)) },
-                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
-                            trailingIcon = {
-                                if (bottomTouchpad) {
-                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        if (spanMode) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_bottom_touchpad)) },
+                                leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                                trailingIcon = {
+                                    if (bottomTouchpad) {
+                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                },
+                                onClick = {
+                                    bottomTouchpad = !bottomTouchpad
+                                    prefs.bottomTouchpad = bottomTouchpad
+                                    presentation?.updateTouchpadVisibility(spanMode && bottomTouchpad)
                                 }
-                            },
-                            onClick = {
-                                bottomTouchpad = !bottomTouchpad
-                                prefs.bottomTouchpad = bottomTouchpad
-                                presentation?.updateTouchpadVisibility(bottomTouchpad)
-                            }
-                        )
+                            )
+                        }
                         if (!spanMode) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_send_to_secondary)) },
