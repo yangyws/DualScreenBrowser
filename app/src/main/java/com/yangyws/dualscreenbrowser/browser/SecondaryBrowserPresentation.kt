@@ -21,22 +21,24 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import com.yangyws.dualscreenbrowser.R
+import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
     display: Display,
     private val initialUrl: String,
     private val jsEnabled: Boolean,
+    private val spanEngine: SpanEngine,
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
-    private val spanOffsetCssProvider: () -> Double?,
-    private val onSecondarySpanScrollCss: (Double) -> Unit,
+    private val spanModeProvider: () -> Boolean,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
@@ -45,13 +47,13 @@ class SecondaryBrowserPresentation(
 ) : Presentation(outerContext, display) {
 
     private var webView: WebView? = null
+    private var spanViewport: SpanViewportView? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: android.view.View? = null
     private var urlInput: EditText? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
-    private var lastTopSyncAtMs: Long = 0L
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -162,12 +164,6 @@ class SecondaryBrowserPresentation(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                if (SystemClock.uptimeMillis() - lastTopSyncAtMs > 250L) {
-                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                    onSecondarySpanScrollCss(scrollY / density.toDouble())
-                }
-            }
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -195,10 +191,6 @@ class SecondaryBrowserPresentation(
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
-                        spanOffsetCssProvider()?.let { targetCssY ->
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
-                        }
                     }
                 }
             }
@@ -214,10 +206,20 @@ class SecondaryBrowserPresentation(
         }
         webView = wv
 
+        val contentStack = FrameLayout(context)
+        val spanView = SpanViewportView(context, spanEngine, isBottomViewport = true).apply {
+            visibility = if (spanModeProvider()) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        spanViewport = spanView
+        wv.visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
+
+        contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
-        root.addView(wv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(contentStack, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
     }
 
@@ -252,24 +254,19 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
-    fun updateBarVisibility(visible: Boolean) {
-        val vis = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+    fun updatePresentationMode(barVisible: Boolean, spanActive: Boolean) {
+        val barVis = if (barVisible && !spanActive) android.view.View.VISIBLE else android.view.View.GONE
+        val spanVis = if (spanActive) android.view.View.VISIBLE else android.view.View.GONE
+        val webVis = if (spanActive) android.view.View.GONE else android.view.View.VISIBLE
         topBarView?.post {
-            topBarView?.visibility = vis
-            dividerView?.visibility = vis
-            topBarView?.parent?.requestLayout()
-        }
-    }
-
-    fun syncSpanScrollCssY(targetCssY: Double) {
-        val clamped = targetCssY.coerceAtLeast(0.0)
-        webView?.let { wv ->
-            lastTopSyncAtMs = SystemClock.uptimeMillis()
-            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-            val targetPx = (clamped * density).toInt()
-            if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
-                wv.scrollTo(wv.scrollX, targetPx)
+            topBarView?.visibility = barVis
+            dividerView?.visibility = barVis
+            spanViewport?.visibility = spanVis
+            webView?.visibility = webVis
+            if (spanActive) {
+                progressBar?.visibility = android.view.View.GONE
             }
+            topBarView?.parent?.requestLayout()
         }
     }
 

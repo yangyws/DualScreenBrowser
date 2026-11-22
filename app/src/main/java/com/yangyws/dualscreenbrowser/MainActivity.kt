@@ -109,6 +109,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -117,6 +118,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -130,12 +132,14 @@ import com.yangyws.dualscreenbrowser.browser.GamepadTargetScreen
 import com.yangyws.dualscreenbrowser.browser.HistoryItem
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
+import com.yangyws.dualscreenbrowser.browser.SpanEngine
 import com.yangyws.dualscreenbrowser.browser.UrlResolver
 import com.yangyws.dualscreenbrowser.browser.UserScript
 import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
+import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
 import com.yangyws.dualscreenbrowser.ui.StrongEaseOut
 import com.yangyws.dualscreenbrowser.ui.TactileIconButton
@@ -243,7 +247,8 @@ private fun DualScreenBrowserApp(
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(false) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
-    val lastBottomSyncAtMs = remember { LongArray(1) }
+    val spanEngine = remember { SpanEngine() }
+    var topViewportSize by remember { mutableStateOf(IntSize.Zero) }
     var isEditingText by remember { mutableStateOf(false) }
     var findBarVisible by remember { mutableStateOf(false) }
     var findQuery by remember { mutableStateOf("") }
@@ -310,30 +315,12 @@ private fun DualScreenBrowserApp(
                 display = targetDisplay,
                 initialUrl = secondaryUrl,
                 jsEnabled = jsEnabled,
+                spanEngine = spanEngine,
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 barVisibleProvider = { showSecondaryBar && !spanMode },
-                spanOffsetCssProvider = {
-                    if (spanMode && dualScreenActive) {
-                        val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                        webViews[activeTabId]?.let { v -> (v.scrollY + v.height) / density.toDouble() }
-                    } else {
-                        null
-                    }
-                },
-                onSecondarySpanScrollCss = { bottomCssY ->
-                    if (spanMode && dualScreenActive) {
-                        webViews[activeTabId]?.let { topWv ->
-                            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                            val targetTopPx = ((bottomCssY * density) - topWv.height).toInt().coerceAtLeast(0)
-                            if (kotlin.math.abs(topWv.scrollY - targetTopPx) > 4) {
-                                lastBottomSyncAtMs[0] = SystemClock.uptimeMillis()
-                                topWv.scrollTo(topWv.scrollX, targetTopPx)
-                            }
-                        }
-                    }
-                },
+                spanModeProvider = { spanMode },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
                     webViews[activeTabId]?.loadUrl(urlFromBottom)
@@ -372,12 +359,70 @@ private fun DualScreenBrowserApp(
     }
 
     LaunchedEffect(spanMode, showSecondaryBar, dualScreenActive, presentation) {
-        presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
+        presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+    }
+
+    // Start/stop VirtualDisplay SpanEngine when Span Mode toggles
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled) {
+        val secDisplay = secondaryDisplay
+        if (spanMode && dualScreenActive && secDisplay != null) {
+            val topW = topViewportSize.width.takeIf { it > 0 } ?: 1080
+            val topH = topViewportSize.height.takeIf { it > 0 } ?: 540
+            val secMetrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            secDisplay.getRealMetrics(secMetrics)
+            val secAspect = if (secMetrics.widthPixels > 0) {
+                secMetrics.heightPixels.toFloat() / secMetrics.widthPixels.toFloat()
+            } else {
+                1f
+            }
+            val bottomH = (topW * secAspect).toInt().coerceAtLeast(240)
+            val dpi = context.resources.displayMetrics.densityDpi
+
+            spanEngine.start(
+                context = context,
+                widthPx = topW,
+                topHeightPx = topH,
+                bottomHeightPx = bottomH,
+                dpi = dpi,
+                initialUrl = activeTab.url,
+                jsEnabled = jsEnabled,
+                adBlockEnabledProvider = { adBlockEnabled },
+                userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
+                onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
+                onPageInfoChanged = { url, title, canBack, canForward ->
+                    addressText = url
+                    canGoBack = canBack
+                    canGoForward = canForward
+                    tabs = tabs.map {
+                        if (it.id == activeTab.id) it.copy(url = url, title = title) else it
+                    }
+                    if (!activeTab.isIncognito) {
+                        val entry = HistoryItem(title = title.ifBlank { url }, url = url)
+                        history = (listOf(entry) + history.filterNot { it.url == url }).take(100)
+                        prefs.saveHistory(history)
+                    }
+                },
+                onProgressChanged = { newProgress ->
+                    loadProgress = if (newProgress in 1..99) newProgress / 100f else 0f
+                }
+            )
+        } else {
+            val lastSpanUrl = spanEngine.currentUrl()
+            spanEngine.stop()
+            if (!lastSpanUrl.isNullOrBlank() && lastSpanUrl != webViews[activeTabId]?.url) {
+                webViews[activeTabId]?.loadUrl(lastSpanUrl)
+            }
+        }
+        onDispose {
+            spanEngine.stop()
+        }
     }
 
     // Cleanup WebViews when activity disposes
     DisposableEffect(Unit) {
         onDispose {
+            spanEngine.stop()
             webViews.values.forEach { it.destroy() }
             webViews.clear()
         }
@@ -398,7 +443,11 @@ private fun DualScreenBrowserApp(
     fun navigateActiveTab(rawInput: String) {
         val target = UrlResolver.resolveInput(rawInput, searchEngine)
         addressText = target
-        webViews[activeTabId]?.loadUrl(target)
+        if (spanMode && spanEngine.isRunning()) {
+            spanEngine.loadUrl(target)
+        } else {
+            webViews[activeTabId]?.loadUrl(target)
+        }
         focusManager.clearFocus()
     }
 
@@ -429,10 +478,12 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    val gamepadActions = remember(activeTabId, tabs, dualScreenActive, gamepadTarget) {
+    val gamepadActions = remember(activeTabId, tabs, dualScreenActive, gamepadTarget, spanMode) {
         object : GamepadActions {
             override fun scrollActive(dy: Int) {
-                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                if (spanMode && spanEngine.isRunning()) {
+                    spanEngine.scrollByY(dy)
+                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
                     presentation?.scrollByY(dy)
                 } else {
                     webViews[activeTabId]?.scrollBy(0, dy)
@@ -440,7 +491,9 @@ private fun DualScreenBrowserApp(
             }
 
             override fun goBackActive() {
-                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                if (spanMode && spanEngine.isRunning()) {
+                    spanEngine.goBack()
+                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
                     presentation?.goBackIfPossible()
                 } else {
                     webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
@@ -448,7 +501,9 @@ private fun DualScreenBrowserApp(
             }
 
             override fun goForwardActive() {
-                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                if (spanMode && spanEngine.isRunning()) {
+                    spanEngine.goForward()
+                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
                     presentation?.goForwardIfPossible()
                 } else {
                     webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() }
@@ -472,7 +527,9 @@ private fun DualScreenBrowserApp(
             }
 
             override fun refreshActive() {
-                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                if (spanMode && spanEngine.isRunning()) {
+                    spanEngine.reload()
+                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
                     presentation?.reloadPage()
                 } else {
                     webViews[activeTabId]?.reload()
@@ -529,21 +586,37 @@ private fun DualScreenBrowserApp(
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             TactileIconButton(
-                onClick = { webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() } },
+                onClick = {
+                    if (spanMode && spanEngine.isRunning()) {
+                        spanEngine.goBack()
+                    } else {
+                        webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
+                    }
+                },
                 enabled = canGoBack
             ) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(20.dp))
             }
             TactileIconButton(
-                onClick = { webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() } },
+                onClick = {
+                    if (spanMode && spanEngine.isRunning()) {
+                        spanEngine.goForward()
+                    } else {
+                        webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() }
+                    }
+                },
                 enabled = canGoForward
             ) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = stringResource(R.string.action_forward), modifier = Modifier.size(20.dp))
             }
             TactileIconButton(
                 onClick = {
-                    val wv = webViews[activeTabId]
-                    if (loadProgress in 0.01f..0.99f) wv?.stopLoading() else wv?.reload()
+                    if (spanMode && spanEngine.isRunning()) {
+                        spanEngine.reload()
+                    } else {
+                        val wv = webViews[activeTabId]
+                        if (loadProgress in 0.01f..0.99f) wv?.stopLoading() else wv?.reload()
+                    }
                 }
             ) {
                 Icon(
@@ -678,18 +751,7 @@ private fun DualScreenBrowserApp(
                 TactileIconButton(
                     onClick = {
                         spanMode = !spanMode
-                        presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
-                        if (spanMode) {
-                            val topWv = webViews[activeTabId]
-                            val currentBottom = presentation?.currentUrl()
-                            if (currentBottom != activeTab.url) {
-                                secondaryUrl = activeTab.url
-                                presentation?.loadUrl(activeTab.url)
-                            } else if (topWv != null) {
-                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                presentation?.syncSpanScrollCssY((topWv.scrollY + topWv.height) / density.toDouble())
-                            }
-                        }
+                        presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
                         val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                         Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                     },
@@ -851,7 +913,7 @@ private fun DualScreenBrowserApp(
                                 overflowMenuExpanded = false
                                 showSecondaryBar = !showSecondaryBar
                                 prefs.showSecondaryBar = showSecondaryBar
-                                presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
+                                presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
                             }
                         )
                     }
@@ -970,6 +1032,7 @@ private fun DualScreenBrowserApp(
                 .weight(1f)
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .onGloballyPositioned { topViewportSize = it.size }
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -990,14 +1053,6 @@ private fun DualScreenBrowserApp(
                     container.settings.javaScriptEnabled = jsEnabled
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
-                        container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive &&
-                                SystemClock.uptimeMillis() - lastBottomSyncAtMs[0] > 250L
-                            ) {
-                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                presentation?.syncSpanScrollCssY((scrollY + v.height) / density.toDouble())
-                            }
-                        }
                         container.webViewClient = object : WebViewClient() {
                             override fun shouldInterceptRequest(
                                 view: WebView?,
@@ -1037,16 +1092,6 @@ private fun DualScreenBrowserApp(
                                         enableCopyScript,
                                         userScripts
                                     )
-                                    if (spanMode && dualScreenActive) {
-                                        if (secondaryUrl != url) {
-                                            secondaryUrl = url
-                                            presentation?.loadUrl(url)
-                                        }
-                                        val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                        view?.let { v ->
-                                            presentation?.syncSpanScrollCssY((v.scrollY + v.height) / density.toDouble())
-                                        }
-                                    }
                                     if (!activeTab.isIncognito) {
                                         val entry = HistoryItem(title = pageTitle.ifBlank { url }, url = url)
                                         history = (listOf(entry) + history.filterNot { it.url == url }).take(100)
@@ -1067,6 +1112,13 @@ private fun DualScreenBrowserApp(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+
+            if (spanMode && dualScreenActive) {
+                AndroidView(
+                    factory = { ctx -> SpanViewportView(ctx, spanEngine, isBottomViewport = false) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 
