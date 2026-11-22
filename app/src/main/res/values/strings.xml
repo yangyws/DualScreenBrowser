@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DualScreenBrowser</string>
+    <string name="url_placeholder">Search or enter URL</string>
+    <string name="action_back">Back</string>
+    <string name="action_forward">Forward</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_home">Home</string>
+    <string name="action_new_tab">New Tab</string>
+    <string name="action_tabs">Tabs</string>
+    <string name="action_tabs_count">%1$d</string>
+    <string name="action_bookmarks">Bookmarks</string>
+    <string name="action_history">History</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_close">Close</string>
+    <string name="action_add_bookmark">Add Bookmark</string>
+    <string name="action_remove_bookmark">Remove Bookmark</string>
+    <string name="action_desktop_mode">Desktop Site</string>
+    <string name="action_incognito">Incognito</string>
+    <string name="action_clear_history">Clear History</string>
+    <string name="action_dual_screen_on">Dual Screen: ON</string>
+    <string name="action_dual_screen_off">Dual Screen: OFF</string>
+    <string name="action_swap_screens">Swap Screens</string>
+    <string name="action_send_to_secondary">Open on Bottom Screen</string>
+    <string name="action_send_to_primary">Open on Top Screen</string>
+
+    <string name="secondary_screen_title">Bottom Screen Browser</string>
+    <string name="secondary_screen_not_found">No secondary display detected</string>
+    <string name="untitled_page">New Tab</string>
+    <string name="no_bookmarks">No bookmarks yet</string>
+    <string name="no_history">No browsing history yet</string>
+    <string name="toast_bookmark_added">Bookmark added</string>
+    <string name="toast_bookmark_removed">Bookmark removed</string>
+    <string name="toast_sent_to_bottom">Opened on bottom screen</string>
+    <string name="toast_sent_to_top">Opened on top screen</string>
+    <string name="toast_swapped_screens">Swapped pages between screens</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">Choose display language</string>
+    <string name="language_system_default">System Default</string>
+    <string name="language_zh_tw">繁體中文 (台灣)</string>
+    <string name="language_english">English</string>
+    <string name="settings_search_engine">Search Engine</string>
+    <string name="settings_search_engine_desc">Default search engine for address bar queries</string>
+    <string name="settings_auto_dual_screen">Auto-Open Bottom Screen</string>
+    <string name="settings_auto_dual_screen_desc">Automatically open the secondary browser when a second display is available</string>
+    <string name="settings_javascript">Enable JavaScript</string>
+    <string name="settings_javascript_desc">Allow websites to run JavaScript</string>
+    <string name="settings_version">Version %1$s</string>
+</resources>
