@@ -3,46 +3,53 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Top 16:9 screen frame -->
-    <path
-        android:fillColor="#222B3A"
-        android:strokeColor="#4CC38A"
-        android:strokeWidth="2.4"
-        android:pathData="M28,27h52a5,5 0,0 1,5 5v18a5,5 0,0 1,-5 5H28a5,5 0,0 1,-5 -5V32a5,5 0,0 1,5 -5z" />
-    <!-- Top browser bar accent -->
-    <path
-        android:fillColor="#4CC38A"
-        android:pathData="M28,27h52a5,5 0,0 1,5 5v3H23v-3a5,5 0,0 1,5 -5z" />
-    <!-- Top browser globe / page arc -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#E8F5EE"
-        android:strokeWidth="2.2"
-        android:strokeLineCap="round"
-        android:pathData="M34,43h18 M34,48h12" />
-    <path
-        android:fillColor="#4CC38A"
-        android:pathData="M68,45m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.70"
+        android:scaleY="0.70"
+        android:translateY="-1.5">
+        <!-- Top 16:9 screen frame -->
+        <path
+            android:fillColor="#222B3A"
+            android:strokeColor="#4CC38A"
+            android:strokeWidth="2.4"
+            android:pathData="M28,27h52a5,5 0,0 1,5 5v18a5,5 0,0 1,-5 5H28a5,5 0,0 1,-5 -5V32a5,5 0,0 1,5 -5z" />
+        <!-- Top browser bar accent -->
+        <path
+            android:fillColor="#4CC38A"
+            android:pathData="M28,27h52a5,5 0,0 1,5 5v3H23v-3a5,5 0,0 1,5 -5z" />
+        <!-- Top browser globe / page arc -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#E8F5EE"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:pathData="M34,43h18 M34,48h12" />
+        <path
+            android:fillColor="#4CC38A"
+            android:pathData="M68,45m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
 
-    <!-- Dual-screen hinge span connector -->
-    <path
-        android:fillColor="#4CC38A"
-        android:pathData="M48,55h12v4h-12z" />
+        <!-- Dual-screen hinge span connector -->
+        <path
+            android:fillColor="#4CC38A"
+            android:pathData="M48,55h12v4h-12z" />
 
-    <!-- Bottom 8:7 screen frame -->
-    <path
-        android:fillColor="#1C2432"
-        android:strokeColor="#4CC38A"
-        android:strokeWidth="2.4"
-        android:pathData="M37,59h34a5,5 0,0 1,5 5v14a5,5 0,0 1,-5 5H37a5,5 0,0 1,-5 -5V64a5,5 0,0 1,5 -5z" />
-    <!-- Continuing content lines & touchpad hint on bottom screen -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#B9D6C9"
-        android:strokeWidth="2.2"
-        android:strokeLineCap="round"
-        android:pathData="M40,67h28 M40,73h20" />
-    <path
-        android:fillColor="#334CC38A"
-        android:pathData="M34,77h40v4a3,3 0,0 1,-3 3H37a3,3 0,0 1,-3 -3z" />
+        <!-- Bottom 8:7 screen frame -->
+        <path
+            android:fillColor="#1C2432"
+            android:strokeColor="#4CC38A"
+            android:strokeWidth="2.4"
+            android:pathData="M37,59h34a5,5 0,0 1,5 5v14a5,5 0,0 1,-5 5H37a5,5 0,0 1,-5 -5V64a5,5 0,0 1,5 -5z" />
+        <!-- Continuing content lines & touchpad hint on bottom screen -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#B9D6C9"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:pathData="M40,67h28 M40,73h20" />
+        <path
+            android:fillColor="#334CC38A"
+            android:pathData="M34,77h40v4a3,3 0,0 1,-3 3H37a3,3 0,0 1,-3 -3z" />
+    </group>
 </vector>
