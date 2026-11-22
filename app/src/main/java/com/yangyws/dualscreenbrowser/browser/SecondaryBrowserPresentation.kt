@@ -33,6 +33,8 @@ class SecondaryBrowserPresentation(
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
+    private val spanOffsetProvider: () -> Int?,
+    private val onSecondarySpanScroll: (Int) -> Unit,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
@@ -45,6 +47,7 @@ class SecondaryBrowserPresentation(
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
+    private var isApplyingSpanSync: Boolean = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,6 +154,11 @@ class SecondaryBrowserPresentation(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            setOnScrollChangeListener { _, _, scrollY, _, _ ->
+                if (!isApplyingSpanSync) {
+                    onSecondarySpanScroll(scrollY)
+                }
+            }
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -178,6 +186,9 @@ class SecondaryBrowserPresentation(
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
+                        spanOffsetProvider()?.let { targetY ->
+                            view?.postDelayed({ syncSpanScrollY(targetY) }, 120)
+                        }
                     }
                 }
             }
@@ -234,7 +245,9 @@ class SecondaryBrowserPresentation(
     fun syncSpanScrollY(targetY: Int) {
         webView?.let { wv ->
             wv.post {
+                isApplyingSpanSync = true
                 wv.scrollTo(wv.scrollX, targetY.coerceAtLeast(0))
+                wv.post { isApplyingSpanSync = false }
             }
         }
     }

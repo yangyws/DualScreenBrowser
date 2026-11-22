@@ -237,6 +237,7 @@ private fun DualScreenBrowserApp(
     var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(false) }
+    val isSyncingTopScroll = remember { BooleanArray(1) }
     var isEditingText by remember { mutableStateOf(false) }
     var findBarVisible by remember { mutableStateOf(false) }
     var findQuery by remember { mutableStateOf("") }
@@ -305,6 +306,25 @@ private fun DualScreenBrowserApp(
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
+                spanOffsetProvider = {
+                    if (spanMode && dualScreenActive) {
+                        webViews[activeTabId]?.let { v -> v.scrollY + v.height }
+                    } else {
+                        null
+                    }
+                },
+                onSecondarySpanScroll = { bottomScrollY ->
+                    if (spanMode && dualScreenActive) {
+                        webViews[activeTabId]?.let { topWv ->
+                            val targetTopY = (bottomScrollY - topWv.height).coerceAtLeast(0)
+                            if (kotlin.math.abs(topWv.scrollY - targetTopY) > 4) {
+                                isSyncingTopScroll[0] = true
+                                topWv.scrollTo(topWv.scrollX, targetTopY)
+                                topWv.post { isSyncingTopScroll[0] = false }
+                            }
+                        }
+                    }
+                },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
                     webViews[activeTabId]?.loadUrl(urlFromBottom)
@@ -785,7 +805,7 @@ private fun DualScreenBrowserApp(
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive) {
+                            if (spanMode && dualScreenActive && !isSyncingTopScroll[0]) {
                                 presentation?.syncSpanScrollY(scrollY + v.height)
                             }
                         }
@@ -992,9 +1012,14 @@ private fun DualScreenBrowserApp(
                     onClick = {
                         spanMode = !spanMode
                         if (spanMode) {
-                            secondaryUrl = activeTab.url
-                            presentation?.loadUrl(activeTab.url)
-                            webViews[activeTabId]?.let { v -> presentation?.syncSpanScrollY(v.scrollY + v.height) }
+                            val topWv = webViews[activeTabId]
+                            val currentBottom = presentation?.currentUrl()
+                            if (currentBottom != activeTab.url) {
+                                secondaryUrl = activeTab.url
+                                presentation?.loadUrl(activeTab.url)
+                            } else if (topWv != null) {
+                                presentation?.syncSpanScrollY(topWv.scrollY + topWv.height)
+                            }
                         }
                         val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                         Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
