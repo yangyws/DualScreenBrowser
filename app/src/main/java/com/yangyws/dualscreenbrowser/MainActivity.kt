@@ -336,13 +336,11 @@ private fun DualScreenBrowserApp(
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
-                spanFractionProvider = {
+                spanOffsetCssProvider = {
                     if (spanMode && dualScreenActive) {
                         val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                         webViews[activeTabId]?.let { v ->
-                            val totalCss = v.contentHeight.toDouble().coerceAtLeast(1.0)
-                            val bottomCss = ((v.scrollY + v.height) / density.toDouble()) + hingeGapDp
-                            (bottomCss / totalCss).coerceIn(0.0, 1.0)
+                            ((v.scrollY + v.height) / density.toDouble()) + hingeGapDp
                         }
                     } else {
                         null
@@ -1104,11 +1102,9 @@ private fun DualScreenBrowserApp(
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive && v is WebView) {
+                            if (spanMode && dualScreenActive) {
                                 val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                val totalCss = v.contentHeight.toDouble().coerceAtLeast(1.0)
-                                val bottomCss = ((scrollY + v.height) / density.toDouble()) + hingeGapDp
-                                presentation?.syncSpanScrollFraction((bottomCss / totalCss).coerceIn(0.0, 1.0))
+                                presentation?.syncSpanScrollCssY(((scrollY + v.height) / density.toDouble()) + hingeGapDp)
                             }
                         }
                         container.webViewClient = object : WebViewClient() {
@@ -1156,9 +1152,7 @@ private fun DualScreenBrowserApp(
                                         }
                                         val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                                         view?.let { v ->
-                                            val totalCss = v.contentHeight.toDouble().coerceAtLeast(1.0)
-                                            val bottomCss = ((v.scrollY + v.height) / density.toDouble()) + hingeGapDp
-                                            presentation?.syncSpanScrollFraction((bottomCss / totalCss).coerceIn(0.0, 1.0))
+                                            presentation?.syncSpanScrollCssY(((v.scrollY + v.height) / density.toDouble()) + hingeGapDp)
                                         }
                                     }
                                     if (!activeTab.isIncognito) {
