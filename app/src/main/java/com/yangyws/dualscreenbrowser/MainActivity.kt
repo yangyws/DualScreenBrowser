@@ -724,26 +724,6 @@ private fun DualScreenBrowserApp(
                 }
             }
 
-            // Span Mode quick toggle when secondary display is present
-            if (dualScreenActive && secondaryDisplay != null) {
-                TactileIconButton(
-                    onClick = {
-                        spanMode = !spanMode
-                        presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
-                        val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
-                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                    },
-                    active = spanMode
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.ViewStream,
-                        contentDescription = stringResource(R.string.action_span_mode),
-                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White,
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
-            }
-
             // Overflow menu with all secondary tools (Bookmarks, History, Find, Desktop, Dual-Screen, Settings)
             Box {
                 TactileIconButton(
