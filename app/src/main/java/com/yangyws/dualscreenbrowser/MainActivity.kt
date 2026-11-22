@@ -733,6 +733,7 @@ private fun DualScreenBrowserApp(
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = stringResource(R.string.action_settings),
+                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }
