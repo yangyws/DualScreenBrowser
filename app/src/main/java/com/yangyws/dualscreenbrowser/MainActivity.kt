@@ -432,9 +432,16 @@ private fun DualScreenBrowserApp(
         }
     }
 
+    LaunchedEffect(hingeGapDp) {
+        if (spanEngine.isRunning()) {
+            val gapPx = (hingeGapDp * context.resources.displayMetrics.density).toInt()
+            spanEngine.updateHingeGapPx(gapPx)
+        }
+    }
+
     val viewportReady = topViewportSize.width > 0 && topViewportSize.height > 0
 
-    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp, spanRestartTrigger, bottomTouchpad) {
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, spanRestartTrigger) {
         val secDisplay = secondaryDisplay
         if (spanMode && dualScreenActive && secDisplay != null && viewportReady) {
             val topW = topViewportSize.width

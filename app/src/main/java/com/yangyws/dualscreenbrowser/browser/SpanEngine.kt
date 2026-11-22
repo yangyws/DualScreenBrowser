@@ -50,6 +50,7 @@ class SpanEngine {
         private set
     var hingeGapPx: Int = 0
         private set
+    private var virtualScale: Float = 1f
     var bottomViewportHeight: Int = 0
         private set
     var totalHeight: Int = 0
@@ -148,6 +149,7 @@ class SpanEngine {
 
         virtualWidth = safeW
         topViewportHeight = safeTopH
+        virtualScale = scale
         this.hingeGapPx = safeGap
         bottomViewportHeight = safeBottomH
         totalHeight = safeTotalH
@@ -212,6 +214,14 @@ class SpanEngine {
         )
         pres.show()
         presentation = pres
+    }
+
+    fun updateHingeGapPx(rawGapPx: Int) {
+        val scaled = (rawGapPx * virtualScale).toInt().coerceAtLeast(0)
+        hingeGapPx = scaled
+        latestBitmap?.let { bmp ->
+            if (!bmp.isRecycled) frameListeners.forEach { it(bmp) }
+        }
     }
 
     fun loadUrl(url: String) {
