@@ -33,6 +33,7 @@ import android.widget.TextView
 import com.yangyws.dualscreenbrowser.R
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import kotlin.math.abs
+import kotlin.math.hypot
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
@@ -273,12 +274,33 @@ class SecondaryBrowserPresentation(
 
     @SuppressLint("ClickableViewAccessibility")
     private fun createTouchpadArea(): LinearLayout {
-        var lastX = 0f
-        var lastY = 0f
+        var lastAvgX = 0f
+        var lastAvgY = 0f
+        var lastSpanDist = 0f
         var totalMove = 0f
+        var maxPointers = 0
+        var downTimeMs = 0L
         var isScrollZone = false
-        val scrollZoneWidthPx = dp(40)
-        val tapSlopPx = dp(10)
+        val scrollZoneWidthPx = dp(36)
+        val tapSlopPx = dp(12)
+
+        fun avgCenter(event: MotionEvent, ignoreIndex: Int = -1): Pair<Float, Float> {
+            var sx = 0f
+            var sy = 0f
+            var count = 0
+            for (i in 0 until event.pointerCount) {
+                if (i == ignoreIndex) continue
+                sx += event.getX(i)
+                sy += event.getY(i)
+                count++
+            }
+            return if (count > 0) (sx / count) to (sy / count) else 0f to 0f
+        }
+
+        fun pairDistance(event: MotionEvent): Float {
+            if (event.pointerCount < 2) return 0f
+            return hypot(event.getX(1) - event.getX(0), event.getY(1) - event.getY(0))
+        }
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -297,7 +319,7 @@ class SecondaryBrowserPresentation(
         val hintLabel = TextView(context).apply {
             text = context.getString(R.string.touchpad_hint)
             setTextColor(Color.parseColor("#6E7687"))
-            textSize = 11.5f
+            textSize = 11f
             gravity = Gravity.CENTER
             setPadding(dp(12), 0, dp(12), 0)
         }
@@ -316,33 +338,72 @@ class SecondaryBrowserPresentation(
         container.setOnTouchListener { v, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    lastX = event.x
-                    lastY = event.y
+                    lastAvgX = event.x
+                    lastAvgY = event.y
+                    lastSpanDist = 0f
                     totalMove = 0f
+                    maxPointers = 1
+                    downTimeMs = event.eventTime
                     isScrollZone = event.x >= v.width - scrollZoneWidthPx
                     true
                 }
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    maxPointers = maxOf(maxPointers, event.pointerCount)
+                    val (cx, cy) = avgCenter(event)
+                    lastAvgX = cx
+                    lastAvgY = cy
+                    lastSpanDist = pairDistance(event)
+                    true
+                }
+                MotionEvent.ACTION_POINTER_UP -> {
+                    val (cx, cy) = avgCenter(event, ignoreIndex = event.actionIndex)
+                    lastAvgX = cx
+                    lastAvgY = cy
+                    lastSpanDist = 0f
+                    true
+                }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = event.x - lastX
-                    val dy = event.y - lastY
+                    val (cx, cy) = avgCenter(event)
+                    val dx = cx - lastAvgX
+                    val dy = cy - lastAvgY
                     totalMove += abs(dx) + abs(dy)
-                    if (isScrollZone || event.pointerCount >= 2) {
-                        val scrollDy = (-dy * 2.2f).toInt()
-                        if (spanModeProvider()) {
-                            spanEngine.scrollByY(scrollDy)
+
+                    if (event.pointerCount == 2) {
+                        val curDist = pairDistance(event)
+                        val distDelta = abs(curDist - lastSpanDist)
+                        if (lastSpanDist > dp(24) && distDelta > dp(4) && distDelta > abs(dy) * 1.15f) {
+                            val factor = curDist / lastSpanDist
+                            if (spanModeProvider()) spanEngine.zoomBy(factor) else webView?.zoomBy(factor)
+                            lastSpanDist = curDist
                         } else {
-                            webView?.scrollBy(0, scrollDy)
+                            val scrollDy = (-dy * 2.4f).toInt()
+                            if (spanModeProvider()) spanEngine.scrollByY(scrollDy) else webView?.scrollBy(0, scrollDy)
                         }
+                    } else if (event.pointerCount >= 3 || isScrollZone) {
+                        val scrollDy = (-dy * 2.4f).toInt()
+                        if (spanModeProvider()) spanEngine.scrollByY(scrollDy) else webView?.scrollBy(0, scrollDy)
                     } else if (spanModeProvider()) {
-                        spanEngine.moveCursorBy(dx * 1.35f, dy * 1.35f)
+                        spanEngine.moveCursorBy(dx * 1.4f, dy * 1.4f)
                     }
-                    lastX = event.x
-                    lastY = event.y
+
+                    lastAvgX = cx
+                    lastAvgY = cy
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (totalMove < tapSlopPx && !isScrollZone && spanModeProvider()) {
-                        spanEngine.tapAtCursor()
+                    val durationMs = event.eventTime - downTimeMs
+                    if (totalMove < tapSlopPx && durationMs < 350L && !isScrollZone) {
+                        when {
+                            maxPointers >= 3 -> {
+                                if (spanModeProvider()) spanEngine.reload() else webView?.reload()
+                            }
+                            maxPointers == 2 -> {
+                                if (spanModeProvider()) spanEngine.goBack() else goBackIfPossible()
+                            }
+                            maxPointers == 1 && spanModeProvider() -> {
+                                spanEngine.tapAtCursor()
+                            }
+                        }
                     }
                     true
                 }

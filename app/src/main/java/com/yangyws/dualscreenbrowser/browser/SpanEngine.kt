@@ -232,6 +232,10 @@ class SpanEngine {
         virtualWebView?.scrollBy(0, dy)
     }
 
+    fun zoomBy(factor: Float) {
+        virtualWebView?.zoomBy(factor.coerceIn(0.88f, 1.12f))
+    }
+
     fun dispatchMappedTouch(
         event: MotionEvent,
         viewWidth: Int,

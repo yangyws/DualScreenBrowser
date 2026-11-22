@@ -74,7 +74,7 @@
     <string name="action_reopen_top">重新開啟上螢幕</string>
     <string name="action_reopen_bottom">重新開啟下螢幕</string>
     <string name="action_bottom_touchpad">下螢幕觸控板</string>
-    <string name="touchpad_hint">觸控板 · 單指移游標 · 輕觸點擊 · 右側滑動捲動</string>
+    <string name="touchpad_hint">單指：移游標／點擊 · 雙指：捲動／縮放／輕觸回上頁 · 三指輕觸：重整</string>
     <string name="action_gamepad_guide">手把操作說明</string>
     <string name="gamepad_guide_title">手把快捷操作說明</string>
     <string name="gamepad_key_dpad">十字鍵 ／ 左右搖桿</string>

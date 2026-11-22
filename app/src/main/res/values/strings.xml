@@ -74,7 +74,7 @@
     <string name="action_reopen_top">Reopen Top Screen</string>
     <string name="action_reopen_bottom">Reopen Bottom Screen</string>
     <string name="action_bottom_touchpad">Bottom Screen Touchpad</string>
-    <string name="touchpad_hint">Touchpad · Drag cursor · Tap click · Right edge scroll</string>
+    <string name="touchpad_hint">1-Finger: Cursor/Tap · 2-Finger: Scroll/Zoom/Tap Back · 3-Finger Tap: Reload</string>
     <string name="action_gamepad_guide">Gamepad Guide</string>
     <string name="gamepad_guide_title">Gamepad Controls</string>
     <string name="gamepad_key_dpad">D-Pad / Analog Stick</string>
