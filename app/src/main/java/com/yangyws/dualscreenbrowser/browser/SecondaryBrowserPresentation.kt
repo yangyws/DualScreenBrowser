@@ -29,6 +29,7 @@ import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -67,6 +68,8 @@ class SecondaryBrowserPresentation(
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
     private var urlInput: EditText? = null
+    private var lockIcon: ImageView? = null
+    private var addressBox: LinearLayout? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
@@ -109,17 +112,32 @@ class SecondaryBrowserPresentation(
         val addressDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(10).toFloat()
-            setColor(Color.parseColor("#252A34"))
+            setColor(initialTheme.surfaceVariantColor)
             setStroke(dp(1), Color.parseColor("#14FFFFFF"))
         }
+
+        val addrContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = addressDrawable
+            setPadding(dp(10), dp(7), dp(10), dp(7))
+        }
+        addressBox = addrContainer
+
+        val lockImg = ImageView(context).apply {
+            setImageResource(R.drawable.ic_lock)
+            setColorFilter(initialTheme.primaryColor)
+            visibility = if (UrlResolver.isHttps(initialUrl)) View.VISIBLE else View.GONE
+        }
+        lockIcon = lockImg
 
         val addressBar = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
             setText(UrlResolver.displayHost(initialUrl).ifBlank { initialUrl })
             setTextColor(Color.WHITE)
             setHintTextColor(Color.parseColor("#8A92A6"))
-            background = addressDrawable
-            setPadding(dp(10), dp(7), dp(10), dp(7))
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
             textSize = 13.5f
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
@@ -127,9 +145,11 @@ class SecondaryBrowserPresentation(
             setOnFocusChangeListener { v, hasFocus ->
                 val et = v as EditText
                 if (hasFocus) {
+                    lockIcon?.visibility = View.GONE
                     et.setText(currentUrl)
                     et.selectAll()
                 } else {
+                    lockIcon?.visibility = if (UrlResolver.isHttps(currentUrl)) View.VISIBLE else View.GONE
                     et.setText(UrlResolver.displayHost(currentUrl).ifBlank { currentUrl })
                 }
             }
@@ -147,6 +167,10 @@ class SecondaryBrowserPresentation(
             }
         }
         urlInput = addressBar
+        addrContainer.addView(lockImg, LinearLayout.LayoutParams(dp(13), dp(13)).apply {
+            setMargins(0, 0, dp(5), 0)
+        })
+        addrContainer.addView(addressBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
         val btnSwap = navButton(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
             onSwapScreens(currentUrl)
@@ -160,7 +184,7 @@ class SecondaryBrowserPresentation(
         topBar.addView(btnForward, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(btnRefresh, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(
-            addressBar,
+            addrContainer,
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                 setMargins(dp(8), 0, dp(8), 0)
             }
@@ -213,6 +237,7 @@ class SecondaryBrowserPresentation(
                     if (!url.isNullOrBlank()) {
                         currentUrl = url
                         if (urlInput?.hasFocus() != true) {
+                            lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
                             urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
                         }
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
@@ -440,7 +465,8 @@ class SecondaryBrowserPresentation(
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
             touchpadContainer?.setBackgroundColor(theme.surfaceColor)
-            (urlInput?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
+            (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
+            lockIcon?.setColorFilter(theme.primaryColor)
         }
     }
 
@@ -462,6 +488,7 @@ class SecondaryBrowserPresentation(
     fun loadUrl(url: String) {
         currentUrl = url
         if (urlInput?.hasFocus() != true) {
+            lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
             urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
         }
         webView?.loadUrl(url)
