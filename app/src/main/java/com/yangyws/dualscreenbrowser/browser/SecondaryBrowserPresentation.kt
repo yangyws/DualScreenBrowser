@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
@@ -50,7 +51,7 @@ class SecondaryBrowserPresentation(
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
-    private var isApplyingSpanSync: Boolean = false
+    private var lastTopSyncAtMs: Long = 0L
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -162,7 +163,7 @@ class SecondaryBrowserPresentation(
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                if (!isApplyingSpanSync) {
+                if (SystemClock.uptimeMillis() - lastTopSyncAtMs > 250L) {
                     val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                     onSecondarySpanScrollCss(scrollY / density.toDouble())
                 }
@@ -260,14 +261,11 @@ class SecondaryBrowserPresentation(
     fun syncSpanScrollCssY(targetCssY: Double) {
         val clamped = targetCssY.coerceAtLeast(0.0)
         webView?.let { wv ->
-            wv.post {
-                isApplyingSpanSync = true
-                if (jsEnabled) {
-                    wv.evaluateJavascript("window.scrollTo(0, $clamped);", null)
-                }
-                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                wv.scrollTo(wv.scrollX, (clamped * density).toInt())
-                wv.postDelayed({ isApplyingSpanSync = false }, 50)
+            lastTopSyncAtMs = SystemClock.uptimeMillis()
+            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+            val targetPx = (clamped * density).toInt()
+            if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
+                wv.scrollTo(wv.scrollX, targetPx)
             }
         }
     }

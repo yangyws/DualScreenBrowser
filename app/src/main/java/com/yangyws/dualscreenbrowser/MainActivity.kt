@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.Display
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -237,7 +238,7 @@ private fun DualScreenBrowserApp(
     var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(false) }
-    val isSyncingTopScroll = remember { BooleanArray(1) }
+    val lastBottomSyncAtMs = remember { LongArray(1) }
     var isEditingText by remember { mutableStateOf(false) }
     var findBarVisible by remember { mutableStateOf(false) }
     var findQuery by remember { mutableStateOf("") }
@@ -320,10 +321,9 @@ private fun DualScreenBrowserApp(
                         webViews[activeTabId]?.let { topWv ->
                             val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                             val targetTopPx = ((bottomCssY * density) - topWv.height).toInt().coerceAtLeast(0)
-                            if (kotlin.math.abs(topWv.scrollY - targetTopPx) > 6) {
-                                isSyncingTopScroll[0] = true
+                            if (kotlin.math.abs(topWv.scrollY - targetTopPx) > 4) {
+                                lastBottomSyncAtMs[0] = SystemClock.uptimeMillis()
                                 topWv.scrollTo(topWv.scrollX, targetTopPx)
-                                topWv.postDelayed({ isSyncingTopScroll[0] = false }, 50)
                             }
                         }
                     }
@@ -812,7 +812,9 @@ private fun DualScreenBrowserApp(
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive && !isSyncingTopScroll[0]) {
+                            if (spanMode && dualScreenActive &&
+                                SystemClock.uptimeMillis() - lastBottomSyncAtMs[0] > 250L
+                            ) {
                                 val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                                 presentation?.syncSpanScrollCssY((scrollY + v.height) / density.toDouble())
                             }
