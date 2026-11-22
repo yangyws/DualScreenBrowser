@@ -135,6 +135,10 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getBoolean("bottom_touchpad", true)
         set(value) = prefs.edit().putBoolean("bottom_touchpad", value).apply()
 
+    var tutorialDone: Boolean
+        get() = prefs.getBoolean("tutorial_done", false)
+        set(value) = prefs.edit().putBoolean("tutorial_done", value).apply()
+
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
         set(value) = prefs.edit().putString("search_engine", value.id).apply()

@@ -153,6 +153,7 @@ import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
 import com.yangyws.dualscreenbrowser.ui.StrongEaseOut
 import com.yangyws.dualscreenbrowser.ui.TactileIconButton
+import com.yangyws.dualscreenbrowser.ui.ThorTutorialOverlay
 
 private enum class BrowserPanel {
     NONE,
@@ -274,6 +275,7 @@ private fun DualScreenBrowserApp(
     var findMatchActive by remember { mutableIntStateOf(0) }
     var findMatchTotal by remember { mutableIntStateOf(0) }
     var overflowMenuExpanded by remember { mutableStateOf(false) }
+    var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
@@ -1068,6 +1070,14 @@ private fun DualScreenBrowserApp(
                         onClick = {
                             overflowMenuExpanded = false
                             activePanel = BrowserPanel.GAMEPAD_GUIDE
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_tutorial)) },
+                        leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            showTutorial = true
                         }
                     )
                     DropdownMenuItem(
@@ -1867,6 +1877,14 @@ private fun DualScreenBrowserApp(
             }
         }
     }
+
+    ThorTutorialOverlay(
+        visible = showTutorial,
+        onFinish = {
+            showTutorial = false
+            prefs.tutorialDone = true
+        }
+    )
 }
 
 private fun findSecondaryDisplay(dm: DisplayManager): Display? =
