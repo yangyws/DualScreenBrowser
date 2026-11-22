@@ -245,7 +245,7 @@ private fun DualScreenBrowserApp(
     var forceDarkWeb by remember { mutableStateOf(prefs.forceDarkWeb) }
     var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
-    var spanMode by remember { mutableStateOf(false) }
+    var spanMode by remember { mutableStateOf(true) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
     val spanEngine = remember { SpanEngine() }
     var topViewportSize by remember { mutableStateOf(IntSize.Zero) }
@@ -362,12 +362,14 @@ private fun DualScreenBrowserApp(
         presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
     }
 
+    val viewportReady = topViewportSize.width > 0 && topViewportSize.height > 0
+
     // Start/stop VirtualDisplay SpanEngine when Span Mode toggles
-    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled) {
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady) {
         val secDisplay = secondaryDisplay
-        if (spanMode && dualScreenActive && secDisplay != null) {
-            val topW = topViewportSize.width.takeIf { it > 0 } ?: 1080
-            val topH = topViewportSize.height.takeIf { it > 0 } ?: 540
+        if (spanMode && dualScreenActive && secDisplay != null && viewportReady) {
+            val topW = topViewportSize.width
+            val topH = topViewportSize.height
             val secMetrics = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             secDisplay.getRealMetrics(secMetrics)
