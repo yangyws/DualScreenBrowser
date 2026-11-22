@@ -399,6 +399,7 @@ private fun DualScreenBrowserApp(
                         Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
                     }
                 },
+                onReopenBottom = { presentationTrigger++ },
                 onUrlChanged = { url, title ->
                     secondaryUrl = url
                     val entry = HistoryItem(title = title.ifBlank { url }, url = url)
@@ -1004,21 +1005,6 @@ private fun DualScreenBrowserApp(
                                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                             }
                         )
-                        if (dualScreenActive && secondaryDisplay != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_screenshot_bottom)) },
-                                leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
-                                onClick = {
-                                    dismissMenu()
-                                    val bmp = presentation?.captureViewportBitmap()
-                                    val saved = bmp?.let { b ->
-                                        ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
-                                    } ?: false
-                                    val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
-                                    Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        }
                     }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_long_screenshot)) },
@@ -1173,7 +1159,7 @@ private fun DualScreenBrowserApp(
                             }
                         }
                     )
-                    if (secondaryDisplay != null) {
+                    if (secondaryDisplay != null && (spanMode || !dualScreenActive)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_reopen_bottom)) },
                             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
