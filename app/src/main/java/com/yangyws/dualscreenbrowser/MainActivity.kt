@@ -293,6 +293,8 @@ private fun DualScreenBrowserApp(
     var secondaryUrl by remember { mutableStateOf("https://duckduckgo.com") }
     var presentation by remember { mutableStateOf<SecondaryBrowserPresentation?>(null) }
     var presentationTrigger by remember { mutableIntStateOf(0) }
+    var spanRestartTrigger by remember { mutableIntStateOf(0) }
+    var topWebViewTrigger by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner, displayManager) {
@@ -416,7 +418,7 @@ private fun DualScreenBrowserApp(
     }
 
     // Start/stop VirtualDisplay SpanEngine when Span Mode toggles
-    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp) {
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp, spanRestartTrigger) {
         val secDisplay = secondaryDisplay
         if (spanMode && dualScreenActive && secDisplay != null && viewportReady) {
             val topW = topViewportSize.width
@@ -1034,8 +1036,21 @@ private fun DualScreenBrowserApp(
                             )
                         }
                     }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_reopen_top)) },
+                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            if (spanMode && dualScreenActive) {
+                                spanRestartTrigger++
+                            } else {
+                                webViews.remove(activeTabId)?.destroy()
+                                topWebViewTrigger++
+                            }
+                        }
+                    )
                     if (secondaryDisplay != null) {
-                        HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_reopen_bottom)) },
                             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
@@ -1171,8 +1186,9 @@ private fun DualScreenBrowserApp(
                 .navigationBarsPadding()
                 .onGloballyPositioned { topViewportSize = it.size }
         ) {
-            AndroidView(
-                factory = { ctx ->
+            androidx.compose.runtime.key(topWebViewTrigger) {
+                AndroidView(
+                    factory = { ctx ->
                     WebView(ctx).apply {
                         settings.javaScriptEnabled = jsEnabled
                         settings.domStorageEnabled = true
@@ -1249,6 +1265,7 @@ private fun DualScreenBrowserApp(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            }
 
             if (spanMode && dualScreenActive) {
                 AndroidView(

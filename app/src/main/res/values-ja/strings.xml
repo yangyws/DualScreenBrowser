@@ -71,6 +71,7 @@
     <string name="action_span_source_top">スパン元：上画面</string>
     <string name="action_span_source_bottom">スパン元：下画面</string>
     <string name="action_secondary_bar">下画面URLバー</string>
+    <string name="action_reopen_top">上画面を再表示</string>
     <string name="action_reopen_bottom">下画面を再表示</string>
     <string name="action_gamepad_guide">ゲームパッド操作ガイド</string>
     <string name="gamepad_guide_title">ゲームパッド操作一覧</string>
