@@ -306,21 +306,24 @@ private fun DualScreenBrowserApp(
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
-                spanOffsetProvider = {
+                spanModeProvider = { spanMode },
+                spanOffsetCssProvider = {
                     if (spanMode && dualScreenActive) {
-                        webViews[activeTabId]?.let { v -> v.scrollY + v.height }
+                        val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                        webViews[activeTabId]?.let { v -> (v.scrollY + v.height) / density.toDouble() }
                     } else {
                         null
                     }
                 },
-                onSecondarySpanScroll = { bottomScrollY ->
+                onSecondarySpanScrollCss = { bottomCssY ->
                     if (spanMode && dualScreenActive) {
                         webViews[activeTabId]?.let { topWv ->
-                            val targetTopY = (bottomScrollY - topWv.height).coerceAtLeast(0)
-                            if (kotlin.math.abs(topWv.scrollY - targetTopY) > 4) {
+                            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                            val targetTopPx = ((bottomCssY * density) - topWv.height).toInt().coerceAtLeast(0)
+                            if (kotlin.math.abs(topWv.scrollY - targetTopPx) > 6) {
                                 isSyncingTopScroll[0] = true
-                                topWv.scrollTo(topWv.scrollX, targetTopY)
-                                topWv.post { isSyncingTopScroll[0] = false }
+                                topWv.scrollTo(topWv.scrollX, targetTopPx)
+                                topWv.postDelayed({ isSyncingTopScroll[0] = false }, 50)
                             }
                         }
                     }
@@ -360,6 +363,10 @@ private fun DualScreenBrowserApp(
             presentation?.dismiss()
             presentation = null
         }
+    }
+
+    LaunchedEffect(spanMode, dualScreenActive, presentation) {
+        presentation?.setSpanMode(spanMode && dualScreenActive)
     }
 
     // Cleanup WebViews when activity disposes
@@ -806,7 +813,8 @@ private fun DualScreenBrowserApp(
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
                             if (spanMode && dualScreenActive && !isSyncingTopScroll[0]) {
-                                presentation?.syncSpanScrollY(scrollY + v.height)
+                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                presentation?.syncSpanScrollCssY((scrollY + v.height) / density.toDouble())
                             }
                         }
                         container.webViewClient = object : WebViewClient() {
@@ -853,7 +861,10 @@ private fun DualScreenBrowserApp(
                                             secondaryUrl = url
                                             presentation?.loadUrl(url)
                                         }
-                                        view?.let { v -> presentation?.syncSpanScrollY(v.scrollY + v.height) }
+                                        val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                        view?.let { v ->
+                                            presentation?.syncSpanScrollCssY((v.scrollY + v.height) / density.toDouble())
+                                        }
                                     }
                                     if (!activeTab.isIncognito) {
                                         val entry = HistoryItem(title = pageTitle.ifBlank { url }, url = url)
@@ -1011,6 +1022,7 @@ private fun DualScreenBrowserApp(
                 TactileIconButton(
                     onClick = {
                         spanMode = !spanMode
+                        presentation?.setSpanMode(spanMode && dualScreenActive)
                         if (spanMode) {
                             val topWv = webViews[activeTabId]
                             val currentBottom = presentation?.currentUrl()
@@ -1018,7 +1030,8 @@ private fun DualScreenBrowserApp(
                                 secondaryUrl = activeTab.url
                                 presentation?.loadUrl(activeTab.url)
                             } else if (topWv != null) {
-                                presentation?.syncSpanScrollY(topWv.scrollY + topWv.height)
+                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                presentation?.syncSpanScrollCssY((topWv.scrollY + topWv.height) / density.toDouble())
                             }
                         }
                         val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off

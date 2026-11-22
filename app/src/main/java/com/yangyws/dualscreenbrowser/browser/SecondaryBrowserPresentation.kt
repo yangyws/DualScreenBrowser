@@ -33,8 +33,9 @@ class SecondaryBrowserPresentation(
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
-    private val spanOffsetProvider: () -> Int?,
-    private val onSecondarySpanScroll: (Int) -> Unit,
+    private val spanModeProvider: () -> Boolean,
+    private val spanOffsetCssProvider: () -> Double?,
+    private val onSecondarySpanScrollCss: (Double) -> Unit,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
@@ -43,6 +44,8 @@ class SecondaryBrowserPresentation(
 ) : Presentation(outerContext, display) {
 
     private var webView: WebView? = null
+    private var topBarView: LinearLayout? = null
+    private var dividerView: android.view.View? = null
     private var urlInput: EditText? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
@@ -67,7 +70,9 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(Color.parseColor("#1A1D24"))
             setPadding(dp(8), dp(6), dp(8), dp(6))
+            visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
         }
+        topBarView = topBar
 
         val btnBack = navButton(android.R.drawable.ic_media_previous, context.getString(R.string.action_back)) {
             webView?.let { if (it.canGoBack()) it.goBack() }
@@ -137,7 +142,9 @@ class SecondaryBrowserPresentation(
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
+            visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
         }
+        dividerView = divider
 
         val progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -156,7 +163,8 @@ class SecondaryBrowserPresentation(
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             setOnScrollChangeListener { _, _, scrollY, _, _ ->
                 if (!isApplyingSpanSync) {
-                    onSecondarySpanScroll(scrollY)
+                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                    onSecondarySpanScrollCss(scrollY / density.toDouble())
                 }
             }
             webViewClient = object : WebViewClient() {
@@ -186,8 +194,9 @@ class SecondaryBrowserPresentation(
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
-                        spanOffsetProvider()?.let { targetY ->
-                            view?.postDelayed({ syncSpanScrollY(targetY) }, 120)
+                        spanOffsetCssProvider()?.let { targetCssY ->
+                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
+                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
                         }
                     }
                 }
@@ -242,12 +251,23 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
-    fun syncSpanScrollY(targetY: Int) {
+    fun setSpanMode(enabled: Boolean) {
+        val vis = if (enabled) android.view.View.GONE else android.view.View.VISIBLE
+        topBarView?.visibility = vis
+        dividerView?.visibility = vis
+    }
+
+    fun syncSpanScrollCssY(targetCssY: Double) {
+        val clamped = targetCssY.coerceAtLeast(0.0)
         webView?.let { wv ->
             wv.post {
                 isApplyingSpanSync = true
-                wv.scrollTo(wv.scrollX, targetY.coerceAtLeast(0))
-                wv.post { isApplyingSpanSync = false }
+                if (jsEnabled) {
+                    wv.evaluateJavascript("window.scrollTo(0, $clamped);", null)
+                }
+                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                wv.scrollTo(wv.scrollX, (clamped * density).toInt())
+                wv.postDelayed({ isApplyingSpanSync = false }, 50)
             }
         }
     }
