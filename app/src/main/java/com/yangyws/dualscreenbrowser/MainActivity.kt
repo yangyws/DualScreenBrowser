@@ -1113,20 +1113,6 @@ private fun DualScreenBrowserApp(
                         }
                         if (!spanMode) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_send_to_secondary)) },
-                                leadingIcon = { Icon(Icons.Rounded.OpenInBrowser, contentDescription = null) },
-                                onClick = {
-                                    dismissMenu()
-                                    secondaryUrl = activeTab.url
-                                    presentation?.loadUrl(activeTab.url)
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.toast_sent_to_bottom),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_swap_screens)) },
                                 leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                                 onClick = {
