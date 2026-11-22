@@ -83,6 +83,8 @@
     <string name="action_reopen_bottom">下画面を再表示</string>
     <string name="action_bottom_touchpad">下画面タッチパッド</string>
     <string name="action_screenshot">スクリーンショット</string>
+    <string name="action_screenshot_top">上画面をスクショ</string>
+    <string name="action_screenshot_bottom">下画面をスクショ</string>
     <string name="action_long_screenshot">ロングスクリーンショット</string>
     <string name="toast_screenshot_saved">Pictures/DualScreenBrowser に保存しました</string>
     <string name="toast_screenshot_failed">スクリーンショットの保存に失敗しました</string>

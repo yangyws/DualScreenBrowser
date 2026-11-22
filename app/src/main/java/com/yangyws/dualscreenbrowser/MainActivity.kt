@@ -954,30 +954,57 @@ private fun DualScreenBrowserApp(
                             }
                         }
                     )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_screenshot)) },
-                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
-                        onClick = {
-                            overflowMenuExpanded = false
-                            val bmp = if (spanMode && spanEngine.isRunning()) {
-                                spanEngine.captureStitchedBitmap()
-                            } else {
+                    if (spanMode && dualScreenActive) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_screenshot)) },
+                            leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                val bmp = spanEngine.captureStitchedBitmap()
+                                val saved = bmp?.let { b ->
+                                    ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                                } ?: false
+                                val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_screenshot_top)) },
+                            leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                            onClick = {
+                                overflowMenuExpanded = false
                                 val wv = webViews[activeTabId]
-                                if (wv != null && wv.width > 0 && wv.height > 0) {
+                                val bmp = if (wv != null && wv.width > 0 && wv.height > 0) {
                                     android.graphics.Bitmap.createBitmap(
                                         wv.width,
                                         wv.height,
                                         android.graphics.Bitmap.Config.ARGB_8888
                                     ).also { b -> wv.draw(android.graphics.Canvas(b)) }
                                 } else null
+                                val saved = bmp?.let { b ->
+                                    ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                                } ?: false
+                                val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                             }
-                            val saved = bmp?.let { b ->
-                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
-                            } ?: false
-                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
-                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        )
+                        if (dualScreenActive && secondaryDisplay != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_screenshot_bottom)) },
+                                leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                                onClick = {
+                                    overflowMenuExpanded = false
+                                    val bmp = presentation?.captureViewportBitmap()
+                                    val saved = bmp?.let { b ->
+                                        ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                                    } ?: false
+                                    val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                                    Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                                }
+                            )
                         }
-                    )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_long_screenshot)) },
                         leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },

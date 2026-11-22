@@ -83,6 +83,8 @@
     <string name="action_reopen_bottom">重新開啟下螢幕</string>
     <string name="action_bottom_touchpad">下螢幕觸控板</string>
     <string name="action_screenshot">螢幕截圖</string>
+    <string name="action_screenshot_top">截取上螢幕</string>
+    <string name="action_screenshot_bottom">截取下螢幕</string>
     <string name="action_long_screenshot">網頁長截圖</string>
     <string name="toast_screenshot_saved">已儲存截圖至 Pictures/DualScreenBrowser</string>
     <string name="toast_screenshot_failed">截圖儲存失敗</string>

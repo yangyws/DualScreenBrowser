@@ -558,6 +558,14 @@ class SecondaryBrowserPresentation(
         webView?.reload()
     }
 
+    fun captureViewportBitmap(): Bitmap? {
+        val wv = webView ?: return null
+        if (wv.width <= 0 || wv.height <= 0) return null
+        return Bitmap.createBitmap(wv.width, wv.height, Bitmap.Config.ARGB_8888).also { bmp ->
+            wv.draw(Canvas(bmp))
+        }
+    }
+
     fun toggleDesktopMode(): Boolean {
         desktopMode = !desktopMode
         webView?.let { wv ->

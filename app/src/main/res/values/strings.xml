@@ -83,6 +83,8 @@
     <string name="action_reopen_bottom">Reopen Bottom Screen</string>
     <string name="action_bottom_touchpad">Bottom Screen Touchpad</string>
     <string name="action_screenshot">Screenshot</string>
+    <string name="action_screenshot_top">Screenshot Top Screen</string>
+    <string name="action_screenshot_bottom">Screenshot Bottom Screen</string>
     <string name="action_long_screenshot">Long Screenshot</string>
     <string name="toast_screenshot_saved">Screenshot saved to Pictures/DualScreenBrowser</string>
     <string name="toast_screenshot_failed">Failed to save screenshot</string>
