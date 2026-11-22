@@ -336,6 +336,18 @@ class SecondaryBrowserPresentation(
                     return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
                 }
 
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    updateNavButtons(view)
+                    if (!url.isNullOrBlank()) {
+                        currentUrl = url
+                        if (urlInput?.hasFocus() != true) {
+                            lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
+                            urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
+                        }
+                    }
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     updateNavButtons(view)
@@ -590,7 +602,7 @@ class SecondaryBrowserPresentation(
         webView?.loadUrl(url)
     }
 
-    fun currentUrl(): String = currentUrl
+    fun currentUrl(): String = webView?.url?.takeIf { it.isNotBlank() } ?: currentUrl
 
     fun updateJsEnabled(enabled: Boolean) {
         webView?.settings?.javaScriptEnabled = enabled

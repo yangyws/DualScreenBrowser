@@ -110,6 +110,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -320,6 +321,33 @@ private fun DualScreenBrowserApp(
     var spanRestartTrigger by remember { mutableIntStateOf(0) }
     var topWebViewTrigger by remember { mutableIntStateOf(0) }
 
+    val latestTabs by rememberUpdatedState(tabs)
+    val latestActiveTabId by rememberUpdatedState(activeTabId)
+    val latestBookmarks by rememberUpdatedState(bookmarks)
+    val latestSecondaryUrl by rememberUpdatedState(secondaryUrl)
+    val latestPresentation by rememberUpdatedState(presentation)
+
+    fun performSwapScreens(urlFromBottomOverride: String? = null) {
+        val currentPres = latestPresentation ?: return
+        val tabId = latestActiveTabId
+        val tab = latestTabs.firstOrNull { it.id == tabId } ?: latestTabs.first()
+        val topWv = webViews[tabId]
+        val topUrl = (topWv?.url?.takeIf { it.isNotBlank() } ?: tab.url)
+            .ifBlank { BrowserTab.DEFAULT_HOME_URL }
+        val bottomUrl = (urlFromBottomOverride?.takeIf { it.isNotBlank() }
+            ?: currentPres.currentUrl().takeIf { it.isNotBlank() }
+            ?: latestSecondaryUrl)
+            .ifBlank { BrowserTab.DEFAULT_HOME_URL }
+
+        addressText = bottomUrl
+        tabs = latestTabs.map { if (it.id == tabId) it.copy(url = bottomUrl) else it }
+        topWv?.loadUrl(bottomUrl)
+
+        secondaryUrl = topUrl
+        currentPres.loadUrl(topUrl)
+        Toast.makeText(context, context.getString(R.string.toast_swapped_screens), Toast.LENGTH_SHORT).show()
+    }
+
     LaunchedEffect(externalUrl) {
         if (!externalUrl.isNullOrBlank()) {
             val newTab = BrowserTab(url = externalUrl)
@@ -373,28 +401,26 @@ private fun DualScreenBrowserApp(
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
-                    webViews[activeTabId]?.loadUrl(urlFromBottom)
+                    val tabId = latestActiveTabId
                     addressText = urlFromBottom
+                    tabs = latestTabs.map { if (it.id == tabId) it.copy(url = urlFromBottom) else it }
+                    webViews[tabId]?.loadUrl(urlFromBottom)
                     Toast.makeText(context, context.getString(R.string.toast_sent_to_top), Toast.LENGTH_SHORT).show()
                 },
                 onSwapScreens = { urlFromBottom ->
-                    val topUrl = activeTab.url
-                    webViews[activeTabId]?.loadUrl(urlFromBottom)
-                    addressText = urlFromBottom
-                    secondaryUrl = topUrl
-                    presentation?.loadUrl(topUrl)
-                    Toast.makeText(context, context.getString(R.string.toast_swapped_screens), Toast.LENGTH_SHORT).show()
+                    performSwapScreens(urlFromBottom)
                 },
-                isBookmarkedProvider = { url -> bookmarks.any { it.url == url } },
+                isBookmarkedProvider = { url -> latestBookmarks.any { it.url == url } },
                 onToggleBookmark = { url, title ->
-                    val exists = bookmarks.any { it.url == url }
+                    val currentBookmarks = latestBookmarks
+                    val exists = currentBookmarks.any { it.url == url }
                     if (exists) {
-                        bookmarks = bookmarks.filterNot { it.url == url }
+                        bookmarks = currentBookmarks.filterNot { it.url == url }
                         prefs.saveBookmarks(bookmarks)
                         Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
                     } else {
                         val entry = BookmarkItem(title = title.ifBlank { url }, url = url)
-                        bookmarks = listOf(entry) + bookmarks
+                        bookmarks = listOf(entry) + currentBookmarks
                         prefs.saveBookmarks(bookmarks)
                         Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
                     }
@@ -650,12 +676,7 @@ private fun DualScreenBrowserApp(
 
             override fun swapScreens() {
                 if (!dualScreenActive || presentation == null) return
-                val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
-                val topUrl = activeTab.url
-                navigateActiveTab(bottomUrl)
-                secondaryUrl = topUrl
-                presentation?.loadUrl(topUrl)
-                Toast.makeText(context, context.getString(R.string.toast_swapped_screens), Toast.LENGTH_SHORT).show()
+                performSwapScreens()
             }
 
             override fun toggleTargetScreen() {
@@ -1117,16 +1138,7 @@ private fun DualScreenBrowserApp(
                                 leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                                 onClick = {
                                     dismissMenu()
-                                    val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
-                                    val topUrl = activeTab.url
-                                    navigateActiveTab(bottomUrl)
-                                    secondaryUrl = topUrl
-                                    presentation?.loadUrl(topUrl)
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.toast_swapped_screens),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    performSwapScreens()
                                 }
                             )
                         }
