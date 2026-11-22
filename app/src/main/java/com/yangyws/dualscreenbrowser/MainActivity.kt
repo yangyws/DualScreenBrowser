@@ -151,6 +151,7 @@ import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
+import com.yangyws.dualscreenbrowser.ui.OverflowMenuButton
 import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
@@ -176,7 +177,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WebView.enableSlowWholeDocumentDraw()
         launchUrlState = intent?.dataString
         setContent {
             val prefs = remember { BrowserPrefs(this) }
@@ -299,7 +299,6 @@ private fun DualScreenBrowserApp(
     var findQuery by remember { mutableStateOf("") }
     var findMatchActive by remember { mutableIntStateOf(0) }
     var findMatchTotal by remember { mutableIntStateOf(0) }
-    var overflowMenuExpanded by remember { mutableStateOf(false) }
     var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
@@ -873,25 +872,8 @@ private fun DualScreenBrowserApp(
                 }
             }
 
-            // Overflow menu with all secondary tools (Bookmarks, History, Find, Desktop, Dual-Screen, Settings)
-            Box {
-                TactileIconButton(
-                    onClick = { overflowMenuExpanded = true },
-                    active = overflowMenuExpanded
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.action_settings),
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = overflowMenuExpanded,
-                    onDismissRequest = { overflowMenuExpanded = false },
-                    containerColor = Color(0xFF1E222B)
-                ) {
+            // Isolated overflow menu so opening ⋮ never recomposes the whole browser screen
+            OverflowMenuButton { dismissMenu ->
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -908,7 +890,7 @@ private fun DualScreenBrowserApp(
                             )
                         },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             if (isBookmarked) {
                                 bookmarks = bookmarks.filterNot { it.url == activeTab.url }
                                 prefs.saveBookmarks(bookmarks)
@@ -928,7 +910,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_bookmarks)) },
                         leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             activePanel = BrowserPanel.BOOKMARKS
                         }
                     )
@@ -936,7 +918,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_history)) },
                         leadingIcon = { Icon(Icons.Rounded.History, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             activePanel = BrowserPanel.HISTORY
                         }
                     )
@@ -944,7 +926,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_find_in_page)) },
                         leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             findBarVisible = !findBarVisible
                             if (!findBarVisible) {
                                 findQuery = ""
@@ -959,7 +941,7 @@ private fun DualScreenBrowserApp(
                             text = { Text(stringResource(R.string.action_screenshot)) },
                             leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
                             onClick = {
-                                overflowMenuExpanded = false
+                                dismissMenu()
                                 val bmp = spanEngine.captureStitchedBitmap()
                                 val saved = bmp?.let { b ->
                                     ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -973,7 +955,7 @@ private fun DualScreenBrowserApp(
                             text = { Text(stringResource(R.string.action_screenshot_top)) },
                             leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
                             onClick = {
-                                overflowMenuExpanded = false
+                                dismissMenu()
                                 val wv = webViews[activeTabId]
                                 val bmp = if (wv != null && wv.width > 0 && wv.height > 0) {
                                     android.graphics.Bitmap.createBitmap(
@@ -994,7 +976,7 @@ private fun DualScreenBrowserApp(
                                 text = { Text(stringResource(R.string.action_screenshot_bottom)) },
                                 leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
                                 onClick = {
-                                    overflowMenuExpanded = false
+                                    dismissMenu()
                                     val bmp = presentation?.captureViewportBitmap()
                                     val saved = bmp?.let { b ->
                                         ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1009,7 +991,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_long_screenshot)) },
                         leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             val bmp = if (spanMode && spanEngine.isRunning()) {
                                 spanEngine.captureFullPageBitmap()
                             } else {
@@ -1045,7 +1027,7 @@ private fun DualScreenBrowserApp(
                             }
                         },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             val nextDesktop = !activeTab.desktopMode
                             tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
                             webViews[activeTabId]?.let { wv ->
@@ -1113,7 +1095,7 @@ private fun DualScreenBrowserApp(
                                 text = { Text(stringResource(R.string.action_send_to_secondary)) },
                                 leadingIcon = { Icon(Icons.Rounded.OpenInBrowser, contentDescription = null) },
                                 onClick = {
-                                    overflowMenuExpanded = false
+                                    dismissMenu()
                                     secondaryUrl = activeTab.url
                                     presentation?.loadUrl(activeTab.url)
                                     Toast.makeText(
@@ -1127,7 +1109,7 @@ private fun DualScreenBrowserApp(
                                 text = { Text(stringResource(R.string.action_swap_screens)) },
                                 leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                                 onClick = {
-                                    overflowMenuExpanded = false
+                                    dismissMenu()
                                     val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
                                     val topUrl = activeTab.url
                                     navigateActiveTab(bottomUrl)
@@ -1149,7 +1131,7 @@ private fun DualScreenBrowserApp(
                                     }
                                 },
                                 onClick = {
-                                    overflowMenuExpanded = false
+                                    dismissMenu()
                                     showSecondaryBar = !showSecondaryBar
                                     prefs.showSecondaryBar = showSecondaryBar
                                     presentation?.updatePresentationMode(showSecondaryBar, false)
@@ -1162,7 +1144,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_reopen_top)) },
                         leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             if (spanMode && dualScreenActive) {
                                 spanRestartTrigger++
                             } else {
@@ -1176,7 +1158,7 @@ private fun DualScreenBrowserApp(
                             text = { Text(stringResource(R.string.action_reopen_bottom)) },
                             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
                             onClick = {
-                                overflowMenuExpanded = false
+                                dismissMenu()
                                 dualScreenActive = true
                                 presentationTrigger++
                             }
@@ -1187,7 +1169,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_gamepad_guide)) },
                         leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             activePanel = BrowserPanel.GAMEPAD_GUIDE
                         }
                     )
@@ -1195,7 +1177,7 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_tutorial)) },
                         leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             showTutorial = true
                         }
                     )
@@ -1203,12 +1185,11 @@ private fun DualScreenBrowserApp(
                         text = { Text(stringResource(R.string.action_settings)) },
                         leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                         onClick = {
-                            overflowMenuExpanded = false
+                            dismissMenu()
                             activePanel = BrowserPanel.SETTINGS
                         }
                     )
                 }
-            }
         }
 
         AnimatedVisibility(

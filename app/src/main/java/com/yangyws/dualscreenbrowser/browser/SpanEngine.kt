@@ -268,18 +268,28 @@ class SpanEngine {
         return out
     }
 
-    /** Captures the full scrollable document of the virtual WebView (capped to prevent OOM). */
+    /** Captures the full scrollable document by stepping through viewport tiles without slowing normal WebView rendering. */
     fun captureFullPageBitmap(maxHeightPx: Int = 12000): Bitmap? {
         val wv = virtualWebView ?: return null
-        if (wv.width <= 0) return null
+        if (wv.width <= 0 || wv.height <= 0) return null
         val density = wv.resources.displayMetrics.density.coerceAtLeast(1f)
-        val fullH = (wv.contentHeight * density).toInt().coerceIn(wv.height.coerceAtLeast(1), maxHeightPx)
+        val fullH = (wv.contentHeight * density).toInt().coerceIn(wv.height, maxHeightPx)
         val bmp = Bitmap.createBitmap(wv.width, fullH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val prevScrollX = wv.scrollX
         val prevScrollY = wv.scrollY
-        wv.scrollTo(0, 0)
-        wv.draw(canvas)
+        val step = wv.height
+        var y = 0
+        while (y < fullH) {
+            val targetY = y.coerceAtMost((fullH - step).coerceAtLeast(0))
+            wv.scrollTo(0, targetY)
+            canvas.save()
+            canvas.translate(0f, targetY.toFloat())
+            wv.draw(canvas)
+            canvas.restore()
+            if (targetY + step >= fullH) break
+            y += step
+        }
         wv.scrollTo(prevScrollX, prevScrollY)
         return bmp
     }
