@@ -53,9 +53,9 @@ class SpanViewportView(
         val bmp = currentBitmap ?: return
         if (bmp.isRecycled || engine.virtualWidth <= 0) return
 
-        val top = if (isBottomViewport) engine.topViewportHeight else 0
+        val top = if (isBottomViewport) engine.topViewportHeight + engine.hingeGapPx else 0
         val bottom = if (isBottomViewport) {
-            (engine.topViewportHeight + engine.bottomViewportHeight).coerceAtMost(bmp.height)
+            (engine.topViewportHeight + engine.hingeGapPx + engine.bottomViewportHeight).coerceAtMost(bmp.height)
         } else {
             engine.topViewportHeight.coerceAtMost(bmp.height)
         }

@@ -39,6 +39,8 @@ class SpanEngine {
         private set
     var topViewportHeight: Int = 0
         private set
+    var hingeGapPx: Int = 0
+        private set
     var bottomViewportHeight: Int = 0
         private set
     var totalHeight: Int = 0
@@ -69,6 +71,7 @@ class SpanEngine {
         widthPx: Int,
         topHeightPx: Int,
         bottomHeightPx: Int,
+        hingeGapPx: Int = 0,
         dpi: Int,
         initialUrl: String,
         jsEnabled: Boolean,
@@ -82,11 +85,13 @@ class SpanEngine {
 
         val safeW = widthPx.coerceAtLeast(320)
         val safeTopH = topHeightPx.coerceAtLeast(240)
+        val safeGap = hingeGapPx.coerceAtLeast(0)
         val safeBottomH = bottomHeightPx.coerceAtLeast(240)
-        val safeTotalH = safeTopH + safeBottomH
+        val safeTotalH = safeTopH + safeGap + safeBottomH
 
         virtualWidth = safeW
         topViewportHeight = safeTopH
+        this.hingeGapPx = safeGap
         bottomViewportHeight = safeBottomH
         totalHeight = safeTotalH
 
@@ -175,7 +180,7 @@ class SpanEngine {
         val wv = virtualWebView ?: return false
         if (viewWidth <= 0 || viewHeight <= 0 || virtualWidth <= 0) return false
 
-        val regionTop = if (isBottomViewport) topViewportHeight.toFloat() else 0f
+        val regionTop = if (isBottomViewport) (topViewportHeight + hingeGapPx).toFloat() else 0f
         val regionHeight = if (isBottomViewport) bottomViewportHeight.toFloat() else topViewportHeight.toFloat()
 
         val scaleX = virtualWidth.toFloat() / viewWidth.toFloat()

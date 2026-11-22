@@ -1,21 +1,38 @@
 package com.yangyws.dualscreenbrowser.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -136,5 +153,94 @@ fun EmptyStateView(
             color = Color.Gray,
             fontSize = 13.sp
         )
+    }
+}
+
+@Composable
+fun SidePanelSheet(
+    visible: Boolean,
+    title: String,
+    onDismiss: () -> Unit,
+    headerActions: @Composable RowScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(160, easing = StrongEaseOut)),
+            exit = fadeOut(tween(130, easing = StrongEaseOut))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.52f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss
+                    )
+            )
+        }
+
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInHorizontally(tween(200, easing = StrongEaseOut)) { it } +
+                fadeIn(tween(160, easing = StrongEaseOut)),
+            exit = slideOutHorizontally(tween(160, easing = StrongEaseOut)) { it } +
+                fadeOut(tween(120, easing = StrongEaseOut)),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            Surface(
+                color = Color(0xFF171A21),
+                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.09f)),
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.58f)
+                    .widthIn(min = 300.dp, max = 460.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = title,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            headerActions()
+                            TactileIconButton(onClick = onDismiss, size = 32.dp) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    Spacer(Modifier.height(10.dp))
+                    content()
+                }
+            }
+        }
     }
 }

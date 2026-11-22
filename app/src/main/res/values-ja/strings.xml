@@ -19,6 +19,8 @@
     <string name="action_desktop_mode">PC版サイト</string>
     <string name="action_incognito">シークレット</string>
     <string name="action_clear_history">履歴を消去</string>
+    <string name="action_undo">元に戻す</string>
+    <string name="history_cleared_prompt">履歴を消去しました</string>
     <string name="action_dual_screen_on">デュアル画面：オン</string>
     <string name="action_dual_screen_off">デュアル画面：オフ</string>
     <string name="action_swap_screens">上下画面を入れ替え</string>
@@ -47,6 +49,8 @@
     <string name="settings_search_engine_desc">アドレスバーでの検索に使用する既定の検索エンジン</string>
     <string name="settings_auto_dual_screen">下画面を自動で開く</string>
     <string name="settings_auto_dual_screen_desc">サブディスプレイ検出時に自動で下画面ブラウザを表示</string>
+    <string name="settings_hinge_gap">ヒンジ隙間補正</string>
+    <string name="settings_hinge_gap_desc">上下画面間のベゼル補正幅（%1$d dp）</string>
     <string name="settings_javascript">JavaScript を有効にする</string>
     <string name="settings_javascript_desc">Webサイトでの JavaScript 実行を許可</string>
     <string name="settings_adblock">広告・トラッカーブロック</string>

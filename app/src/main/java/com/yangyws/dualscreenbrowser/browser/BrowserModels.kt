@@ -3,6 +3,7 @@ package com.yangyws.dualscreenbrowser.browser
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URI
 import java.net.URLEncoder
 import java.util.UUID
 
@@ -69,6 +70,14 @@ object UrlResolver {
             searchEngine.buildQueryUrl(trimmed)
         }
     }
+
+    fun isHttps(url: String): Boolean = url.startsWith("https://", ignoreCase = true)
+
+    fun displayHost(url: String): String {
+        if (url.isBlank()) return ""
+        val host = runCatching { URI(url).host }.getOrNull()
+        return if (!host.isNullOrBlank()) host.removePrefix("www.") else url
+    }
 }
 
 class BrowserPrefs(context: Context) {
@@ -109,6 +118,10 @@ class BrowserPrefs(context: Context) {
             SpanSource.TOP
         }
         set(value) = prefs.edit().putString("span_source", value.name).apply()
+
+    var hingeGapDp: Int
+        get() = prefs.getInt("hinge_gap_dp", 12).coerceIn(0, 48)
+        set(value) = prefs.edit().putInt("hinge_gap_dp", value.coerceIn(0, 48)).apply()
 
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))

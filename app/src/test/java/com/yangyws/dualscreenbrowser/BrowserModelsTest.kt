@@ -41,4 +41,12 @@ class BrowserModelsTest {
         assertTrue(UserScriptManager.matchesUrl("github.com", "https://github.com/yangyws"))
         assertFalse(UserScriptManager.matchesUrl("youtube.com", "https://github.com/yangyws"))
     }
+
+    @Test
+    fun `UrlResolver extracts displayHost and detects HTTPS`() {
+        assertEquals("github.com", UrlResolver.displayHost("https://www.github.com/yangyws?tab=1"))
+        assertEquals("example.org", UrlResolver.displayHost("http://example.org/path"))
+        assertTrue(UrlResolver.isHttps("https://www.google.com"))
+        assertFalse(UrlResolver.isHttps("http://localhost:8080"))
+    }
 }

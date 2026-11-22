@@ -46,6 +46,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,6 +71,7 @@ import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
@@ -89,6 +93,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -107,6 +112,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -141,6 +148,7 @@ import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
+import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
 import com.yangyws.dualscreenbrowser.ui.StrongEaseOut
@@ -250,7 +258,10 @@ private fun DualScreenBrowserApp(
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(true) }
     var spanSource by remember { mutableStateOf(prefs.spanSource) }
+    var hingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
+    var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
+    val addressFocusRequester = remember { FocusRequester() }
     val spanEngine = remember { SpanEngine() }
     var topViewportSize by remember { mutableStateOf(IntSize.Zero) }
     var isEditingText by remember { mutableStateOf(false) }
@@ -368,8 +379,14 @@ private fun DualScreenBrowserApp(
 
     val viewportReady = topViewportSize.width > 0 && topViewportSize.height > 0
 
+    LaunchedEffect(isEditingText) {
+        if (isEditingText) {
+            runCatching { addressFocusRequester.requestFocus() }
+        }
+    }
+
     // Start/stop VirtualDisplay SpanEngine when Span Mode toggles
-    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady) {
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp) {
         val secDisplay = secondaryDisplay
         if (spanMode && dualScreenActive && secDisplay != null && viewportReady) {
             val topW = topViewportSize.width
@@ -377,13 +394,16 @@ private fun DualScreenBrowserApp(
             val secMetrics = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             secDisplay.getRealMetrics(secMetrics)
-            val secAspect = if (secMetrics.widthPixels > 0) {
-                secMetrics.heightPixels.toFloat() / secMetrics.widthPixels.toFloat()
+            val secAspect = if (secMetrics.widthPixels > 0 && secMetrics.heightPixels > 0) {
+                val minDim = minOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
+                val maxDim = maxOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
+                if (topW >= topH) minDim / maxDim else maxDim / minDim
             } else {
-                1f
+                7f / 8f
             }
             val bottomH = (topW * secAspect).toInt().coerceAtLeast(240)
             val dpi = context.resources.displayMetrics.densityDpi
+            val gapPx = (hingeGapDp * context.resources.displayMetrics.density).toInt()
 
             val spanInitialUrl = if (spanSource == SpanSource.BOTTOM) {
                 presentation?.currentUrl()?.takeIf { it.isNotBlank() } ?: secondaryUrl
@@ -396,6 +416,7 @@ private fun DualScreenBrowserApp(
                 widthPx = topW,
                 topHeightPx = topH,
                 bottomHeightPx = bottomH,
+                hingeGapPx = gapPx,
                 dpi = dpi,
                 initialUrl = spanInitialUrl,
                 jsEnabled = jsEnabled,
@@ -693,7 +714,10 @@ private fun DualScreenBrowserApp(
                     .padding(horizontal = 10.dp, vertical = 7.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     if (activeTab.isIncognito) {
                         Icon(
                             Icons.Rounded.VisibilityOff,
@@ -702,44 +726,70 @@ private fun DualScreenBrowserApp(
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(Modifier.width(6.dp))
-                    }
-                    BasicTextField(
-                        value = addressText,
-                        onValueChange = { addressText = it },
-                        singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 13.5.sp),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Uri,
-                            imeAction = ImeAction.Go
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onGo = { navigateActiveTab(addressText) }
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { isEditingText = it.isFocused },
-                        decorationBox = { inner ->
-                            if (addressText.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.url_placeholder),
-                                    color = Color(0xFF8A92A6),
-                                    fontSize = 13.5.sp
-                                )
-                            }
-                            inner()
-                        }
-                    )
-                    if (isEditingText && addressText.isNotEmpty()) {
-                        Spacer(Modifier.width(4.dp))
+                    } else if (!isEditingText && UrlResolver.isHttps(addressText)) {
                         Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.action_close),
-                            tint = Color(0xFF8A92A6),
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clickable { addressText = "" }
+                            Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(13.dp)
                         )
+                        Spacer(Modifier.width(5.dp))
+                    }
+
+                    if (!isEditingText && addressText.isNotBlank()) {
+                        Text(
+                            text = UrlResolver.displayHost(addressText),
+                            color = Color.White,
+                            fontSize = 13.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    isEditingText = true
+                                    addressFocusRequester.requestFocus()
+                                }
+                        )
+                    } else {
+                        BasicTextField(
+                            value = addressText,
+                            onValueChange = { addressText = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 13.5.sp),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onGo = { navigateActiveTab(addressText) }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(addressFocusRequester)
+                                .onFocusChanged { isEditingText = it.isFocused },
+                            decorationBox = { inner ->
+                                if (addressText.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.url_placeholder),
+                                        color = Color(0xFF8A92A6),
+                                        fontSize = 13.5.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                        if (isEditingText && addressText.isNotEmpty()) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = Color(0xFF8A92A6),
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clickable { addressText = "" }
+                            )
+                        }
                     }
                 }
             }
@@ -782,7 +832,8 @@ private fun DualScreenBrowserApp(
 
                 DropdownMenu(
                     expanded = overflowMenuExpanded,
-                    onDismissRequest = { overflowMenuExpanded = false }
+                    onDismissRequest = { overflowMenuExpanded = false },
+                    containerColor = Color(0xFF1E222B)
                 ) {
                     DropdownMenuItem(
                         text = {
@@ -1166,517 +1217,538 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    // Modal Panels
-    when (activePanel) {
-        BrowserPanel.NONE -> Unit
+    // Docked Right Side Panel Sheet
+    val panelTitle = when (activePanel) {
+        BrowserPanel.NONE -> ""
+        BrowserPanel.TABS -> stringResource(R.string.action_tabs)
+        BrowserPanel.BOOKMARKS -> stringResource(R.string.action_bookmarks)
+        BrowserPanel.HISTORY -> stringResource(R.string.action_history)
+        BrowserPanel.USERSCRIPTS -> stringResource(R.string.userscripts_title)
+        BrowserPanel.GAMEPAD_GUIDE -> stringResource(R.string.gamepad_guide_title)
+        BrowserPanel.SETTINGS -> stringResource(R.string.settings_title)
+    }
 
-        BrowserPanel.TABS -> {
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.action_tabs)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { openTab(incognito = false) }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.action_new_tab))
-                            }
-                            OutlinedButton(onClick = { openTab(incognito = true) }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.VisibilityOff, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.action_incognito))
-                            }
-                        }
-                        LazyColumn(modifier = Modifier.height(260.dp)) {
-                            items(tabs, key = { it.id }) { tab ->
-                                val isCurrent = tab.id == activeTab.id
-                                Surface(
-                                    color = if (isCurrent) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            activeTabId = tab.id
-                                            addressText = tab.url
-                                            activePanel = BrowserPanel.NONE
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = tab.title.ifBlank { stringResource(R.string.untitled_page) },
-                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = tab.url,
-                                                fontSize = 11.sp,
-                                                color = Color.Gray,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        IconButton(onClick = { closeTab(tab.id) }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close))
-                                        }
-                                    }
-                                }
-                            }
-                        }
+    SidePanelSheet(
+        visible = activePanel != BrowserPanel.NONE,
+        title = panelTitle,
+        onDismiss = { activePanel = BrowserPanel.NONE },
+        headerActions = {
+            if (activePanel == BrowserPanel.HISTORY && history.isNotEmpty()) {
+                TextButton(onClick = {
+                    clearedHistoryBackup = history
+                    history = emptyList()
+                    prefs.saveHistory(emptyList())
+                }) {
+                    Text(stringResource(R.string.action_clear_history), fontSize = 12.sp)
+                }
+            }
+        }
+    ) {
+        when (activePanel) {
+            BrowserPanel.NONE -> Unit
+
+            BrowserPanel.TABS -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { openTab(incognito = false) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_new_tab), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
-                        Text(stringResource(R.string.action_close))
+                    OutlinedButton(onClick = { openTab(incognito = true) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Rounded.VisibilityOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_incognito), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-            )
-        }
+                Spacer(Modifier.height(10.dp))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    gridItems(tabs, key = { it.id }) { tab ->
+                        val isCurrent = tab.id == activeTab.id
+                        Surface(
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.08f)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    activeTabId = tab.id
+                                    addressText = tab.url
+                                    activePanel = BrowserPanel.NONE
+                                }
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (tab.isIncognito) {
+                                        StatusChip(
+                                            label = stringResource(R.string.action_incognito),
+                                            accentColor = Color(0xFFCE93D8)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = UrlResolver.displayHost(tab.url).ifBlank { "New" },
+                                            fontSize = 11.sp,
+                                            color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.LightGray,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    TactileIconButton(onClick = { closeTab(tab.id) }, size = 24.dp) {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = stringResource(R.string.action_close),
+                                            tint = Color.LightGray,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = tab.title.ifBlank { stringResource(R.string.untitled_page) },
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = tab.url,
+                                    fontSize = 11.sp,
+                                    color = Color.Gray,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
-        BrowserPanel.BOOKMARKS -> {
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.action_bookmarks)) },
-                text = {
-                    if (bookmarks.isEmpty()) {
-                        EmptyStateView(Icons.Rounded.BookmarkBorder, stringResource(R.string.no_bookmarks))
+            BrowserPanel.BOOKMARKS -> {
+                if (bookmarks.isEmpty()) {
+                    EmptyStateView(Icons.Rounded.BookmarkBorder, stringResource(R.string.no_bookmarks))
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(bookmarks, key = { it.url }) { item ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        navigateActiveTab(item.url)
+                                        activePanel = BrowserPanel.NONE
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(item.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                TactileIconButton(
+                                    onClick = {
+                                        bookmarks = bookmarks.filterNot { it.url == item.url }
+                                        prefs.saveBookmarks(bookmarks)
+                                    },
+                                    size = 32.dp
+                                ) {
+                                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_remove_bookmark), tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                        }
+                    }
+                }
+            }
+
+            BrowserPanel.HISTORY -> {
+                val backup = clearedHistoryBackup
+                if (history.isEmpty() && backup != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.history_cleared_prompt), color = Color.White, fontSize = 13.sp)
+                            TextButton(onClick = {
+                                history = backup
+                                prefs.saveHistory(backup)
+                                clearedHistoryBackup = null
+                            }) {
+                                Text(stringResource(R.string.action_undo), color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+                if (history.isEmpty()) {
+                    EmptyStateView(Icons.Rounded.History, stringResource(R.string.no_history))
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(history, key = { "${it.url}_${it.visitedAtMs}" }) { item ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        navigateActiveTab(item.url)
+                                        activePanel = BrowserPanel.NONE
+                                    }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(item.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                        }
+                    }
+                }
+            }
+
+            BrowserPanel.USERSCRIPTS -> {
+                var newName by remember { mutableStateOf("") }
+                var newPattern by remember { mutableStateOf("*") }
+                var newCode by remember { mutableStateOf("") }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text(stringResource(R.string.userscripts_name_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPattern,
+                        onValueChange = { newPattern = it },
+                        label = { Text(stringResource(R.string.userscripts_pattern_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newCode,
+                        onValueChange = { newCode = it },
+                        label = { Text(stringResource(R.string.userscripts_code_hint)) },
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        onClick = {
+                            if (newName.isNotBlank() && newCode.isNotBlank()) {
+                                val added = UserScript(
+                                    name = newName.trim(),
+                                    matchPattern = newPattern.trim().ifEmpty { "*" },
+                                    code = newCode
+                                )
+                                userScripts = listOf(added) + userScripts
+                                prefs.saveUserScripts(userScripts)
+                                newName = ""
+                                newPattern = "*"
+                                newCode = ""
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.userscripts_add))
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    if (userScripts.isEmpty()) {
+                        EmptyStateView(Icons.Rounded.Code, stringResource(R.string.userscripts_empty))
                     } else {
-                        LazyColumn(modifier = Modifier.height(280.dp)) {
-                            items(bookmarks, key = { it.url }) { item ->
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(userScripts, key = { it.id }) { script ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            navigateActiveTab(item.url)
-                                            activePanel = BrowserPanel.NONE
-                                        }
-                                        .padding(vertical = 8.dp),
+                                        .padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(script.name, color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(script.matchPattern, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
-                                    IconButton(onClick = {
-                                        bookmarks = bookmarks.filterNot { it.url == item.url }
-                                        prefs.saveBookmarks(bookmarks)
-                                    }) {
-                                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_remove_bookmark))
-                                    }
-                                }
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
-                        Text(stringResource(R.string.action_close))
-                    }
-                }
-            )
-        }
-
-        BrowserPanel.HISTORY -> {
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.action_history)) },
-                text = {
-                    if (history.isEmpty()) {
-                        EmptyStateView(Icons.Rounded.History, stringResource(R.string.no_history))
-                    } else {
-                        LazyColumn(modifier = Modifier.height(280.dp)) {
-                            items(history, key = { "${it.url}_${it.visitedAtMs}" }) { item ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navigateActiveTab(item.url)
-                                            activePanel = BrowserPanel.NONE
-                                        }
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (history.isNotEmpty()) {
-                        TextButton(onClick = {
-                            history = emptyList()
-                            prefs.saveHistory(emptyList())
-                        }) {
-                            Text(stringResource(R.string.action_clear_history))
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
-                        Text(stringResource(R.string.action_close))
-                    }
-                }
-            )
-        }
-
-        BrowserPanel.USERSCRIPTS -> {
-            var newName by remember { mutableStateOf("") }
-            var newPattern by remember { mutableStateOf("*") }
-            var newCode by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.userscripts_title)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = newName,
-                            onValueChange = { newName = it },
-                            label = { Text(stringResource(R.string.userscripts_name_hint)) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = newPattern,
-                            onValueChange = { newPattern = it },
-                            label = { Text(stringResource(R.string.userscripts_pattern_hint)) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = newCode,
-                            onValueChange = { newCode = it },
-                            label = { Text(stringResource(R.string.userscripts_code_hint)) },
-                            maxLines = 3,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Button(
-                            onClick = {
-                                if (newName.isNotBlank() && newCode.isNotBlank()) {
-                                    val added = UserScript(
-                                        name = newName.trim(),
-                                        matchPattern = newPattern.trim().ifEmpty { "*" },
-                                        code = newCode
-                                    )
-                                    userScripts = listOf(added) + userScripts
-                                    prefs.saveUserScripts(userScripts)
-                                    newName = ""
-                                    newPattern = "*"
-                                    newCode = ""
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.userscripts_add))
-                        }
-                        HorizontalDivider()
-                        if (userScripts.isEmpty()) {
-                            EmptyStateView(Icons.Rounded.Code, stringResource(R.string.userscripts_empty))
-                        } else {
-                            LazyColumn(modifier = Modifier.height(140.dp)) {
-                                items(userScripts, key = { it.id }) { script ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(script.name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text(script.matchPattern, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-                                        Switch(
-                                            checked = script.enabled,
-                                            onCheckedChange = { enabled ->
-                                                userScripts = userScripts.map {
-                                                    if (it.id == script.id) it.copy(enabled = enabled) else it
-                                                }
-                                                prefs.saveUserScripts(userScripts)
+                                    Switch(
+                                        checked = script.enabled,
+                                        onCheckedChange = { enabled ->
+                                            userScripts = userScripts.map {
+                                                if (it.id == script.id) it.copy(enabled = enabled) else it
                                             }
-                                        )
-                                        IconButton(onClick = {
+                                            prefs.saveUserScripts(userScripts)
+                                        }
+                                    )
+                                    TactileIconButton(
+                                        onClick = {
                                             userScripts = userScripts.filterNot { it.id == script.id }
                                             prefs.saveUserScripts(userScripts)
-                                        }) {
-                                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_close))
-                                        }
+                                        },
+                                        size = 32.dp
+                                    ) {
+                                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_close), tint = Color.LightGray, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
-                        Text(stringResource(R.string.action_close))
-                    }
                 }
-            )
-        }
+            }
 
-        BrowserPanel.GAMEPAD_GUIDE -> {
-            val mappings = listOf(
-                R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
-                R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
-                R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
-                R.string.gamepad_key_x to R.string.gamepad_desc_x,
-                R.string.gamepad_key_y to R.string.gamepad_desc_y,
-                R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                R.string.gamepad_key_start to R.string.gamepad_desc_start,
-                R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
-            )
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.gamepad_guide_title)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        mappings.forEach { (keyRes, descRes) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                StatusChip(
-                                    label = stringResource(keyRes),
-                                    accentColor = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = stringResource(descRes),
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+            BrowserPanel.GAMEPAD_GUIDE -> {
+                val mappings = listOf(
+                    R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+                    R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+                    R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+                    R.string.gamepad_key_x to R.string.gamepad_desc_x,
+                    R.string.gamepad_key_y to R.string.gamepad_desc_y,
+                    R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                    R.string.gamepad_key_start to R.string.gamepad_desc_start,
+                    R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    mappings.forEach { (keyRes, descRes) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            StatusChip(
+                                label = stringResource(keyRes),
+                                accentColor = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = stringResource(descRes),
+                                fontSize = 13.sp,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
-                        Text(stringResource(R.string.action_close))
-                    }
                 }
-            )
-        }
+            }
 
-        BrowserPanel.SETTINGS -> {
-            val currentLang = remember(context) { LocaleHelper.currentLanguage(context) }
-            val langs = AppLanguage.entries
-            val engines = SearchEngine.entries
-            AlertDialog(
-                onDismissRequest = { activePanel = BrowserPanel.NONE },
-                title = { Text(stringResource(R.string.settings_title)) },
-                text = {
-                    Column(
+            BrowserPanel.SETTINGS -> {
+                val currentLang = remember(context) { LocaleHelper.currentLanguage(context) }
+                val langs = AppLanguage.entries
+                val engines = SearchEngine.entries
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
                         modifier = Modifier
-                            .height(380.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            .fillMaxWidth()
+                            .clickable {
+                                val next = langs[(langs.indexOf(currentLang) + 1) % langs.size]
+                                LocaleHelper.applyLanguage(context, next)
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Language switcher
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val next = langs[(langs.indexOf(currentLang) + 1) % langs.size]
-                                    LocaleHelper.applyLanguage(context, next)
-                                },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_language_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.primary)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_language_desc), fontSize = 12.sp, color = Color.Gray)
                         }
-                        HorizontalDivider()
+                        Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.primary)
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                        // Search engine
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val next = engines[(engines.indexOf(searchEngine) + 1) % engines.size]
-                                    searchEngine = next
-                                    prefs.searchEngine = next
-                                },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_search_engine), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_search_engine_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Text(searchEngine.label, color = MaterialTheme.colorScheme.primary)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val next = engines[(engines.indexOf(searchEngine) + 1) % engines.size]
+                                searchEngine = next
+                                prefs.searchEngine = next
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_search_engine), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_search_engine_desc), fontSize = 12.sp, color = Color.Gray)
                         }
-                        HorizontalDivider()
+                        Text(searchEngine.label, color = MaterialTheme.colorScheme.primary)
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                        // Auto dual screen
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_auto_dual_screen), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_auto_dual_screen_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Switch(
-                                checked = autoDualScreen,
-                                onCheckedChange = {
-                                    autoDualScreen = it
-                                    prefs.autoDualScreen = it
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // JavaScript
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_javascript), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_javascript_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Switch(
-                                checked = jsEnabled,
-                                onCheckedChange = {
-                                    jsEnabled = it
-                                    prefs.jsEnabled = it
-                                    presentation?.updateJsEnabled(it)
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // AdBlock
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_adblock), fontWeight = FontWeight.Medium)
-                                Text(
-                                    stringResource(R.string.settings_adblock_desc, adBlockedCount),
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                            Switch(
-                                checked = adBlockEnabled,
-                                onCheckedChange = {
-                                    adBlockEnabled = it
-                                    prefs.adBlockEnabled = it
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // Gamepad controls
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_gamepad), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_gamepad_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Switch(
-                                checked = gamepadEnabled,
-                                onCheckedChange = {
-                                    gamepadEnabled = it
-                                    prefs.gamepadEnabled = it
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // Force Dark Web Mode
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_force_dark_web), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_force_dark_web_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Switch(
-                                checked = forceDarkWeb,
-                                onCheckedChange = {
-                                    forceDarkWeb = it
-                                    prefs.forceDarkWeb = it
-                                    webViews[activeTabId]?.reload()
-                                    presentation?.reloadPage()
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // Enable Copy & Text Selection
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_enable_copy), fontWeight = FontWeight.Medium)
-                                Text(stringResource(R.string.settings_enable_copy_desc), fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Switch(
-                                checked = enableCopyScript,
-                                onCheckedChange = {
-                                    enableCopyScript = it
-                                    prefs.enableCopyScript = it
-                                }
-                            )
-                        }
-                        HorizontalDivider()
-
-                        // Custom UserScripts manager
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { activePanel = BrowserPanel.USERSCRIPTS }
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Code, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium)
-                            }
-                            Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary)
-                        }
-                        HorizontalDivider()
-
+                    // Hinge gap compensation slider
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.settings_hinge_gap), fontWeight = FontWeight.Medium, color = Color.White)
                         Text(
-                            text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                            stringResource(R.string.settings_hinge_gap_desc, hingeGapDp),
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = Color.Gray,
+                            style = TextStyle(fontFeatureSettings = "tnum")
+                        )
+                        Slider(
+                            value = hingeGapDp.toFloat(),
+                            onValueChange = {
+                                val rounded = it.toInt()
+                                hingeGapDp = rounded
+                                prefs.hingeGapDp = rounded
+                            },
+                            valueRange = 0f..48f
                         )
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
-                        Text(stringResource(R.string.action_close))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_javascript), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_javascript_desc), fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = jsEnabled,
+                            onCheckedChange = {
+                                jsEnabled = it
+                                prefs.jsEnabled = it
+                                presentation?.updateJsEnabled(it)
+                            }
+                        )
                     }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_adblock), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(
+                                stringResource(R.string.settings_adblock_desc, adBlockedCount),
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                style = TextStyle(fontFeatureSettings = "tnum")
+                            )
+                        }
+                        Switch(
+                            checked = adBlockEnabled,
+                            onCheckedChange = {
+                                adBlockEnabled = it
+                                prefs.adBlockEnabled = it
+                            }
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_gamepad), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_gamepad_desc), fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = gamepadEnabled,
+                            onCheckedChange = {
+                                gamepadEnabled = it
+                                prefs.gamepadEnabled = it
+                            }
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_force_dark_web), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_force_dark_web_desc), fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = forceDarkWeb,
+                            onCheckedChange = {
+                                forceDarkWeb = it
+                                prefs.forceDarkWeb = it
+                                if (spanMode && spanEngine.isRunning()) spanEngine.reload() else webViews[activeTabId]?.reload()
+                                presentation?.reloadPage()
+                            }
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_enable_copy), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_enable_copy_desc), fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = enableCopyScript,
+                            onCheckedChange = {
+                                enableCopyScript = it
+                                prefs.enableCopyScript = it
+                            }
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { activePanel = BrowserPanel.USERSCRIPTS }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Code, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium, color = Color.White)
+                        }
+                        Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary, style = TextStyle(fontFeatureSettings = "tnum"))
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Text(
+                        text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
-            )
+            }
         }
     }
 }

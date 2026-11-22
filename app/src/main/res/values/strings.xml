@@ -19,6 +19,8 @@
     <string name="action_desktop_mode">Desktop Site</string>
     <string name="action_incognito">Incognito</string>
     <string name="action_clear_history">Clear History</string>
+    <string name="action_undo">Undo</string>
+    <string name="history_cleared_prompt">History cleared</string>
     <string name="action_dual_screen_on">Dual Screen: ON</string>
     <string name="action_dual_screen_off">Dual Screen: OFF</string>
     <string name="action_swap_screens">Swap Screens</string>
@@ -47,6 +49,8 @@
     <string name="settings_search_engine_desc">Default search engine for address bar queries</string>
     <string name="settings_auto_dual_screen">Auto-Open Bottom Screen</string>
     <string name="settings_auto_dual_screen_desc">Automatically open the secondary browser when a second display is available</string>
+    <string name="settings_hinge_gap">Hinge Gap Compensation</string>
+    <string name="settings_hinge_gap_desc">Vertical bezel offset between screens (%1$d dp)</string>
     <string name="settings_javascript">Enable JavaScript</string>
     <string name="settings_javascript_desc">Allow websites to run JavaScript</string>
     <string name="settings_adblock">Ad &amp; Tracker Blocker</string>
