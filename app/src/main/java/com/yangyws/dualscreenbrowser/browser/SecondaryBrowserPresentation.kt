@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -28,6 +29,9 @@ class SecondaryBrowserPresentation(
     private val initialUrl: String,
     private val jsEnabled: Boolean,
     private val searchEngineProvider: () -> SearchEngine,
+    private val adBlockEnabledProvider: () -> Boolean,
+    private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
+    private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
     private val onUrlChanged: (String, String) -> Unit,
@@ -134,6 +138,19 @@ class SecondaryBrowserPresentation(
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val reqUrl = request?.url?.toString()
+                    if (adBlockEnabledProvider() && AdBlocker.shouldBlockUrl(reqUrl)) {
+                        AdBlocker.recordBlocked()
+                        onAdBlocked()
+                        return AdBlocker.emptyResponse()
+                    }
+                    return super.shouldInterceptRequest(view, request)
+                }
+
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val uri = request?.url ?: return false
                     return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
@@ -144,6 +161,8 @@ class SecondaryBrowserPresentation(
                     if (!url.isNullOrBlank()) {
                         currentUrl = url
                         urlInput?.setText(url)
+                        val (forceDark, enableCopy, customScripts) = userScriptsProvider()
+                        UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
                     }
                 }
@@ -185,6 +204,30 @@ class SecondaryBrowserPresentation(
 
     fun updateJsEnabled(enabled: Boolean) {
         webView?.settings?.javaScriptEnabled = enabled
+    }
+
+    fun scrollByY(dy: Int) {
+        webView?.scrollBy(0, dy)
+    }
+
+    fun syncSpanScrollY(targetY: Int) {
+        webView?.let { wv ->
+            wv.post {
+                wv.scrollTo(wv.scrollX, targetY.coerceAtLeast(0))
+            }
+        }
+    }
+
+    fun goBackIfPossible() {
+        webView?.let { if (it.canGoBack()) it.goBack() }
+    }
+
+    fun goForwardIfPossible() {
+        webView?.let { if (it.canGoForward()) it.goForward() }
+    }
+
+    fun reloadPage() {
+        webView?.reload()
     }
 
     fun toggleDesktopMode(): Boolean {

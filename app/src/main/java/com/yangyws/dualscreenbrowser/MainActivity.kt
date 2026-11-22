@@ -6,9 +6,12 @@ import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -32,10 +35,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -43,15 +48,20 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Tab
+import androidx.compose.material.icons.rounded.ViewStream
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -61,6 +71,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -71,6 +82,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +90,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -91,13 +104,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.yangyws.dualscreenbrowser.browser.AdBlocker
 import com.yangyws.dualscreenbrowser.browser.BookmarkItem
 import com.yangyws.dualscreenbrowser.browser.BrowserPrefs
 import com.yangyws.dualscreenbrowser.browser.BrowserTab
+import com.yangyws.dualscreenbrowser.browser.GamepadActions
+import com.yangyws.dualscreenbrowser.browser.GamepadController
+import com.yangyws.dualscreenbrowser.browser.GamepadTargetScreen
 import com.yangyws.dualscreenbrowser.browser.HistoryItem
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
 import com.yangyws.dualscreenbrowser.browser.UrlResolver
+import com.yangyws.dualscreenbrowser.browser.UserScript
+import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 
@@ -106,11 +125,15 @@ private enum class BrowserPanel {
     TABS,
     BOOKMARKS,
     HISTORY,
+    USERSCRIPTS,
     SETTINGS
 }
 
 class MainActivity : ComponentActivity() {
     private var launchUrlState by mutableStateOf<String?>(null)
+    private var gamepadActions: GamepadActions? = null
+    private var gamepadEnabledFlag: Boolean = true
+    private var isEditingTextFlag: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,7 +149,12 @@ class MainActivity : ComponentActivity() {
             ) {
                 DualScreenBrowserApp(
                     externalUrl = launchUrlState,
-                    onConsumeExternalUrl = { launchUrlState = null }
+                    onConsumeExternalUrl = { launchUrlState = null },
+                    onRegisterGamepad = { actions, enabled, editing ->
+                        gamepadActions = actions
+                        gamepadEnabledFlag = enabled
+                        isEditingTextFlag = editing
+                    }
                 )
             }
         }
@@ -137,13 +165,34 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         intent.dataString?.let { launchUrlState = it }
     }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val actions = gamepadActions
+        if (actions != null &&
+            GamepadController.handleKeyEvent(event, gamepadEnabledFlag, isEditingTextFlag, actions)
+        ) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        val actions = gamepadActions
+        if (actions != null &&
+            GamepadController.handleGenericMotionEvent(event, gamepadEnabledFlag, actions)
+        ) {
+            return true
+        }
+        return super.onGenericMotionEvent(event)
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun DualScreenBrowserApp(
     externalUrl: String?,
-    onConsumeExternalUrl: () -> Unit
+    onConsumeExternalUrl: () -> Unit,
+    onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -165,6 +214,19 @@ private fun DualScreenBrowserApp(
     var searchEngine by remember { mutableStateOf(prefs.searchEngine) }
     var autoDualScreen by remember { mutableStateOf(prefs.autoDualScreen) }
     var jsEnabled by remember { mutableStateOf(prefs.jsEnabled) }
+    var adBlockEnabled by remember { mutableStateOf(prefs.adBlockEnabled) }
+    var adBlockedCount by remember { mutableIntStateOf(AdBlocker.blockedCount()) }
+    var gamepadEnabled by remember { mutableStateOf(prefs.gamepadEnabled) }
+    var gamepadTarget by remember { mutableStateOf(GamepadTargetScreen.TOP) }
+    var forceDarkWeb by remember { mutableStateOf(prefs.forceDarkWeb) }
+    var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
+    var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
+    var spanMode by remember { mutableStateOf(false) }
+    var isEditingText by remember { mutableStateOf(false) }
+    var findBarVisible by remember { mutableStateOf(false) }
+    var findQuery by remember { mutableStateOf("") }
+    var findMatchActive by remember { mutableIntStateOf(0) }
+    var findMatchTotal by remember { mutableIntStateOf(0) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
@@ -226,6 +288,9 @@ private fun DualScreenBrowserApp(
                 initialUrl = secondaryUrl,
                 jsEnabled = jsEnabled,
                 searchEngineProvider = { searchEngine },
+                adBlockEnabledProvider = { adBlockEnabled },
+                userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
+                onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
                     webViews[activeTabId]?.loadUrl(urlFromBottom)
                     addressText = urlFromBottom
@@ -247,6 +312,7 @@ private fun DualScreenBrowserApp(
                 },
                 onRequestClose = {
                     dualScreenActive = false
+                    spanMode = false
                 }
             )
             pres.show()
@@ -313,6 +379,90 @@ private fun DualScreenBrowserApp(
                 addressText = next.url
             }
         }
+    }
+
+    val gamepadActions = remember(activeTabId, tabs, dualScreenActive, gamepadTarget) {
+        object : GamepadActions {
+            override fun scrollActive(dy: Int) {
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.scrollByY(dy)
+                } else {
+                    webViews[activeTabId]?.scrollBy(0, dy)
+                }
+            }
+
+            override fun goBackActive() {
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.goBackIfPossible()
+                } else {
+                    webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
+                }
+            }
+
+            override fun goForwardActive() {
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.goForwardIfPossible()
+                } else {
+                    webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() }
+                }
+            }
+
+            override fun previousTab() {
+                if (tabs.size <= 1) return
+                val idx = tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0)
+                val prev = tabs[(idx - 1 + tabs.size) % tabs.size]
+                activeTabId = prev.id
+                addressText = prev.url
+            }
+
+            override fun nextTab() {
+                if (tabs.size <= 1) return
+                val idx = tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0)
+                val next = tabs[(idx + 1) % tabs.size]
+                activeTabId = next.id
+                addressText = next.url
+            }
+
+            override fun refreshActive() {
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.reloadPage()
+                } else {
+                    webViews[activeTabId]?.reload()
+                }
+            }
+
+            override fun swapScreens() {
+                if (!dualScreenActive || presentation == null) return
+                val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
+                val topUrl = activeTab.url
+                navigateActiveTab(bottomUrl)
+                secondaryUrl = topUrl
+                presentation?.loadUrl(topUrl)
+                Toast.makeText(context, context.getString(R.string.toast_swapped_screens), Toast.LENGTH_SHORT).show()
+            }
+
+            override fun toggleTargetScreen() {
+                if (!dualScreenActive || presentation == null) {
+                    gamepadTarget = GamepadTargetScreen.TOP
+                    return
+                }
+                gamepadTarget = if (gamepadTarget == GamepadTargetScreen.TOP) {
+                    GamepadTargetScreen.BOTTOM
+                } else {
+                    GamepadTargetScreen.TOP
+                }
+                val msgRes = if (gamepadTarget == GamepadTargetScreen.TOP) {
+                    R.string.toast_gamepad_target_top
+                } else {
+                    R.string.toast_gamepad_target_bottom
+                }
+                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    LaunchedEffect(gamepadActions, gamepadEnabled, isEditingText, activePanel, findBarVisible) {
+        onRegisterGamepad(gamepadActions, gamepadEnabled, isEditingText || activePanel != BrowserPanel.NONE || findBarVisible)
     }
 
     Column(
@@ -391,7 +541,9 @@ private fun DualScreenBrowserApp(
                         keyboardActions = KeyboardActions(
                             onGo = { navigateActiveTab(addressText) }
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isEditingText = it.isFocused },
                         decorationBox = { inner ->
                             if (addressText.isEmpty()) {
                                 Text(
@@ -453,6 +605,100 @@ private fun DualScreenBrowserApp(
                     tint = if (activeTab.desktopMode) MaterialTheme.colorScheme.primary else Color.White
                 )
             }
+
+            IconButton(
+                onClick = {
+                    findBarVisible = !findBarVisible
+                    if (!findBarVisible) {
+                        findQuery = ""
+                        findMatchActive = 0
+                        findMatchTotal = 0
+                        webViews[activeTabId]?.clearMatches()
+                    }
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.action_find_in_page),
+                    tint = if (findBarVisible) MaterialTheme.colorScheme.primary else Color.White
+                )
+            }
+        }
+
+        if (findBarVisible) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = findQuery,
+                    onValueChange = { q ->
+                        findQuery = q
+                        val wv = webViews[activeTabId]
+                        if (wv != null) {
+                            if (q.isEmpty()) {
+                                wv.clearMatches()
+                                findMatchActive = 0
+                                findMatchTotal = 0
+                            } else {
+                                wv.setFindListener { activeOrdinal, numberOfMatches, _ ->
+                                    findMatchTotal = numberOfMatches
+                                    findMatchActive = if (numberOfMatches > 0) activeOrdinal + 1 else 0
+                                }
+                                wv.findAllAsync(q)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        if (findQuery.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.find_placeholder),
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        inner()
+                    }
+                )
+                Text(
+                    text = stringResource(R.string.find_matches, findMatchActive, findMatchTotal),
+                    fontSize = 12.sp,
+                    color = Color.LightGray,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                IconButton(
+                    onClick = { webViews[activeTabId]?.findNext(false) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null)
+                }
+                IconButton(
+                    onClick = { webViews[activeTabId]?.findNext(true) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null)
+                }
+                IconButton(
+                    onClick = {
+                        findBarVisible = false
+                        findQuery = ""
+                        findMatchActive = 0
+                        findMatchTotal = 0
+                        webViews[activeTabId]?.clearMatches()
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close))
+                }
+            }
         }
 
         if (loadProgress in 0.01f..0.99f) {
@@ -489,7 +735,25 @@ private fun DualScreenBrowserApp(
                     container.settings.javaScriptEnabled = jsEnabled
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
+                        container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
+                            if (spanMode && dualScreenActive) {
+                                presentation?.syncSpanScrollY(scrollY + v.height)
+                            }
+                        }
                         container.webViewClient = object : WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): WebResourceResponse? {
+                                val reqUrl = request?.url?.toString()
+                                if (adBlockEnabled && AdBlocker.shouldBlockUrl(reqUrl)) {
+                                    AdBlocker.recordBlocked()
+                                    adBlockedCount = AdBlocker.blockedCount()
+                                    return AdBlocker.emptyResponse()
+                                }
+                                return super.shouldInterceptRequest(view, request)
+                            }
+
                             override fun shouldOverrideUrlLoading(
                                 view: WebView?,
                                 request: WebResourceRequest?
@@ -507,6 +771,20 @@ private fun DualScreenBrowserApp(
                                     addressText = url
                                     tabs = tabs.map {
                                         if (it.id == activeTab.id) it.copy(url = url, title = pageTitle) else it
+                                    }
+                                    UserScriptManager.injectScripts(
+                                        view,
+                                        url,
+                                        forceDarkWeb,
+                                        enableCopyScript,
+                                        userScripts
+                                    )
+                                    if (spanMode && dualScreenActive) {
+                                        if (secondaryUrl != url) {
+                                            secondaryUrl = url
+                                            presentation?.loadUrl(url)
+                                        }
+                                        view?.let { v -> presentation?.syncSpanScrollY(v.scrollY + v.height) }
                                     }
                                     if (!activeTab.isIncognito) {
                                         val entry = HistoryItem(title = pageTitle.ifBlank { url }, url = url)
@@ -611,6 +889,24 @@ private fun DualScreenBrowserApp(
                     Icon(
                         imageVector = Icons.Rounded.SwapVert,
                         contentDescription = stringResource(R.string.action_swap_screens)
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        spanMode = !spanMode
+                        if (spanMode) {
+                            secondaryUrl = activeTab.url
+                            presentation?.loadUrl(activeTab.url)
+                            webViews[activeTabId]?.let { v -> presentation?.syncSpanScrollY(v.scrollY + v.height) }
+                        }
+                        val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ViewStream,
+                        contentDescription = stringResource(R.string.action_span_mode),
+                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White
                     )
                 }
             }
@@ -781,6 +1077,102 @@ private fun DualScreenBrowserApp(
             )
         }
 
+        BrowserPanel.USERSCRIPTS -> {
+            var newName by remember { mutableStateOf("") }
+            var newPattern by remember { mutableStateOf("*") }
+            var newCode by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { activePanel = BrowserPanel.NONE },
+                title = { Text(stringResource(R.string.userscripts_title)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            label = { Text(stringResource(R.string.userscripts_name_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = newPattern,
+                            onValueChange = { newPattern = it },
+                            label = { Text(stringResource(R.string.userscripts_pattern_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = newCode,
+                            onValueChange = { newCode = it },
+                            label = { Text(stringResource(R.string.userscripts_code_hint)) },
+                            maxLines = 3,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = {
+                                if (newName.isNotBlank() && newCode.isNotBlank()) {
+                                    val added = UserScript(
+                                        name = newName.trim(),
+                                        matchPattern = newPattern.trim().ifEmpty { "*" },
+                                        code = newCode
+                                    )
+                                    userScripts = listOf(added) + userScripts
+                                    prefs.saveUserScripts(userScripts)
+                                    newName = ""
+                                    newPattern = "*"
+                                    newCode = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.userscripts_add))
+                        }
+                        HorizontalDivider()
+                        if (userScripts.isEmpty()) {
+                            Text(stringResource(R.string.userscripts_empty), color = Color.Gray, fontSize = 12.sp)
+                        } else {
+                            LazyColumn(modifier = Modifier.height(140.dp)) {
+                                items(userScripts, key = { it.id }) { script ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(script.name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(script.matchPattern, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        Switch(
+                                            checked = script.enabled,
+                                            onCheckedChange = { enabled ->
+                                                userScripts = userScripts.map {
+                                                    if (it.id == script.id) it.copy(enabled = enabled) else it
+                                                }
+                                                prefs.saveUserScripts(userScripts)
+                                            }
+                                        )
+                                        IconButton(onClick = {
+                                            userScripts = userScripts.filterNot { it.id == script.id }
+                                            prefs.saveUserScripts(userScripts)
+                                        }) {
+                                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_close))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                }
+            )
+        }
+
         BrowserPanel.SETTINGS -> {
             val currentLang = remember(context) { LocaleHelper.currentLanguage(context) }
             val langs = AppLanguage.entries
@@ -789,7 +1181,12 @@ private fun DualScreenBrowserApp(
                 onDismissRequest = { activePanel = BrowserPanel.NONE },
                 title = { Text(stringResource(R.string.settings_title)) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .height(380.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         // Language switcher
                         Row(
                             modifier = Modifier
@@ -867,6 +1264,110 @@ private fun DualScreenBrowserApp(
                                     presentation?.updateJsEnabled(it)
                                 }
                             )
+                        }
+                        HorizontalDivider()
+
+                        // AdBlock
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_adblock), fontWeight = FontWeight.Medium)
+                                Text(
+                                    stringResource(R.string.settings_adblock_desc, adBlockedCount),
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                            Switch(
+                                checked = adBlockEnabled,
+                                onCheckedChange = {
+                                    adBlockEnabled = it
+                                    prefs.adBlockEnabled = it
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+
+                        // Gamepad controls
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_gamepad), fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.settings_gamepad_desc), fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Switch(
+                                checked = gamepadEnabled,
+                                onCheckedChange = {
+                                    gamepadEnabled = it
+                                    prefs.gamepadEnabled = it
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+
+                        // Force Dark Web Mode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_force_dark_web), fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.settings_force_dark_web_desc), fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Switch(
+                                checked = forceDarkWeb,
+                                onCheckedChange = {
+                                    forceDarkWeb = it
+                                    prefs.forceDarkWeb = it
+                                    webViews[activeTabId]?.reload()
+                                    presentation?.reloadPage()
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+
+                        // Enable Copy & Text Selection
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_enable_copy), fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.settings_enable_copy_desc), fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Switch(
+                                checked = enableCopyScript,
+                                onCheckedChange = {
+                                    enableCopyScript = it
+                                    prefs.enableCopyScript = it
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+
+                        // Custom UserScripts manager
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { activePanel = BrowserPanel.USERSCRIPTS }
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Code, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium)
+                            }
+                            Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary)
                         }
                         HorizontalDivider()
 

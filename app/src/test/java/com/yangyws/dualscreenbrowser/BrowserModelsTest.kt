@@ -1,8 +1,12 @@
 package com.yangyws.dualscreenbrowser
 
+import com.yangyws.dualscreenbrowser.browser.AdBlocker
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.UrlResolver
+import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserModelsTest {
@@ -20,5 +24,21 @@ class BrowserModelsTest {
             "https://www.google.com/search?q=ayn%20thor",
             UrlResolver.resolveInput("ayn thor", SearchEngine.GOOGLE)
         )
+    }
+
+    @Test
+    fun `AdBlocker matches ad domains and subdomains without blocking normal hosts`() {
+        assertTrue(AdBlocker.isAdHost("doubleclick.net"))
+        assertTrue(AdBlocker.isAdHost("ad.doubleclick.net"))
+        assertTrue(AdBlocker.isAdHost("pagead2.googlesyndication.com"))
+        assertFalse(AdBlocker.isAdHost("github.com"))
+        assertFalse(AdBlocker.isAdHost("developer.android.com"))
+    }
+
+    @Test
+    fun `UserScriptManager matches wildcard and substring URL patterns`() {
+        assertTrue(UserScriptManager.matchesUrl("*", "https://example.com"))
+        assertTrue(UserScriptManager.matchesUrl("github.com", "https://github.com/yangyws"))
+        assertFalse(UserScriptManager.matchesUrl("youtube.com", "https://github.com/yangyws"))
     }
 }

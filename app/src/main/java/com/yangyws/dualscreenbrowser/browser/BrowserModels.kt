@@ -1,6 +1,8 @@
 package com.yangyws.dualscreenbrowser.browser
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.UUID
 
@@ -75,6 +77,22 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getBoolean("js_enabled", true)
         set(value) = prefs.edit().putBoolean("js_enabled", value).apply()
 
+    var adBlockEnabled: Boolean
+        get() = prefs.getBoolean("ad_block_enabled", true)
+        set(value) = prefs.edit().putBoolean("ad_block_enabled", value).apply()
+
+    var gamepadEnabled: Boolean
+        get() = prefs.getBoolean("gamepad_enabled", true)
+        set(value) = prefs.edit().putBoolean("gamepad_enabled", value).apply()
+
+    var forceDarkWeb: Boolean
+        get() = prefs.getBoolean("force_dark_web", false)
+        set(value) = prefs.edit().putBoolean("force_dark_web", value).apply()
+
+    var enableCopyScript: Boolean
+        get() = prefs.getBoolean("enable_copy_script", true)
+        set(value) = prefs.edit().putBoolean("enable_copy_script", value).apply()
+
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
         set(value) = prefs.edit().putString("search_engine", value.id).apply()
@@ -121,5 +139,43 @@ class BrowserPrefs(context: Context) {
             "${item.title.replace("\t", " ").replace("\n", " ")}\t${item.url}\t${item.visitedAtMs}"
         }
         prefs.edit().putString("history_v1", serialized).apply()
+    }
+
+    fun loadUserScripts(): List<UserScript> {
+        val raw = prefs.getString("user_scripts_v1", "").orEmpty()
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            val arr = JSONArray(raw)
+            buildList {
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    add(
+                        UserScript(
+                            id = obj.optString("id", UUID.randomUUID().toString()),
+                            name = obj.optString("name", "Script"),
+                            matchPattern = obj.optString("matchPattern", "*"),
+                            code = obj.optString("code", ""),
+                            enabled = obj.optBoolean("enabled", true)
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveUserScripts(scripts: List<UserScript>) {
+        val arr = JSONArray()
+        scripts.forEach { s ->
+            arr.put(
+                JSONObject().apply {
+                    put("id", s.id)
+                    put("name", s.name)
+                    put("matchPattern", s.matchPattern)
+                    put("code", s.code)
+                    put("enabled", s.enabled)
+                }
+            )
+        }
+        prefs.edit().putString("user_scripts_v1", arr.toString()).apply()
     }
 }
