@@ -317,55 +317,18 @@ class SecondaryBrowserPresentation(
         val topDivider = View(context).apply {
             setBackgroundColor(Color.parseColor("#24FFFFFF"))
         }
-        val bodyRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val btnBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(10).toFloat()
-            setColor(Color.parseColor("#1FFFFFFF"))
-            setStroke(dp(1), Color.parseColor("#24FFFFFF"))
-        }
-        val btnScreenshot = ImageButton(context).apply {
-            setImageResource(R.drawable.ic_screenshot)
-            contentDescription = context.getString(R.string.action_screenshot)
-            background = btnBg
-            setColorFilter(Color.WHITE)
-            setPadding(dp(10), dp(10), dp(10), dp(10))
-            setOnClickListener { captureCurrentView() }
-        }
-        val vDivider = View(context).apply {
-            setBackgroundColor(Color.parseColor("#1AFFFFFF"))
-        }
-
         val padArea = FrameLayout(context)
         val hintLabel = TextView(context).apply {
             text = context.getString(R.string.touchpad_hint)
             setTextColor(Color.parseColor("#6E7687"))
             textSize = 11f
             gravity = Gravity.CENTER
-            setPadding(dp(10), 0, dp(10), 0)
+            setPadding(dp(12), 0, dp(12), 0)
         }
         padArea.addView(hintLabel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        bodyRow.addView(
-            btnScreenshot,
-            LinearLayout.LayoutParams(dp(44), dp(44)).apply {
-                setMargins(dp(10), 0, dp(8), 0)
-            }
-        )
-        bodyRow.addView(
-            vDivider,
-            LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply {
-                setMargins(0, dp(14), 0, dp(14))
-            }
-        )
-        bodyRow.addView(padArea, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-
         container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
-        container.addView(bodyRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        container.addView(padArea, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         padArea.setOnTouchListener { _, event ->
             when (event.actionMasked) {

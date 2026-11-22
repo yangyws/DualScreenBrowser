@@ -62,6 +62,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
@@ -138,6 +139,7 @@ import com.yangyws.dualscreenbrowser.browser.GamepadActions
 import com.yangyws.dualscreenbrowser.browser.GamepadController
 import com.yangyws.dualscreenbrowser.browser.GamepadTargetScreen
 import com.yangyws.dualscreenbrowser.browser.HistoryItem
+import com.yangyws.dualscreenbrowser.browser.ScreenCaptureHelper
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
 import com.yangyws.dualscreenbrowser.browser.SpanEngine
@@ -174,6 +176,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WebView.enableSlowWholeDocumentDraw()
         launchUrlState = intent?.dataString
         setContent {
             val prefs = remember { BrowserPrefs(this) }
@@ -942,6 +945,61 @@ private fun DualScreenBrowserApp(
                                 findMatchTotal = 0
                                 webViews[activeTabId]?.clearMatches()
                             }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_screenshot)) },
+                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            val bmp = if (spanMode && spanEngine.isRunning()) {
+                                spanEngine.captureStitchedBitmap()
+                            } else {
+                                val wv = webViews[activeTabId]
+                                if (wv != null && wv.width > 0 && wv.height > 0) {
+                                    android.graphics.Bitmap.createBitmap(
+                                        wv.width,
+                                        wv.height,
+                                        android.graphics.Bitmap.Config.ARGB_8888
+                                    ).also { b -> wv.draw(android.graphics.Canvas(b)) }
+                                } else null
+                            }
+                            val saved = bmp?.let { b ->
+                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                            } ?: false
+                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_long_screenshot)) },
+                        leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            val bmp = if (spanMode && spanEngine.isRunning()) {
+                                spanEngine.captureFullPageBitmap()
+                            } else {
+                                val wv = webViews[activeTabId]
+                                if (wv != null && wv.width > 0) {
+                                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                    val fullH = (wv.contentHeight * density).toInt().coerceIn(wv.height.coerceAtLeast(1), 12000)
+                                    android.graphics.Bitmap.createBitmap(
+                                        wv.width,
+                                        fullH,
+                                        android.graphics.Bitmap.Config.ARGB_8888
+                                    ).also { b ->
+                                        val prevY = wv.scrollY
+                                        wv.scrollTo(0, 0)
+                                        wv.draw(android.graphics.Canvas(b))
+                                        wv.scrollTo(wv.scrollX, prevY)
+                                    }
+                                } else null
+                            }
+                            val saved = bmp?.let { b ->
+                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                            } ?: false
+                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                         }
                     )
                     DropdownMenuItem(

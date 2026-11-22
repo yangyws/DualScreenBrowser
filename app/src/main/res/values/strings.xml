@@ -83,6 +83,7 @@
     <string name="action_reopen_bottom">Reopen Bottom Screen</string>
     <string name="action_bottom_touchpad">Bottom Screen Touchpad</string>
     <string name="action_screenshot">Screenshot</string>
+    <string name="action_long_screenshot">Long Screenshot</string>
     <string name="toast_screenshot_saved">Screenshot saved to Pictures/DualScreenBrowser</string>
     <string name="toast_screenshot_failed">Failed to save screenshot</string>
     <string name="touchpad_hint">1-Finger: Cursor/Tap · 2-Finger: Scroll/Zoom/Tap Back · 3-Finger Tap: Reload</string>
