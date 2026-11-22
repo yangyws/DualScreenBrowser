@@ -261,6 +261,7 @@ private fun DualScreenBrowserApp(
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
+    val lastBottomSyncAtMs = remember { LongArray(1) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     var isEditingText by remember { mutableStateOf(false) }
@@ -346,6 +347,23 @@ private fun DualScreenBrowserApp(
                         }
                     } else {
                         null
+                    }
+                },
+                onSecondarySpanScrollFraction = { bottomFraction ->
+                    if (spanMode && dualScreenActive) {
+                        webViews[activeTabId]?.let { v ->
+                            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                            val totalPx = (v.contentHeight * density).toDouble()
+                            if (totalPx > 0.0) {
+                                val gapPx = hingeGapDp * density
+                                val maxScroll = (totalPx - v.height).coerceAtLeast(0.0)
+                                val targetTopPx = ((bottomFraction * totalPx) - v.height - gapPx).coerceIn(0.0, maxScroll).toInt()
+                                if (kotlin.math.abs(v.scrollY - targetTopPx) > 4) {
+                                    lastBottomSyncAtMs[0] = SystemClock.uptimeMillis()
+                                    v.scrollTo(v.scrollX, targetTopPx)
+                                }
+                            }
+                        }
                     }
                 },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
@@ -1104,7 +1122,9 @@ private fun DualScreenBrowserApp(
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive && v is WebView) {
+                            if (spanMode && dualScreenActive && v is WebView &&
+                                SystemClock.uptimeMillis() - lastBottomSyncAtMs[0] > 250L
+                            ) {
                                 val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                                 val totalCss = v.contentHeight.toDouble().coerceAtLeast(1.0)
                                 val bottomCss = ((scrollY + v.height) / density.toDouble()) + hingeGapDp
