@@ -280,8 +280,6 @@ class SecondaryBrowserPresentation(
         var totalMove = 0f
         var maxPointers = 0
         var downTimeMs = 0L
-        var isScrollZone = false
-        val scrollZoneWidthPx = dp(36)
         val tapSlopPx = dp(12)
 
         fun avgCenter(event: MotionEvent, ignoreIndex: Int = -1): Pair<Float, Float> {
@@ -312,10 +310,6 @@ class SecondaryBrowserPresentation(
         val topDivider = View(context).apply {
             setBackgroundColor(Color.parseColor("#24FFFFFF"))
         }
-        val bodyRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
         val hintLabel = TextView(context).apply {
             text = context.getString(R.string.touchpad_hint)
             setTextColor(Color.parseColor("#6E7687"))
@@ -323,19 +317,11 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER
             setPadding(dp(12), 0, dp(12), 0)
         }
-        val scrollTrack = View(context).apply {
-            setBackgroundColor(Color.parseColor("#1AFFFFFF"))
-        }
-
-        bodyRow.addView(hintLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-        bodyRow.addView(scrollTrack, LinearLayout.LayoutParams(dp(4), ViewGroup.LayoutParams.MATCH_PARENT).apply {
-            setMargins(0, dp(14), dp(10), dp(14))
-        })
 
         container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
-        container.addView(bodyRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        container.addView(hintLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        container.setOnTouchListener { v, event ->
+        container.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     lastAvgX = event.x
@@ -344,7 +330,6 @@ class SecondaryBrowserPresentation(
                     totalMove = 0f
                     maxPointers = 1
                     downTimeMs = event.eventTime
-                    isScrollZone = event.x >= v.width - scrollZoneWidthPx
                     true
                 }
                 MotionEvent.ACTION_POINTER_DOWN -> {
@@ -379,7 +364,7 @@ class SecondaryBrowserPresentation(
                             val scrollDy = (-dy * 2.4f).toInt()
                             if (spanModeProvider()) spanEngine.scrollByY(scrollDy) else webView?.scrollBy(0, scrollDy)
                         }
-                    } else if (event.pointerCount >= 3 || isScrollZone) {
+                    } else if (event.pointerCount >= 3) {
                         val scrollDy = (-dy * 2.4f).toInt()
                         if (spanModeProvider()) spanEngine.scrollByY(scrollDy) else webView?.scrollBy(0, scrollDy)
                     } else if (spanModeProvider()) {
@@ -392,7 +377,7 @@ class SecondaryBrowserPresentation(
                 }
                 MotionEvent.ACTION_UP -> {
                     val durationMs = event.eventTime - downTimeMs
-                    if (totalMove < tapSlopPx && durationMs < 350L && !isScrollZone) {
+                    if (totalMove < tapSlopPx && durationMs < 350L) {
                         when {
                             maxPointers >= 3 -> {
                                 if (spanModeProvider()) spanEngine.reload() else webView?.reload()
