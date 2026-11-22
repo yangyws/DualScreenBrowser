@@ -40,7 +40,7 @@ class SecondaryBrowserPresentation(
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
-    private val spanOffsetCssProvider: () -> Double?,
+    private val spanFractionProvider: () -> Double?,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -191,9 +191,9 @@ class SecondaryBrowserPresentation(
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
-                        spanOffsetCssProvider()?.let { targetCssY ->
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
-                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
+                        spanFractionProvider()?.let { frac ->
+                            view?.postDelayed({ syncSpanScrollFraction(frac) }, 150)
+                            view?.postDelayed({ syncSpanScrollFraction(frac) }, 450)
                         }
                     }
                 }
@@ -291,11 +291,14 @@ class SecondaryBrowserPresentation(
         }
     }
 
-    fun syncSpanScrollCssY(targetCssY: Double) {
-        val clamped = targetCssY.coerceAtLeast(0.0)
+    fun syncSpanScrollFraction(fraction: Double) {
+        val clamped = fraction.coerceIn(0.0, 1.0)
         webView?.let { wv ->
             val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-            val targetPx = (clamped * density).toInt()
+            val totalContentPx = (wv.contentHeight * density).toDouble()
+            if (totalContentPx <= 0.0) return
+            val maxScroll = (totalContentPx - wv.height).coerceAtLeast(0.0)
+            val targetPx = (clamped * totalContentPx).coerceIn(0.0, maxScroll).toInt()
             if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
                 wv.scrollTo(wv.scrollX, targetPx)
             }
