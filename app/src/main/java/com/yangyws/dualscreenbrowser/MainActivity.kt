@@ -134,6 +134,7 @@ import com.yangyws.dualscreenbrowser.browser.HistoryItem
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
 import com.yangyws.dualscreenbrowser.browser.SpanEngine
+import com.yangyws.dualscreenbrowser.browser.SpanSource
 import com.yangyws.dualscreenbrowser.browser.UrlResolver
 import com.yangyws.dualscreenbrowser.browser.UserScript
 import com.yangyws.dualscreenbrowser.browser.UserScriptManager
@@ -248,6 +249,7 @@ private fun DualScreenBrowserApp(
     var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(true) }
+    var spanSource by remember { mutableStateOf(prefs.spanSource) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
     val spanEngine = remember { SpanEngine() }
     var topViewportSize by remember { mutableStateOf(IntSize.Zero) }
@@ -383,13 +385,19 @@ private fun DualScreenBrowserApp(
             val bottomH = (topW * secAspect).toInt().coerceAtLeast(240)
             val dpi = context.resources.displayMetrics.densityDpi
 
+            val spanInitialUrl = if (spanSource == SpanSource.BOTTOM) {
+                presentation?.currentUrl()?.takeIf { it.isNotBlank() } ?: secondaryUrl
+            } else {
+                activeTab.url
+            }
+
             spanEngine.start(
                 context = context,
                 widthPx = topW,
                 topHeightPx = topH,
                 bottomHeightPx = bottomH,
                 dpi = dpi,
-                initialUrl = activeTab.url,
+                initialUrl = spanInitialUrl,
                 jsEnabled = jsEnabled,
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
@@ -843,6 +851,35 @@ private fun DualScreenBrowserApp(
                                 presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
                                 val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (spanSource == SpanSource.TOP) {
+                                            R.string.action_span_source_top
+                                        } else {
+                                            R.string.action_span_source_bottom
+                                        }
+                                    )
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            onClick = {
+                                val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
+                                spanSource = next
+                                prefs.spanSource = next
+                                if (spanMode && spanEngine.isRunning()) {
+                                    val targetUrl = if (next == SpanSource.BOTTOM) {
+                                        secondaryUrl
+                                    } else {
+                                        activeTab.url
+                                    }
+                                    if (targetUrl.isNotBlank() && targetUrl != spanEngine.currentUrl()) {
+                                        spanEngine.loadUrl(targetUrl)
+                                    }
+                                }
                             }
                         )
                         if (!spanMode) {

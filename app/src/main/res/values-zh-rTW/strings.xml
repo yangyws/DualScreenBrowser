@@ -59,6 +59,8 @@
     <string name="settings_enable_copy">解除選取與複製限制</string>
     <string name="settings_enable_copy_desc">允許在封鎖右鍵或選取的網頁上複製文字</string>
     <string name="action_span_mode">跨螢幕拼接</string>
+    <string name="action_span_source_top">拼接來源：上螢幕</string>
+    <string name="action_span_source_bottom">拼接來源：下螢幕</string>
     <string name="action_secondary_bar">下螢幕網址列</string>
     <string name="action_gamepad_guide">手把操作說明</string>
     <string name="gamepad_guide_title">手把快捷操作說明</string>

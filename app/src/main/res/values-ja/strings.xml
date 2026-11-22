@@ -59,6 +59,8 @@
     <string name="settings_enable_copy">テキスト選択・コピー制限を解除</string>
     <string name="settings_enable_copy_desc">右クリックや選択が禁止されたページでもコピー可能にする</string>
     <string name="action_span_mode">スパン連結</string>
+    <string name="action_span_source_top">スパン元：上画面</string>
+    <string name="action_span_source_bottom">スパン元：下画面</string>
     <string name="action_secondary_bar">下画面URLバー</string>
     <string name="action_gamepad_guide">ゲームパッド操作ガイド</string>
     <string name="gamepad_guide_title">ゲームパッド操作一覧</string>

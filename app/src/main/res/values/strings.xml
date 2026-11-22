@@ -59,6 +59,8 @@
     <string name="settings_enable_copy">Force Enable Text Selection</string>
     <string name="settings_enable_copy_desc">Allow copying and selecting text on restricted pages</string>
     <string name="action_span_mode">Span Mode</string>
+    <string name="action_span_source_top">Span Source: Top Screen</string>
+    <string name="action_span_source_bottom">Span Source: Bottom Screen</string>
     <string name="action_secondary_bar">Bottom Screen URL Bar</string>
     <string name="action_gamepad_guide">Gamepad Guide</string>
     <string name="gamepad_guide_title">Gamepad Controls</string>

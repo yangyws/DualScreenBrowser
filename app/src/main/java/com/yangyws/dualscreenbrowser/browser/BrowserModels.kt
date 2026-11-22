@@ -6,6 +6,11 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.UUID
 
+enum class SpanSource {
+    TOP,
+    BOTTOM
+}
+
 enum class SearchEngine(val id: String, val label: String, val searchUrlTemplate: String) {
     GOOGLE("google", "Google", "https://www.google.com/search?q=%s"),
     DUCKDUCKGO("ddg", "DuckDuckGo", "https://duckduckgo.com/?q=%s"),
@@ -96,6 +101,14 @@ class BrowserPrefs(context: Context) {
     var showSecondaryBar: Boolean
         get() = prefs.getBoolean("show_secondary_bar", true)
         set(value) = prefs.edit().putBoolean("show_secondary_bar", value).apply()
+
+    var spanSource: SpanSource
+        get() = if (prefs.getString("span_source", SpanSource.TOP.name) == SpanSource.BOTTOM.name) {
+            SpanSource.BOTTOM
+        } else {
+            SpanSource.TOP
+        }
+        set(value) = prefs.edit().putString("span_source", value.name).apply()
 
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
