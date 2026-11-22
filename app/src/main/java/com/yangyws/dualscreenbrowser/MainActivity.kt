@@ -288,7 +288,6 @@ private fun DualScreenBrowserApp(
     var pendingHingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
-    var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
     var bottomTouchpad by remember { mutableStateOf(prefs.bottomTouchpad) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
@@ -367,7 +366,6 @@ private fun DualScreenBrowserApp(
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
-                barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
                 touchpadVisibleProvider = { spanMode && bottomTouchpad },
                 themeProvider = { currentTheme },
@@ -409,8 +407,8 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, showSecondaryBar, dualScreenActive, presentation) {
-        presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+    LaunchedEffect(spanMode, dualScreenActive, presentation) {
+        presentation?.updatePresentationMode(spanMode && dualScreenActive)
     }
 
     LaunchedEffect(bottomBrightness, bottomWarmth, presentation) {
@@ -665,7 +663,7 @@ private fun DualScreenBrowserApp(
             override fun toggleSpanMode() {
                 if (!dualScreenActive || secondaryDisplay == null) return
                 spanMode = !spanMode
-                presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+                presentation?.updatePresentationMode(spanMode && dualScreenActive)
                 val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
             }
@@ -1053,7 +1051,7 @@ private fun DualScreenBrowserApp(
                             },
                             onClick = {
                                 spanMode = !spanMode
-                                presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+                                presentation?.updatePresentationMode(spanMode && dualScreenActive)
                                 val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                             }
@@ -1122,21 +1120,6 @@ private fun DualScreenBrowserApp(
                                         context.getString(R.string.toast_swapped_screens),
                                         Toast.LENGTH_SHORT
                                     ).show()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_secondary_bar)) },
-                                leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
-                                trailingIcon = {
-                                    if (showSecondaryBar) {
-                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                },
-                                onClick = {
-                                    dismissMenu()
-                                    showSecondaryBar = !showSecondaryBar
-                                    prefs.showSecondaryBar = showSecondaryBar
-                                    presentation?.updatePresentationMode(showSecondaryBar, false)
                                 }
                             )
                         }

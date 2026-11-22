@@ -3,6 +3,7 @@ package com.yangyws.dualscreenbrowser.browser
 import android.annotation.SuppressLint
 import android.app.Presentation
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -12,7 +13,9 @@ import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
@@ -48,7 +51,6 @@ class SecondaryBrowserPresentation(
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
-    private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
     private val touchpadVisibleProvider: () -> Boolean,
     private val themeProvider: () -> ThorTheme,
@@ -64,15 +66,18 @@ class SecondaryBrowserPresentation(
     private var spanViewport: SpanViewportView? = null
     private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
-    private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
     private var urlInput: EditText? = null
     private var lockIcon: ImageView? = null
+    private var clearAddressBtn: ImageView? = null
     private var addressBox: LinearLayout? = null
+    private var backButton: ImageButton? = null
+    private var forwardButton: ImageButton? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
+    private var activeTheme: ThorTheme = themeProvider()
     private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -80,6 +85,7 @@ class SecondaryBrowserPresentation(
         super.onCreate(savedInstanceState)
 
         val initialTheme = themeProvider()
+        activeTheme = initialTheme
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(initialTheme.backgroundColor)
@@ -95,25 +101,40 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(initialTheme.surfaceColor)
             setPadding(dp(8), dp(6), dp(8), dp(6))
-            visibility = if (barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            visibility = if (!spanModeProvider()) android.view.View.VISIBLE else android.view.View.GONE
         }
         topBarView = topBar
 
         val btnBack = navButton(R.drawable.ic_arrow_back, context.getString(R.string.action_back)) {
             webView?.let { if (it.canGoBack()) it.goBack() }
+        }.apply {
+            isEnabled = false
+            alpha = 0.38f
         }
+        backButton = btnBack
         val btnForward = navButton(R.drawable.ic_arrow_forward, context.getString(R.string.action_forward)) {
             webView?.let { if (it.canGoForward()) it.goForward() }
+        }.apply {
+            isEnabled = false
+            alpha = 0.38f
         }
+        forwardButton = btnForward
         val btnRefresh = navButton(R.drawable.ic_refresh, context.getString(R.string.action_refresh)) {
             webView?.reload()
         }
 
+        val unfocusedBorderColor = Color.parseColor("#14FFFFFF")
+        val focusedBorderColor = Color.argb(
+            (255 * 0.65f).toInt(),
+            Color.red(initialTheme.primaryColor),
+            Color.green(initialTheme.primaryColor),
+            Color.blue(initialTheme.primaryColor)
+        )
         val addressDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(10).toFloat()
             setColor(initialTheme.surfaceVariantColor)
-            setStroke(dp(1), Color.parseColor("#14FFFFFF"))
+            setStroke(dp(1), unfocusedBorderColor)
         }
 
         val addrContainer = LinearLayout(context).apply {
@@ -131,6 +152,17 @@ class SecondaryBrowserPresentation(
         }
         lockIcon = lockImg
 
+        val clearImg = ImageView(context).apply {
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            contentDescription = context.getString(R.string.action_close)
+            setColorFilter(Color.parseColor("#8A92A6"))
+            visibility = View.GONE
+            setOnClickListener {
+                urlInput?.setText("")
+            }
+        }
+        clearAddressBtn = clearImg
+
         val addressBar = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
             setText(UrlResolver.displayHost(initialUrl).ifBlank { initialUrl })
@@ -142,13 +174,33 @@ class SecondaryBrowserPresentation(
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+                override fun afterTextChanged(s: Editable?) {
+                    clearAddressBtn?.visibility = if (hasFocus() && !s.isNullOrEmpty()) View.VISIBLE else View.GONE
+                }
+            })
             setOnFocusChangeListener { v, hasFocus ->
                 val et = v as EditText
+                val border = if (hasFocus) {
+                    Color.argb(
+                        (255 * 0.65f).toInt(),
+                        Color.red(activeTheme.primaryColor),
+                        Color.green(activeTheme.primaryColor),
+                        Color.blue(activeTheme.primaryColor)
+                    )
+                } else {
+                    unfocusedBorderColor
+                }
+                (addressBox?.background as? GradientDrawable)?.setStroke(dp(1), border)
                 if (hasFocus) {
                     lockIcon?.visibility = View.GONE
                     et.setText(currentUrl)
                     et.selectAll()
+                    clearAddressBtn?.visibility = if (et.text.isNullOrEmpty()) View.GONE else View.VISIBLE
                 } else {
+                    clearAddressBtn?.visibility = View.GONE
                     lockIcon?.visibility = if (UrlResolver.isHttps(currentUrl)) View.VISIBLE else View.GONE
                     et.setText(UrlResolver.displayHost(currentUrl).ifBlank { currentUrl })
                 }
@@ -171,6 +223,9 @@ class SecondaryBrowserPresentation(
             setMargins(0, 0, dp(5), 0)
         })
         addrContainer.addView(addressBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addrContainer.addView(clearImg, LinearLayout.LayoutParams(dp(16), dp(16)).apply {
+            setMargins(dp(4), 0, 0, 0)
+        })
 
         val btnSwap = navButton(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
             onSwapScreens(currentUrl)
@@ -180,26 +235,28 @@ class SecondaryBrowserPresentation(
         }
 
         val btnSize = dp(36)
-        topBar.addView(btnBack, LinearLayout.LayoutParams(btnSize, btnSize))
-        topBar.addView(btnForward, LinearLayout.LayoutParams(btnSize, btnSize))
-        topBar.addView(btnRefresh, LinearLayout.LayoutParams(btnSize, btnSize))
+        val btnGap = dp(2)
+        topBar.addView(btnBack, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(0, 0, btnGap, 0) })
+        topBar.addView(btnForward, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(0, 0, btnGap, 0) })
+        topBar.addView(btnRefresh, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(0, 0, btnGap, 0) })
         topBar.addView(
             addrContainer,
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                setMargins(dp(8), 0, dp(8), 0)
+                setMargins(dp(4), 0, dp(4), 0)
             }
         )
-        topBar.addView(btnSwap, LinearLayout.LayoutParams(btnSize, btnSize))
-        topBar.addView(btnSendUp, LinearLayout.LayoutParams(btnSize, btnSize))
+        topBar.addView(btnSwap, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(btnGap, 0, 0, 0) })
+        topBar.addView(btnSendUp, LinearLayout.LayoutParams(btnSize, btnSize).apply { setMargins(btnGap, 0, 0, 0) })
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
-            visibility = if (barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            visibility = if (!spanModeProvider()) android.view.View.VISIBLE else android.view.View.GONE
         }
         dividerView = divider
 
         val progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
+            progressTintList = ColorStateList.valueOf(initialTheme.primaryColor)
             visibility = android.view.View.GONE
         }
         progressBar = progress
@@ -234,6 +291,7 @@ class SecondaryBrowserPresentation(
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    updateNavButtons(view)
                     if (!url.isNullOrBlank()) {
                         currentUrl = url
                         if (urlInput?.hasFocus() != true) {
@@ -248,6 +306,7 @@ class SecondaryBrowserPresentation(
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    updateNavButtons(view)
                     progressBar?.let { bar ->
                         bar.progress = newProgress
                         bar.visibility = if (newProgress in 1..99) android.view.View.VISIBLE else android.view.View.GONE
@@ -269,32 +328,7 @@ class SecondaryBrowserPresentation(
         wv.visibility = if (spanModeProvider()) View.GONE else View.VISIBLE
 
         contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-
-        val restorePillBg = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(Color.parseColor("#CC1A1D24"))
-            setStroke(dp(1), Color.parseColor("#44FFFFFF"))
-        }
-        val btnRestoreBar = ImageButton(context).apply {
-            setImageResource(android.R.drawable.ic_menu_more)
-            contentDescription = context.getString(R.string.action_secondary_bar)
-            background = restorePillBg
-            setColorFilter(Color.WHITE)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
-            visibility = if (!spanModeProvider() && !barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
-            setOnClickListener {
-                updatePresentationMode(barVisible = true, spanActive = false)
-            }
-        }
-        restoreBarBtn = btnRestoreBar
         contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        contentStack.addView(
-            btnRestoreBar,
-            FrameLayout.LayoutParams(dp(34), dp(34)).apply {
-                gravity = Gravity.TOP or Gravity.END
-                setMargins(0, dp(8), dp(8), 0)
-            }
-        )
 
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
@@ -461,12 +495,27 @@ class SecondaryBrowserPresentation(
     }
 
     fun updateTheme(theme: ThorTheme) {
+        activeTheme = theme
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
             touchpadContainer?.setBackgroundColor(theme.surfaceColor)
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
             lockIcon?.setColorFilter(theme.primaryColor)
+            progressBar?.progressTintList = ColorStateList.valueOf(theme.primaryColor)
+        }
+    }
+
+    private fun updateNavButtons(wv: WebView?) {
+        val backOk = wv?.canGoBack() == true
+        val fwdOk = wv?.canGoForward() == true
+        backButton?.let {
+            it.isEnabled = backOk
+            it.alpha = if (backOk) 1f else 0.38f
+        }
+        forwardButton?.let {
+            it.isEnabled = fwdOk
+            it.alpha = if (fwdOk) 1f else 0.38f
         }
     }
 
@@ -481,7 +530,7 @@ class SecondaryBrowserPresentation(
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
             setColorFilter(Color.WHITE)
-            setPadding(dp(7), dp(7), dp(7), dp(7))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             setOnClickListener { onClick() }
         }
 
@@ -504,15 +553,13 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
-    fun updatePresentationMode(barVisible: Boolean, spanActive: Boolean) {
-        val barVis = if (barVisible && !spanActive) View.VISIBLE else View.GONE
-        val restoreVis = if (!barVisible && !spanActive) View.VISIBLE else View.GONE
+    fun updatePresentationMode(spanActive: Boolean) {
+        val barVis = if (!spanActive) View.VISIBLE else View.GONE
         val spanVis = if (spanActive) View.VISIBLE else View.GONE
         val webVis = if (spanActive) View.GONE else View.VISIBLE
         topBarView?.post {
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
-            restoreBarBtn?.visibility = restoreVis
             spanViewport?.visibility = spanVis
             webView?.visibility = webVis
             if (spanActive) {
