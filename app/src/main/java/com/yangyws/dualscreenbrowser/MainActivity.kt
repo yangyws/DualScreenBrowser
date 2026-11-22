@@ -73,6 +73,7 @@ import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Tab
 import androidx.compose.material.icons.rounded.ViewStream
@@ -150,6 +151,7 @@ private enum class BrowserPanel {
     BOOKMARKS,
     HISTORY,
     USERSCRIPTS,
+    GAMEPAD_GUIDE,
     SETTINGS
 }
 
@@ -895,6 +897,14 @@ private fun DualScreenBrowserApp(
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_gamepad_guide)) },
+                        leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            activePanel = BrowserPanel.GAMEPAD_GUIDE
+                        }
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_settings)) },
                         leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                         onClick = {
@@ -1349,6 +1359,47 @@ private fun DualScreenBrowserApp(
                 },
                 confirmButton = {
                     TextButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                }
+            )
+        }
+
+        BrowserPanel.GAMEPAD_GUIDE -> {
+            val mappings = listOf(
+                R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+                R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+                R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+                R.string.gamepad_key_x to R.string.gamepad_desc_x,
+                R.string.gamepad_key_y to R.string.gamepad_desc_y,
+                R.string.gamepad_key_select to R.string.gamepad_desc_select
+            )
+            AlertDialog(
+                onDismissRequest = { activePanel = BrowserPanel.NONE },
+                title = { Text(stringResource(R.string.gamepad_guide_title)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        mappings.forEach { (keyRes, descRes) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                StatusChip(
+                                    label = stringResource(keyRes),
+                                    accentColor = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = stringResource(descRes),
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { activePanel = BrowserPanel.NONE }) {
                         Text(stringResource(R.string.action_close))
                     }
                 }
