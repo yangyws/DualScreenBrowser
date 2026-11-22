@@ -4,14 +4,17 @@ import android.annotation.SuppressLint
 import android.app.Presentation
 import android.content.Context
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.SystemClock
 import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.webkit.WebChromeClient
@@ -26,19 +29,18 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import com.yangyws.dualscreenbrowser.R
-import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
     display: Display,
     private val initialUrl: String,
     private val jsEnabled: Boolean,
-    private val spanEngine: SpanEngine,
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
+    private val spanOffsetCssProvider: () -> Double?,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -48,14 +50,14 @@ class SecondaryBrowserPresentation(
 ) : Presentation(outerContext, display) {
 
     private var webView: WebView? = null
-    private var spanViewport: SpanViewportView? = null
     private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
-    private var dividerView: android.view.View? = null
+    private var dividerView: View? = null
     private var urlInput: EditText? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
+    private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -189,6 +191,10 @@ class SecondaryBrowserPresentation(
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
+                        spanOffsetCssProvider()?.let { targetCssY ->
+                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
+                            view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
+                        }
                     }
                 }
             }
@@ -205,16 +211,10 @@ class SecondaryBrowserPresentation(
         webView = wv
 
         val contentStack = FrameLayout(context)
-        val spanView = SpanViewportView(context, spanEngine, isBottomViewport = true).apply {
-            visibility = if (spanModeProvider()) android.view.View.VISIBLE else android.view.View.GONE
-            val (b, w) = bottomColorProvider()
-            setColorCalibration(b, w)
-        }
-        spanViewport = spanView
-        wv.visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
+        val (b, w) = bottomColorProvider()
+        applyColorFilterToWebView(wv, b, w)
 
         contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val restorePillBg = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -280,27 +280,47 @@ class SecondaryBrowserPresentation(
     }
 
     fun updatePresentationMode(barVisible: Boolean, spanActive: Boolean) {
-        val barVis = if (barVisible && !spanActive) android.view.View.VISIBLE else android.view.View.GONE
-        val restoreVis = if (!barVisible && !spanActive) android.view.View.VISIBLE else android.view.View.GONE
-        val spanVis = if (spanActive) android.view.View.VISIBLE else android.view.View.GONE
-        val webVis = if (spanActive) android.view.View.GONE else android.view.View.VISIBLE
+        val barVis = if (barVisible && !spanActive) View.VISIBLE else View.GONE
+        val restoreVis = if (!barVisible && !spanActive) View.VISIBLE else View.GONE
         topBarView?.post {
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
             restoreBarBtn?.visibility = restoreVis
-            spanViewport?.visibility = spanVis
-            webView?.visibility = webVis
-            if (spanActive) {
-                progressBar?.visibility = android.view.View.GONE
-            }
+            webView?.visibility = View.VISIBLE
             topBarView?.parent?.requestLayout()
         }
     }
 
-    fun updateBottomColor(brightness: Int, warmth: Int) {
-        spanViewport?.post {
-            spanViewport?.setColorCalibration(brightness, warmth)
+    fun syncSpanScrollCssY(targetCssY: Double) {
+        val clamped = targetCssY.coerceAtLeast(0.0)
+        webView?.let { wv ->
+            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+            val targetPx = (clamped * density).toInt()
+            if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
+                wv.scrollTo(wv.scrollX, targetPx)
+            }
         }
+    }
+
+    fun updateBottomColor(brightness: Int, warmth: Int) {
+        webView?.post {
+            webView?.let { wv -> applyColorFilterToWebView(wv, brightness, warmth) }
+        }
+    }
+
+    private fun applyColorFilterToWebView(wv: WebView, brightnessOffset: Int, warmthOffset: Int) {
+        if (brightnessOffset == 0 && warmthOffset == 0) {
+            colorPaint.colorFilter = null
+            wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        } else {
+            val base = 1f + brightnessOffset * 0.01f
+            val r = (base + warmthOffset * 0.004f).coerceIn(0.5f, 1.5f)
+            val g = base.coerceIn(0.5f, 1.5f)
+            val b = (base - warmthOffset * 0.005f).coerceIn(0.5f, 1.5f)
+            colorPaint.colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setScale(r, g, b, 1f) })
+            wv.setLayerType(View.LAYER_TYPE_HARDWARE, colorPaint)
+        }
+        wv.invalidate()
     }
 
     fun goBackIfPossible() {
