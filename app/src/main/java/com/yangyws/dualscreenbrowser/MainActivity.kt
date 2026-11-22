@@ -263,6 +263,7 @@ private fun DualScreenBrowserApp(
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
+    var bottomTouchpad by remember { mutableStateOf(prefs.bottomTouchpad) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     val spanEngine = remember { SpanEngine() }
@@ -342,6 +343,7 @@ private fun DualScreenBrowserApp(
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
+                touchpadVisibleProvider = { bottomTouchpad },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
@@ -388,6 +390,10 @@ private fun DualScreenBrowserApp(
         presentation?.updateBottomColor(bottomBrightness, bottomWarmth)
     }
 
+    LaunchedEffect(bottomTouchpad, presentation) {
+        presentation?.updateTouchpadVisibility(bottomTouchpad)
+    }
+
     LaunchedEffect(isEditingText) {
         if (isEditingText) {
             runCatching { addressFocusRequester.requestFocus() }
@@ -396,7 +402,7 @@ private fun DualScreenBrowserApp(
 
     val viewportReady = topViewportSize.width > 0 && topViewportSize.height > 0
 
-    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp, spanRestartTrigger) {
+    DisposableEffect(spanMode, dualScreenActive, secondaryDisplay, jsEnabled, viewportReady, hingeGapDp, spanRestartTrigger, bottomTouchpad) {
         val secDisplay = secondaryDisplay
         if (spanMode && dualScreenActive && secDisplay != null && viewportReady) {
             val topW = topViewportSize.width
@@ -404,10 +410,13 @@ private fun DualScreenBrowserApp(
             val secMetrics = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             secDisplay.getRealMetrics(secMetrics)
+            val padPx = if (bottomTouchpad) (112 * secMetrics.density).toInt() else 0
             val secAspect = if (secMetrics.widthPixels > 0 && secMetrics.heightPixels > 0) {
                 val minDim = minOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
                 val maxDim = maxOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
-                if (topW >= topH) minDim / maxDim else maxDim / minDim
+                val rawH = if (topW >= topH) minDim else maxDim
+                val rawW = if (topW >= topH) maxDim else minDim
+                ((rawH - padPx).coerceAtLeast(100f)) / rawW
             } else {
                 7f / 8f
             }
@@ -962,6 +971,20 @@ private fun DualScreenBrowserApp(
                             onClick = {
                                 val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
                                 gamepadActions.setSpanSource(next)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_bottom_touchpad)) },
+                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                            trailingIcon = {
+                                if (bottomTouchpad) {
+                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            },
+                            onClick = {
+                                bottomTouchpad = !bottomTouchpad
+                                prefs.bottomTouchpad = bottomTouchpad
+                                presentation?.updateTouchpadVisibility(bottomTouchpad)
                             }
                         )
                         if (!spanMode) {

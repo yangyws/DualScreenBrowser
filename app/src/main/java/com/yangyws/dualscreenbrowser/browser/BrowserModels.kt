@@ -131,6 +131,10 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getInt("bottom_warmth", 0).coerceIn(-30, 30)
         set(value) = prefs.edit().putInt("bottom_warmth", value.coerceIn(-30, 30)).apply()
 
+    var bottomTouchpad: Boolean
+        get() = prefs.getBoolean("bottom_touchpad", true)
+        set(value) = prefs.edit().putBoolean("bottom_touchpad", value).apply()
+
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
         set(value) = prefs.edit().putString("search_engine", value.id).apply()

@@ -14,6 +14,7 @@ import android.text.InputType
 import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -28,8 +29,10 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.TextView
 import com.yangyws.dualscreenbrowser.R
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
+import kotlin.math.abs
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
@@ -42,6 +45,7 @@ class SecondaryBrowserPresentation(
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
+    private val touchpadVisibleProvider: () -> Boolean,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -52,6 +56,7 @@ class SecondaryBrowserPresentation(
 
     private var webView: WebView? = null
     private var spanViewport: SpanViewportView? = null
+    private var touchpadContainer: LinearLayout? = null
     private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
@@ -250,7 +255,96 @@ class SecondaryBrowserPresentation(
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
         root.addView(contentStack, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(createTouchpadArea(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(112)))
         setContentView(root)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun createTouchpadArea(): LinearLayout {
+        var lastX = 0f
+        var lastY = 0f
+        var totalMove = 0f
+        var isScrollZone = false
+        val scrollZoneWidthPx = dp(40)
+        val tapSlopPx = dp(10)
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#14171E"))
+            visibility = if (touchpadVisibleProvider()) View.VISIBLE else View.GONE
+        }
+        touchpadContainer = container
+
+        val topDivider = View(context).apply {
+            setBackgroundColor(Color.parseColor("#24FFFFFF"))
+        }
+        val bodyRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val hintLabel = TextView(context).apply {
+            text = context.getString(R.string.touchpad_hint)
+            setTextColor(Color.parseColor("#6E7687"))
+            textSize = 11.5f
+            gravity = Gravity.CENTER
+            setPadding(dp(12), 0, dp(12), 0)
+        }
+        val scrollTrack = View(context).apply {
+            setBackgroundColor(Color.parseColor("#1AFFFFFF"))
+        }
+
+        bodyRow.addView(hintLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        bodyRow.addView(scrollTrack, LinearLayout.LayoutParams(dp(4), ViewGroup.LayoutParams.MATCH_PARENT).apply {
+            setMargins(0, dp(14), dp(10), dp(14))
+        })
+
+        container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
+        container.addView(bodyRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        container.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastX = event.x
+                    lastY = event.y
+                    totalMove = 0f
+                    isScrollZone = event.x >= v.width - scrollZoneWidthPx
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.x - lastX
+                    val dy = event.y - lastY
+                    totalMove += abs(dx) + abs(dy)
+                    if (isScrollZone || event.pointerCount >= 2) {
+                        val scrollDy = (-dy * 2.2f).toInt()
+                        if (spanModeProvider()) {
+                            spanEngine.scrollByY(scrollDy)
+                        } else {
+                            webView?.scrollBy(0, scrollDy)
+                        }
+                    } else if (spanModeProvider()) {
+                        spanEngine.moveCursorBy(dx * 1.35f, dy * 1.35f)
+                    }
+                    lastX = event.x
+                    lastY = event.y
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (totalMove < tapSlopPx && !isScrollZone && spanModeProvider()) {
+                        spanEngine.tapAtCursor()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        return container
+    }
+
+    fun updateTouchpadVisibility(visible: Boolean) {
+        touchpadContainer?.post {
+            touchpadContainer?.visibility = if (visible) View.VISIBLE else View.GONE
+            touchpadContainer?.parent?.requestLayout()
+        }
     }
 
     private fun dp(value: Int): Int =

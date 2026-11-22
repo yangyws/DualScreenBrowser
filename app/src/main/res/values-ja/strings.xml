@@ -73,6 +73,8 @@
     <string name="action_secondary_bar">下画面URLバー</string>
     <string name="action_reopen_top">上画面を再表示</string>
     <string name="action_reopen_bottom">下画面を再表示</string>
+    <string name="action_bottom_touchpad">下画面タッチパッド</string>
+    <string name="touchpad_hint">タッチパッド · 移動 · タップでクリック · 右端でスクロール</string>
     <string name="action_gamepad_guide">ゲームパッド操作ガイド</string>
     <string name="gamepad_guide_title">ゲームパッド操作一覧</string>
     <string name="gamepad_key_dpad">十字キー / スティック</string>

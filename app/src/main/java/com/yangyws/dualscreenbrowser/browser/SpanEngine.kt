@@ -11,6 +11,7 @@ import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.SystemClock
 import android.view.Display
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -53,6 +54,51 @@ class SpanEngine {
         private set
 
     private val frameListeners = CopyOnWriteArrayList<(Bitmap) -> Unit>()
+    private val cursorListeners = CopyOnWriteArrayList<() -> Unit>()
+
+    @Volatile
+    var cursorX: Float = 0f
+        private set
+
+    @Volatile
+    var cursorY: Float = 0f
+        private set
+
+    @Volatile
+    var cursorVisible: Boolean = false
+        private set
+
+    fun addCursorListener(listener: () -> Unit) {
+        cursorListeners.addIfAbsent(listener)
+    }
+
+    fun removeCursorListener(listener: () -> Unit) {
+        cursorListeners.remove(listener)
+    }
+
+    fun moveCursorBy(dx: Float, dy: Float) {
+        if (virtualWidth <= 0 || totalHeight <= 0) return
+        if (!cursorVisible) {
+            cursorX = virtualWidth * 0.5f
+            cursorY = topViewportHeight * 0.5f
+            cursorVisible = true
+        }
+        cursorX = (cursorX + dx).coerceIn(0f, (virtualWidth - 1).toFloat())
+        cursorY = (cursorY + dy).coerceIn(0f, (totalHeight - 1).toFloat())
+        cursorListeners.forEach { it() }
+    }
+
+    fun tapAtCursor() {
+        val wv = virtualWebView ?: return
+        if (!cursorVisible) return
+        val now = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, cursorX, cursorY, 0)
+        val up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, cursorX, cursorY, 0)
+        wv.dispatchTouchEvent(down)
+        wv.dispatchTouchEvent(up)
+        down.recycle()
+        up.recycle()
+    }
 
     fun addFrameListener(listener: (Bitmap) -> Unit) {
         frameListeners.addIfAbsent(listener)
