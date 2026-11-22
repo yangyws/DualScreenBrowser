@@ -59,6 +59,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
@@ -77,6 +79,8 @@ import androidx.compose.material.icons.rounded.ViewStream
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -244,6 +248,7 @@ private fun DualScreenBrowserApp(
     var findQuery by remember { mutableStateOf("") }
     var findMatchActive by remember { mutableIntStateOf(0) }
     var findMatchTotal by remember { mutableIntStateOf(0) }
+    var overflowMenuExpanded by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
@@ -619,74 +624,231 @@ private fun DualScreenBrowserApp(
                 }
             }
 
+            // Tabs count pill
+            Surface(
+                onClick = { activePanel = BrowserPanel.TABS },
+                shape = RoundedCornerShape(9.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.action_tabs_count, tabs.size),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(fontFeatureSettings = "tnum")
+                    )
+                }
+            }
+
+            // Dual screen quick toggle
             TactileIconButton(
                 onClick = {
-                    if (isBookmarked) {
-                        bookmarks = bookmarks.filterNot { it.url == activeTab.url }
-                        prefs.saveBookmarks(bookmarks)
-                        Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
+                    if (secondaryDisplay == null) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.secondary_screen_not_found),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        val entry = BookmarkItem(
-                            title = activeTab.title.ifBlank { activeTab.url },
-                            url = activeTab.url
-                        )
-                        bookmarks = listOf(entry) + bookmarks
-                        prefs.saveBookmarks(bookmarks)
-                        Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
+                        dualScreenActive = !dualScreenActive
+                        if (!dualScreenActive) spanMode = false
                     }
                 },
-                active = isBookmarked
+                active = dualScreenActive
             ) {
                 Icon(
-                    imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                    contentDescription = stringResource(R.string.action_add_bookmark),
-                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White,
+                    imageVector = Icons.Rounded.Devices,
+                    contentDescription = stringResource(
+                        if (dualScreenActive) R.string.action_dual_screen_on else R.string.action_dual_screen_off
+                    ),
+                    tint = if (dualScreenActive) MaterialTheme.colorScheme.primary else Color.White,
                     modifier = Modifier.size(19.dp)
                 )
             }
 
-            TactileIconButton(
-                onClick = {
-                    val nextDesktop = !activeTab.desktopMode
-                    tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
-                    webViews[activeTabId]?.let { wv ->
-                        val defaultUa = WebSettings.getDefaultUserAgent(context)
-                        wv.settings.userAgentString = if (nextDesktop) {
-                            defaultUa.replace("Mobile", "").replace("Android", "X11; Linux x86_64")
-                        } else {
-                            defaultUa
+            // Span Mode quick toggle when Dual Screen is active
+            if (dualScreenActive && secondaryDisplay != null) {
+                TactileIconButton(
+                    onClick = {
+                        spanMode = !spanMode
+                        presentation?.setSpanMode(spanMode && dualScreenActive)
+                        if (spanMode) {
+                            val topWv = webViews[activeTabId]
+                            val currentBottom = presentation?.currentUrl()
+                            if (currentBottom != activeTab.url) {
+                                secondaryUrl = activeTab.url
+                                presentation?.loadUrl(activeTab.url)
+                            } else if (topWv != null) {
+                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                presentation?.syncSpanScrollCssY((topWv.scrollY + topWv.height) / density.toDouble())
+                            }
                         }
-                        wv.reload()
-                    }
-                },
-                active = activeTab.desktopMode
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Computer,
-                    contentDescription = stringResource(R.string.action_desktop_mode),
-                    tint = if (activeTab.desktopMode) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(19.dp)
-                )
+                        val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                    },
+                    active = spanMode
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ViewStream,
+                        contentDescription = stringResource(R.string.action_span_mode),
+                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
 
-            TactileIconButton(
-                onClick = {
-                    findBarVisible = !findBarVisible
-                    if (!findBarVisible) {
-                        findQuery = ""
-                        findMatchActive = 0
-                        findMatchTotal = 0
-                        webViews[activeTabId]?.clearMatches()
+            // Overflow menu with all secondary tools (Bookmarks, History, Find, Desktop, Dual-Screen, Settings)
+            Box {
+                TactileIconButton(
+                    onClick = { overflowMenuExpanded = true },
+                    active = overflowMenuExpanded
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.action_settings),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = overflowMenuExpanded,
+                    onDismissRequest = { overflowMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isBookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                                contentDescription = null,
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White
+                            )
+                        },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            if (isBookmarked) {
+                                bookmarks = bookmarks.filterNot { it.url == activeTab.url }
+                                prefs.saveBookmarks(bookmarks)
+                                Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
+                            } else {
+                                val entry = BookmarkItem(
+                                    title = activeTab.title.ifBlank { activeTab.url },
+                                    url = activeTab.url
+                                )
+                                bookmarks = listOf(entry) + bookmarks
+                                prefs.saveBookmarks(bookmarks)
+                                Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_bookmarks)) },
+                        leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            activePanel = BrowserPanel.BOOKMARKS
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_history)) },
+                        leadingIcon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            activePanel = BrowserPanel.HISTORY
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_find_in_page)) },
+                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            findBarVisible = !findBarVisible
+                            if (!findBarVisible) {
+                                findQuery = ""
+                                findMatchActive = 0
+                                findMatchTotal = 0
+                                webViews[activeTabId]?.clearMatches()
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_desktop_mode)) },
+                        leadingIcon = { Icon(Icons.Rounded.Computer, contentDescription = null) },
+                        trailingIcon = {
+                            if (activeTab.desktopMode) {
+                                Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            val nextDesktop = !activeTab.desktopMode
+                            tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
+                            webViews[activeTabId]?.let { wv ->
+                                val defaultUa = WebSettings.getDefaultUserAgent(context)
+                                wv.settings.userAgentString = if (nextDesktop) {
+                                    defaultUa.replace("Mobile", "").replace("Android", "X11; Linux x86_64")
+                                } else {
+                                    defaultUa
+                                }
+                                wv.reload()
+                            }
+                        }
+                    )
+                    if (dualScreenActive && secondaryDisplay != null) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_send_to_secondary)) },
+                            leadingIcon = { Icon(Icons.Rounded.OpenInBrowser, contentDescription = null) },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                secondaryUrl = activeTab.url
+                                presentation?.loadUrl(activeTab.url)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.toast_sent_to_bottom),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_swap_screens)) },
+                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
+                                val topUrl = activeTab.url
+                                navigateActiveTab(bottomUrl)
+                                secondaryUrl = topUrl
+                                presentation?.loadUrl(topUrl)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.toast_swapped_screens),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
                     }
-                },
-                active = findBarVisible
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = stringResource(R.string.action_find_in_page),
-                    tint = if (findBarVisible) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(19.dp)
-                )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_settings)) },
+                        leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                        onClick = {
+                            overflowMenuExpanded = false
+                            activePanel = BrowserPanel.SETTINGS
+                        }
+                    )
+                }
             }
         }
 
@@ -786,11 +948,12 @@ private fun DualScreenBrowserApp(
             )
         }
 
-        // Main WebView container
+        // Main WebView container (uses full vertical space below top bar)
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .navigationBarsPadding()
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -888,170 +1051,6 @@ private fun DualScreenBrowserApp(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-        }
-
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
-
-        // Slim status chip strip when dual-screen or ad-blocker has active info
-        if (dualScreenActive || adBlockedCount > 0) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (dualScreenActive && secondaryDisplay != null) {
-                    StatusChip(
-                        label = if (gamepadTarget == GamepadTargetScreen.TOP) "PAD: TOP" else "PAD: BOTTOM",
-                        accentColor = MaterialTheme.colorScheme.primary
-                    )
-                    if (spanMode) {
-                        StatusChip(
-                            label = stringResource(R.string.action_span_mode),
-                            accentColor = Color(0xFF64B5F6)
-                        )
-                    }
-                }
-                if (adBlockEnabled && adBlockedCount > 0) {
-                    StatusChip(
-                        label = "ADBLOCK $adBlockedCount",
-                        accentColor = Color(0xFFFFB74D)
-                    )
-                }
-            }
-        }
-
-        // Bottom Toolbar (Tabs, Bookmarks, History, Dual-Screen Controls, Settings)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .navigationBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                onClick = { activePanel = BrowserPanel.TABS },
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.action_tabs_count, tabs.size),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        style = TextStyle(fontFeatureSettings = "tnum")
-                    )
-                }
-            }
-            TactileIconButton(onClick = { activePanel = BrowserPanel.BOOKMARKS }) {
-                Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.action_bookmarks), modifier = Modifier.size(20.dp))
-            }
-            TactileIconButton(onClick = { activePanel = BrowserPanel.HISTORY }) {
-                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.action_history), modifier = Modifier.size(20.dp))
-            }
-            TactileIconButton(
-                onClick = {
-                    if (secondaryDisplay == null) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.secondary_screen_not_found),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        dualScreenActive = !dualScreenActive
-                        if (!dualScreenActive) spanMode = false
-                    }
-                },
-                active = dualScreenActive
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Devices,
-                    contentDescription = stringResource(
-                        if (dualScreenActive) R.string.action_dual_screen_on else R.string.action_dual_screen_off
-                    ),
-                    tint = if (dualScreenActive) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            if (dualScreenActive && secondaryDisplay != null) {
-                TactileIconButton(
-                    onClick = {
-                        secondaryUrl = activeTab.url
-                        presentation?.loadUrl(activeTab.url)
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_sent_to_bottom),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.OpenInBrowser,
-                        contentDescription = stringResource(R.string.action_send_to_secondary),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                TactileIconButton(
-                    onClick = {
-                        val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
-                        val topUrl = activeTab.url
-                        navigateActiveTab(bottomUrl)
-                        secondaryUrl = topUrl
-                        presentation?.loadUrl(topUrl)
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_swapped_screens),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SwapVert,
-                        contentDescription = stringResource(R.string.action_swap_screens),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                TactileIconButton(
-                    onClick = {
-                        spanMode = !spanMode
-                        presentation?.setSpanMode(spanMode && dualScreenActive)
-                        if (spanMode) {
-                            val topWv = webViews[activeTabId]
-                            val currentBottom = presentation?.currentUrl()
-                            if (currentBottom != activeTab.url) {
-                                secondaryUrl = activeTab.url
-                                presentation?.loadUrl(activeTab.url)
-                            } else if (topWv != null) {
-                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                presentation?.syncSpanScrollCssY((topWv.scrollY + topWv.height) / density.toDouble())
-                            }
-                        }
-                        val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
-                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                    },
-                    active = spanMode
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.ViewStream,
-                        contentDescription = stringResource(R.string.action_span_mode),
-                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            TactileIconButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
-                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.action_settings), modifier = Modifier.size(20.dp))
-            }
         }
     }
 
