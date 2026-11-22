@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
@@ -26,6 +27,10 @@ class SpanViewportView(
     private val srcRect = Rect()
     private val dstRect = RectF()
     private var currentBitmap: Bitmap? = null
+
+    init {
+        setBackgroundColor(Color.parseColor("#101216"))
+    }
 
     private val frameListener: (Bitmap) -> Unit = { bmp ->
         currentBitmap = bmp
