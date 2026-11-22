@@ -9,7 +9,6 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.SystemClock
 import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
@@ -42,7 +41,6 @@ class SecondaryBrowserPresentation(
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
     private val spanFractionProvider: () -> Double?,
-    private val onSecondarySpanScrollFraction: (Double) -> Unit,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -59,7 +57,6 @@ class SecondaryBrowserPresentation(
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
-    private var lastTopSyncAtMs: Long = 0L
     private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -167,13 +164,6 @@ class SecondaryBrowserPresentation(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                if (spanModeProvider() && SystemClock.uptimeMillis() - lastTopSyncAtMs > 250L) {
-                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                    val totalPx = (contentHeight * density).toDouble().coerceAtLeast(1.0)
-                    onSecondarySpanScrollFraction((scrollY.toDouble() / totalPx).coerceIn(0.0, 1.0))
-                }
-            }
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -304,7 +294,6 @@ class SecondaryBrowserPresentation(
     fun syncSpanScrollFraction(fraction: Double) {
         val clamped = fraction.coerceIn(0.0, 1.0)
         webView?.let { wv ->
-            lastTopSyncAtMs = SystemClock.uptimeMillis()
             val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
             val totalContentPx = (wv.contentHeight * density).toDouble()
             if (totalContentPx <= 0.0) return
