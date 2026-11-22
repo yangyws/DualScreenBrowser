@@ -39,6 +39,10 @@ class SpanEngine {
 
     private val backBuffers = arrayOfNulls<Bitmap>(2)
     private var bufferIndex = 0
+    private val bufferLock = Any()
+
+    @Volatile
+    private var stopping = false
 
     @Volatile
     var latestBitmap: Bitmap? = null
@@ -135,6 +139,7 @@ class SpanEngine {
         onProgressChanged: (Int) -> Unit
     ) {
         stop()
+        stopping = false
 
         // Scale down oversized resolutions to keep VirtualDisplay + ImageReader fast and lightweight
         val rawW = widthPx.coerceAtLeast(320)
@@ -158,12 +163,17 @@ class SpanEngine {
         frameThread = thread
         val handler = Handler(thread.looper)
 
-        val reader = ImageReader.newInstance(safeW, safeTotalH, PixelFormat.RGBA_8888, 2)
+        val reader = ImageReader.newInstance(safeW, safeTotalH, PixelFormat.RGBA_8888, 3)
         imageReader = reader
 
         reader.setOnImageAvailableListener({ r ->
+            if (stopping) {
+                runCatching { r.acquireLatestImage()?.close() }
+                return@setOnImageAvailableListener
+            }
             val image = r.acquireLatestImage() ?: return@setOnImageAvailableListener
             try {
+                if (stopping) return@setOnImageAvailableListener
                 val plane = image.planes[0]
                 val buffer = plane.buffer
                 val pixelStride = plane.pixelStride
@@ -171,17 +181,22 @@ class SpanEngine {
                 val rowPadding = rowStride - pixelStride * safeW
                 val bufferWidth = safeW + rowPadding / pixelStride
 
-                val idx = bufferIndex
-                bufferIndex = 1 - bufferIndex
-                val bmp = backBuffers[idx]?.takeIf {
-                    !it.isRecycled && it.width == bufferWidth && it.height == safeTotalH
-                } ?: Bitmap.createBitmap(bufferWidth, safeTotalH, Bitmap.Config.ARGB_8888).also {
-                    backBuffers[idx] = it
+                val bmp = synchronized(bufferLock) {
+                    if (stopping) return@setOnImageAvailableListener
+                    val idx = bufferIndex
+                    bufferIndex = 1 - bufferIndex
+                    backBuffers[idx]?.takeIf {
+                        !it.isRecycled && it.width == bufferWidth && it.height == safeTotalH
+                    } ?: Bitmap.createBitmap(bufferWidth, safeTotalH, Bitmap.Config.ARGB_8888).also {
+                        backBuffers[idx] = it
+                    }
                 }
 
                 bmp.copyPixelsFromBuffer(buffer)
-                latestBitmap = bmp
-                frameListeners.forEach { it(bmp) }
+                if (!stopping) {
+                    latestBitmap = bmp
+                    frameListeners.forEach { it(bmp) }
+                }
             } catch (_: Throwable) {
                 // Ignore transient frame errors during teardown
             } finally {
@@ -343,19 +358,28 @@ class SpanEngine {
     }
 
     fun stop() {
-        presentation?.dismiss()
-        presentation = null
+        stopping = true
+        imageReader?.setOnImageAvailableListener(null, null)
+        virtualWebView?.let { wv ->
+            runCatching {
+                wv.stopLoading()
+                wv.destroy()
+            }
+        }
         virtualWebView = null
-        virtualDisplay?.release()
+        runCatching { presentation?.dismiss() }
+        presentation = null
+        runCatching { virtualDisplay?.release() }
         virtualDisplay = null
-        imageReader?.close()
-        imageReader = null
         frameThread?.quitSafely()
         frameThread = null
-        latestBitmap = null
-        for (i in backBuffers.indices) {
-            backBuffers[i]?.recycle()
-            backBuffers[i] = null
+        runCatching { imageReader?.close() }
+        imageReader = null
+        synchronized(bufferLock) {
+            latestBitmap = null
+            for (i in backBuffers.indices) {
+                backBuffers[i] = null
+            }
         }
     }
 

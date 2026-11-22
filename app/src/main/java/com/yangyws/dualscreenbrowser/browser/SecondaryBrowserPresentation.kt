@@ -640,7 +640,7 @@ class SecondaryBrowserPresentation(
     private fun applyColorFilterToWebView(wv: WebView, brightnessOffset: Int, warmthOffset: Int) {
         if (brightnessOffset == 0 && warmthOffset == 0) {
             colorPaint.colorFilter = null
-            wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            wv.setLayerType(View.LAYER_TYPE_NONE, null)
         } else {
             val base = 1f + brightnessOffset * 0.01f
             val r = (base + warmthOffset * 0.004f).coerceIn(0.5f, 1.5f)
