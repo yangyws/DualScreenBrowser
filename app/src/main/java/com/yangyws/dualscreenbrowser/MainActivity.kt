@@ -575,6 +575,14 @@ private fun DualScreenBrowserApp(
                 }
                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
             }
+
+            override fun toggleSpanMode() {
+                if (!dualScreenActive || secondaryDisplay == null) return
+                spanMode = !spanMode
+                presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+                val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -1408,7 +1416,8 @@ private fun DualScreenBrowserApp(
                 R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
                 R.string.gamepad_key_x to R.string.gamepad_desc_x,
                 R.string.gamepad_key_y to R.string.gamepad_desc_y,
-                R.string.gamepad_key_select to R.string.gamepad_desc_select
+                R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                R.string.gamepad_key_start to R.string.gamepad_desc_start
             )
             AlertDialog(
                 onDismissRequest = { activePanel = BrowserPanel.NONE },

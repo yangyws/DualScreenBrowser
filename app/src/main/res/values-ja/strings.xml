@@ -76,6 +76,8 @@
     <string name="gamepad_desc_y">現在のページを再読み込み</string>
     <string name="gamepad_key_select">Select ボタン</string>
     <string name="gamepad_desc_select">操作対象を上画面・下画面で切り替え</string>
+    <string name="gamepad_key_start">Start ボタン</string>
+    <string name="gamepad_desc_start">スパン連結モードのオン／オフを切り替え</string>
     <string name="toast_span_on">上下画面スパン連結：オン</string>
     <string name="toast_span_off">上下画面スパン連結：オフ</string>
     <string name="action_find_in_page">ページ内検索</string>

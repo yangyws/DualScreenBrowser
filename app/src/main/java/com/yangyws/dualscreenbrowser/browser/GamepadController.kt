@@ -19,6 +19,7 @@ interface GamepadActions {
     fun refreshActive()
     fun swapScreens()
     fun toggleTargetScreen()
+    fun toggleSpanMode()
 }
 
 object GamepadController {
@@ -73,6 +74,10 @@ object GamepadController {
             }
             KeyEvent.KEYCODE_BUTTON_SELECT -> {
                 actions.toggleTargetScreen()
+                true
+            }
+            KeyEvent.KEYCODE_BUTTON_START -> {
+                actions.toggleSpanMode()
                 true
             }
             else -> false

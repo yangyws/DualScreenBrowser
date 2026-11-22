@@ -76,6 +76,8 @@
     <string name="gamepad_desc_y">重新整理目前網頁</string>
     <string name="gamepad_key_select">Select 鍵</string>
     <string name="gamepad_desc_select">切換手把控制目標（上螢幕 ↔ 下螢幕）</string>
+    <string name="gamepad_key_start">Start 鍵</string>
+    <string name="gamepad_desc_start">切換「跨螢幕拼接 ↔ 獨立雙螢幕」模式</string>
     <string name="toast_span_on">已開啟跨螢幕延展拼接</string>
     <string name="toast_span_off">已關閉跨螢幕延展拼接</string>
     <string name="action_find_in_page">頁面內搜尋</string>
