@@ -830,51 +830,69 @@ private fun DualScreenBrowserApp(
                     if (dualScreenActive && secondaryDisplay != null) {
                         HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_send_to_secondary)) },
-                            leadingIcon = { Icon(Icons.Rounded.OpenInBrowser, contentDescription = null) },
-                            onClick = {
-                                overflowMenuExpanded = false
-                                secondaryUrl = activeTab.url
-                                presentation?.loadUrl(activeTab.url)
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.toast_sent_to_bottom),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_swap_screens)) },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
-                            onClick = {
-                                overflowMenuExpanded = false
-                                val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
-                                val topUrl = activeTab.url
-                                navigateActiveTab(bottomUrl)
-                                secondaryUrl = topUrl
-                                presentation?.loadUrl(topUrl)
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.toast_swapped_screens),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_secondary_bar)) },
-                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                            text = { Text(stringResource(R.string.action_span_mode)) },
+                            leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
                             trailingIcon = {
-                                if (showSecondaryBar && !spanMode) {
+                                if (spanMode) {
                                     Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 }
                             },
                             onClick = {
                                 overflowMenuExpanded = false
-                                showSecondaryBar = !showSecondaryBar
-                                prefs.showSecondaryBar = showSecondaryBar
+                                spanMode = !spanMode
                                 presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+                                val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                             }
                         )
+                        if (!spanMode) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_send_to_secondary)) },
+                                leadingIcon = { Icon(Icons.Rounded.OpenInBrowser, contentDescription = null) },
+                                onClick = {
+                                    overflowMenuExpanded = false
+                                    secondaryUrl = activeTab.url
+                                    presentation?.loadUrl(activeTab.url)
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_sent_to_bottom),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_swap_screens)) },
+                                leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                                onClick = {
+                                    overflowMenuExpanded = false
+                                    val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
+                                    val topUrl = activeTab.url
+                                    navigateActiveTab(bottomUrl)
+                                    secondaryUrl = topUrl
+                                    presentation?.loadUrl(topUrl)
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_swapped_screens),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_secondary_bar)) },
+                                leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                                trailingIcon = {
+                                    if (showSecondaryBar) {
+                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                },
+                                onClick = {
+                                    overflowMenuExpanded = false
+                                    showSecondaryBar = !showSecondaryBar
+                                    prefs.showSecondaryBar = showSecondaryBar
+                                    presentation?.updatePresentationMode(showSecondaryBar, false)
+                                }
+                            )
+                        }
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
