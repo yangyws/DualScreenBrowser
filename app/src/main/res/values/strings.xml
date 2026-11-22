@@ -42,6 +42,7 @@
     <string name="language_system_default">System Default</string>
     <string name="language_zh_tw">繁體中文 (台灣)</string>
     <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
     <string name="settings_search_engine">Search Engine</string>
     <string name="settings_search_engine_desc">Default search engine for address bar queries</string>
     <string name="settings_auto_dual_screen">Auto-Open Bottom Screen</string>

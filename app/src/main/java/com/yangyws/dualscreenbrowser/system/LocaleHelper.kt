@@ -14,7 +14,8 @@ enum class AppLanguage(
 ) {
     SYSTEM("system", R.string.language_system_default),
     ZH_TW("zh-TW", R.string.language_zh_tw),
-    EN("en", R.string.language_english)
+    EN("en", R.string.language_english),
+    JA("ja", R.string.language_japanese)
 }
 
 object LocaleHelper {
@@ -27,6 +28,7 @@ object LocaleHelper {
             return when {
                 tag.startsWith("zh", ignoreCase = true) -> AppLanguage.ZH_TW
                 tag.startsWith("en", ignoreCase = true) -> AppLanguage.EN
+                tag.startsWith("ja", ignoreCase = true) -> AppLanguage.JA
                 else -> AppLanguage.SYSTEM
             }
         }
@@ -40,6 +42,7 @@ object LocaleHelper {
                 AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
                 AppLanguage.EN -> LocaleList(Locale.ENGLISH)
                 AppLanguage.ZH_TW -> LocaleList(Locale.TRADITIONAL_CHINESE)
+                AppLanguage.JA -> LocaleList(Locale.JAPANESE)
             }
             if (localeManager != null && localeManager.applicationLocales != desired) {
                 localeManager.applicationLocales = desired

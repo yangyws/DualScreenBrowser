@@ -42,6 +42,7 @@
     <string name="language_system_default">跟隨系統</string>
     <string name="language_zh_tw">繁體中文 (台灣)</string>
     <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
     <string name="settings_search_engine">搜尋引擎</string>
     <string name="settings_search_engine_desc">網址列輸入關鍵字時的預設搜尋引擎</string>
     <string name="settings_auto_dual_screen">自動開啟下螢幕瀏覽器</string>
