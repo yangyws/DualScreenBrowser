@@ -130,6 +130,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.yangyws.dualscreenbrowser.browser.AdBlocker
 import com.yangyws.dualscreenbrowser.browser.BookmarkItem
 import com.yangyws.dualscreenbrowser.browser.BrowserPrefs
@@ -289,6 +292,25 @@ private fun DualScreenBrowserApp(
     }
     var secondaryUrl by remember { mutableStateOf("https://duckduckgo.com") }
     var presentation by remember { mutableStateOf<SecondaryBrowserPresentation?>(null) }
+    var presentationTrigger by remember { mutableIntStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, displayManager) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val found = findSecondaryDisplay(displayManager)
+                secondaryDisplay = found
+                if (found != null && presentation?.isShowing != true) {
+                    dualScreenActive = true
+                    presentationTrigger++
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(externalUrl) {
         if (!externalUrl.isNullOrBlank()) {
@@ -325,7 +347,7 @@ private fun DualScreenBrowserApp(
     }
 
     // Manage SecondaryBrowserPresentation lifecycle
-    DisposableEffect(dualScreenActive, secondaryDisplay, jsEnabled) {
+    DisposableEffect(dualScreenActive, secondaryDisplay, jsEnabled, presentationTrigger) {
         val targetDisplay = secondaryDisplay
         if (dualScreenActive && targetDisplay != null) {
             val pres = SecondaryBrowserPresentation(
@@ -1011,6 +1033,18 @@ private fun DualScreenBrowserApp(
                                 }
                             )
                         }
+                    }
+                    if (secondaryDisplay != null) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_reopen_bottom)) },
+                            leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                dualScreenActive = true
+                                presentationTrigger++
+                            }
+                        )
                     }
                     HorizontalDivider()
                     DropdownMenuItem(

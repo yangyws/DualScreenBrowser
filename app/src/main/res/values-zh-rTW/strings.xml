@@ -71,6 +71,7 @@
     <string name="action_span_source_top">拼接來源：上螢幕</string>
     <string name="action_span_source_bottom">拼接來源：下螢幕</string>
     <string name="action_secondary_bar">下螢幕網址列</string>
+    <string name="action_reopen_bottom">重新開啟下螢幕</string>
     <string name="action_gamepad_guide">手把操作說明</string>
     <string name="gamepad_guide_title">手把快捷操作說明</string>
     <string name="gamepad_key_dpad">十字鍵 ／ 左右搖桿</string>
