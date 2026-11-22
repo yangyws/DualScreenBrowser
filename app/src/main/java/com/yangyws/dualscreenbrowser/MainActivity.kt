@@ -406,8 +406,12 @@ private fun DualScreenBrowserApp(
                     addressText = url
                     canGoBack = canBack
                     canGoForward = canForward
-                    tabs = tabs.map {
-                        if (it.id == activeTab.id) it.copy(url = url, title = title) else it
+                    if (spanSource == SpanSource.BOTTOM) {
+                        secondaryUrl = url
+                    } else {
+                        tabs = tabs.map {
+                            if (it.id == activeTab.id) it.copy(url = url, title = title) else it
+                        }
                     }
                     if (!activeTab.isIncognito) {
                         val entry = HistoryItem(title = title.ifBlank { url }, url = url)
@@ -422,8 +426,13 @@ private fun DualScreenBrowserApp(
         } else {
             val lastSpanUrl = spanEngine.currentUrl()
             spanEngine.stop()
-            if (!lastSpanUrl.isNullOrBlank() && lastSpanUrl != webViews[activeTabId]?.url) {
-                webViews[activeTabId]?.loadUrl(lastSpanUrl)
+            if (!lastSpanUrl.isNullOrBlank()) {
+                if (spanSource == SpanSource.BOTTOM) {
+                    secondaryUrl = lastSpanUrl
+                    presentation?.loadUrl(lastSpanUrl)
+                } else if (lastSpanUrl != webViews[activeTabId]?.url) {
+                    webViews[activeTabId]?.loadUrl(lastSpanUrl)
+                }
             }
         }
         onDispose {
@@ -875,9 +884,16 @@ private fun DualScreenBrowserApp(
                             },
                             leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                             onClick = {
+                                overflowMenuExpanded = false
                                 val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
                                 spanSource = next
                                 prefs.spanSource = next
+                                val labelRes = if (next == SpanSource.TOP) {
+                                    R.string.action_span_source_top
+                                } else {
+                                    R.string.action_span_source_bottom
+                                }
+                                Toast.makeText(context, context.getString(labelRes), Toast.LENGTH_SHORT).show()
                                 if (spanMode && spanEngine.isRunning()) {
                                     val targetUrl = if (next == SpanSource.BOTTOM) {
                                         secondaryUrl
