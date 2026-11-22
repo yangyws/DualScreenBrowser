@@ -10,7 +10,7 @@ import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
+import android.os.HandlerThread
 import android.view.Display
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -28,7 +28,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  * each frame into top and bottom viewports for flicker-free cross-screen spanning.
  */
 class SpanEngine {
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var frameThread: HandlerThread? = null
+    private var frameHandler: Handler? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
     private var presentation: VirtualWebPresentation? = null
@@ -95,6 +96,11 @@ class SpanEngine {
         bottomViewportHeight = safeBottomH
         totalHeight = safeTotalH
 
+        val thread = HandlerThread("SpanFrameThread").apply { start() }
+        frameThread = thread
+        val handler = Handler(thread.looper)
+        frameHandler = handler
+
         val reader = ImageReader.newInstance(safeW, safeTotalH, PixelFormat.RGBA_8888, 2)
         imageReader = reader
 
@@ -111,7 +117,6 @@ class SpanEngine {
                 val bmp = reusableBitmap?.takeIf {
                     !it.isRecycled && it.width == bufferWidth && it.height == safeTotalH
                 } ?: Bitmap.createBitmap(bufferWidth, safeTotalH, Bitmap.Config.ARGB_8888).also {
-                    reusableBitmap?.recycle()
                     reusableBitmap = it
                 }
 
@@ -122,7 +127,7 @@ class SpanEngine {
             } finally {
                 image.close()
             }
-        }, mainHandler)
+        }, handler)
 
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val vd = dm.createVirtualDisplay(
@@ -227,6 +232,9 @@ class SpanEngine {
         virtualDisplay = null
         imageReader?.close()
         imageReader = null
+        frameThread?.quitSafely()
+        frameThread = null
+        frameHandler = null
         reusableBitmap?.recycle()
         reusableBitmap = null
     }

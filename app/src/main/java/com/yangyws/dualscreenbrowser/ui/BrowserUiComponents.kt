@@ -161,6 +161,8 @@ fun SidePanelSheet(
     visible: Boolean,
     title: String,
     onDismiss: () -> Unit,
+    dimBackground: Boolean = true,
+    compactWidth: Boolean = false,
     headerActions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -173,7 +175,7 @@ fun SidePanelSheet(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.52f))
+                    .background(if (dimBackground) Color.Black.copy(alpha = 0.52f) else Color.Transparent)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -196,8 +198,8 @@ fun SidePanelSheet(
                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.09f)),
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.58f)
-                    .widthIn(min = 300.dp, max = 460.dp)
+                    .fillMaxWidth(if (compactWidth) 0.44f else 0.58f)
+                    .widthIn(min = if (compactWidth) 260.dp else 300.dp, max = if (compactWidth) 360.dp else 460.dp)
             ) {
                 Column(
                     modifier = Modifier

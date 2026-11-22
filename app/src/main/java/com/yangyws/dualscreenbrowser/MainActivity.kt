@@ -259,6 +259,7 @@ private fun DualScreenBrowserApp(
     var spanMode by remember { mutableStateOf(true) }
     var spanSource by remember { mutableStateOf(prefs.spanSource) }
     var hingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
+    var pendingHingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
@@ -1239,6 +1240,8 @@ private fun DualScreenBrowserApp(
         visible = activePanel != BrowserPanel.NONE,
         title = panelTitle,
         onDismiss = { activePanel = BrowserPanel.NONE },
+        dimBackground = activePanel != BrowserPanel.SETTINGS,
+        compactWidth = activePanel == BrowserPanel.SETTINGS,
         headerActions = {
             if (activePanel == BrowserPanel.HISTORY && history.isNotEmpty()) {
                 TextButton(onClick = {
@@ -1612,17 +1615,17 @@ private fun DualScreenBrowserApp(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.settings_hinge_gap), fontWeight = FontWeight.Medium, color = Color.White)
                         Text(
-                            stringResource(R.string.settings_hinge_gap_desc, hingeGapDp),
+                            stringResource(R.string.settings_hinge_gap_desc, pendingHingeGapDp),
                             fontSize = 12.sp,
                             color = Color.Gray,
                             style = TextStyle(fontFeatureSettings = "tnum")
                         )
                         Slider(
-                            value = hingeGapDp.toFloat(),
-                            onValueChange = {
-                                val rounded = it.toInt()
-                                hingeGapDp = rounded
-                                prefs.hingeGapDp = rounded
+                            value = pendingHingeGapDp.toFloat(),
+                            onValueChange = { pendingHingeGapDp = it.toInt() },
+                            onValueChangeFinished = {
+                                hingeGapDp = pendingHingeGapDp
+                                prefs.hingeGapDp = pendingHingeGapDp
                             },
                             valueRange = 0f..48f
                         )
