@@ -49,6 +49,7 @@ class SecondaryBrowserPresentation(
 
     private var webView: WebView? = null
     private var spanViewport: SpanViewportView? = null
+    private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: android.view.View? = null
     private var urlInput: EditText? = null
@@ -215,6 +216,31 @@ class SecondaryBrowserPresentation(
         contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
+        val restorePillBg = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#CC1A1D24"))
+            setStroke(dp(1), Color.parseColor("#44FFFFFF"))
+        }
+        val btnRestoreBar = ImageButton(context).apply {
+            setImageResource(android.R.drawable.ic_menu_more)
+            contentDescription = context.getString(R.string.action_secondary_bar)
+            background = restorePillBg
+            setColorFilter(Color.WHITE)
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            visibility = if (!spanModeProvider() && !barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            setOnClickListener {
+                updatePresentationMode(barVisible = true, spanActive = false)
+            }
+        }
+        restoreBarBtn = btnRestoreBar
+        contentStack.addView(
+            btnRestoreBar,
+            FrameLayout.LayoutParams(dp(34), dp(34)).apply {
+                gravity = Gravity.TOP or Gravity.END
+                setMargins(0, dp(8), dp(8), 0)
+            }
+        )
+
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
@@ -255,11 +281,13 @@ class SecondaryBrowserPresentation(
 
     fun updatePresentationMode(barVisible: Boolean, spanActive: Boolean) {
         val barVis = if (barVisible && !spanActive) android.view.View.VISIBLE else android.view.View.GONE
+        val restoreVis = if (!barVisible && !spanActive) android.view.View.VISIBLE else android.view.View.GONE
         val spanVis = if (spanActive) android.view.View.VISIBLE else android.view.View.GONE
         val webVis = if (spanActive) android.view.View.GONE else android.view.View.VISIBLE
         topBarView?.post {
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
+            restoreBarBtn?.visibility = restoreVis
             spanViewport?.visibility = spanVis
             webView?.visibility = webVis
             if (spanActive) {
