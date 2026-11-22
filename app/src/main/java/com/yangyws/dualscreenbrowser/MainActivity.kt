@@ -261,6 +261,7 @@ private fun DualScreenBrowserApp(
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
+    val lastBottomSyncAtMs = remember { LongArray(1) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     var isEditingText by remember { mutableStateOf(false) }
@@ -329,7 +330,7 @@ private fun DualScreenBrowserApp(
             val pres = SecondaryBrowserPresentation(
                 outerContext = context.createDisplayContext(targetDisplay),
                 display = targetDisplay,
-                initialUrl = if (spanMode) activeTab.url else secondaryUrl,
+                initialUrl = if (spanMode && spanSource == SpanSource.TOP) activeTab.url else secondaryUrl,
                 jsEnabled = jsEnabled,
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
@@ -344,6 +345,24 @@ private fun DualScreenBrowserApp(
                         }
                     } else {
                         null
+                    }
+                },
+                onSecondarySpanScrollCss = { bottomCssY ->
+                    if (spanMode && dualScreenActive) {
+                        webViews[activeTabId]?.let { topWv ->
+                            val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                            val targetTopPx = ((bottomCssY - hingeGapDp) * density - topWv.height).toInt().coerceAtLeast(0)
+                            if (kotlin.math.abs(topWv.scrollY - targetTopPx) > 4) {
+                                lastBottomSyncAtMs[0] = SystemClock.uptimeMillis()
+                                topWv.scrollTo(topWv.scrollX, targetTopPx)
+                            }
+                        }
+                    }
+                },
+                onSpanBottomUrlChanged = { bottomUrl ->
+                    if (spanMode && dualScreenActive && webViews[activeTabId]?.url != bottomUrl) {
+                        webViews[activeTabId]?.loadUrl(bottomUrl)
+                        addressText = bottomUrl
                     }
                 },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
@@ -1102,7 +1121,9 @@ private fun DualScreenBrowserApp(
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.setOnScrollChangeListener { v, _, scrollY, _, _ ->
-                            if (spanMode && dualScreenActive) {
+                            if (spanMode && dualScreenActive &&
+                                SystemClock.uptimeMillis() - lastBottomSyncAtMs[0] > 250L
+                            ) {
                                 val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
                                 presentation?.syncSpanScrollCssY(((scrollY + v.height) / density.toDouble()) + hingeGapDp)
                             }

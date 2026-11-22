@@ -9,6 +9,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
@@ -41,6 +42,8 @@ class SecondaryBrowserPresentation(
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
     private val spanOffsetCssProvider: () -> Double?,
+    private val onSecondarySpanScrollCss: (Double) -> Unit,
+    private val onSpanBottomUrlChanged: (String) -> Unit,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -57,6 +60,7 @@ class SecondaryBrowserPresentation(
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
     private var desktopMode: Boolean = false
+    private var lastTopSyncAtMs: Long = 0L
     private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -164,6 +168,12 @@ class SecondaryBrowserPresentation(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            setOnScrollChangeListener { _, _, scrollY, _, _ ->
+                if (spanModeProvider() && SystemClock.uptimeMillis() - lastTopSyncAtMs > 250L) {
+                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                    onSecondarySpanScrollCss(scrollY / density.toDouble())
+                }
+            }
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -190,7 +200,11 @@ class SecondaryBrowserPresentation(
                         urlInput?.setText(url)
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
+                        applySpanStickyHeaderCss(view, spanModeProvider())
                         onUrlChanged(url, view?.title.orEmpty())
+                        if (spanModeProvider()) {
+                            onSpanBottomUrlChanged(url)
+                        }
                         spanOffsetCssProvider()?.let { targetCssY ->
                             view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 150)
                             view?.postDelayed({ syncSpanScrollCssY(targetCssY) }, 450)
@@ -287,13 +301,33 @@ class SecondaryBrowserPresentation(
             dividerView?.visibility = barVis
             restoreBarBtn?.visibility = restoreVis
             webView?.visibility = View.VISIBLE
+            applySpanStickyHeaderCss(webView, spanActive)
             topBarView?.parent?.requestLayout()
         }
+    }
+
+    private fun applySpanStickyHeaderCss(wv: WebView?, hideSticky: Boolean) {
+        if (wv == null || !jsEnabled) return
+        val js = if (hideSticky) {
+            """
+            (function() {
+                if (document.getElementById('dsb-span-hide-sticky')) return;
+                var s = document.createElement('style');
+                s.id = 'dsb-span-hide-sticky';
+                s.textContent = 'header, [role="banner"], .sticky, [style*="position: fixed"], [style*="position:sticky"] { display: none !important; }';
+                (document.head || document.documentElement).appendChild(s);
+            })();
+            """.trimIndent()
+        } else {
+            "(function(){ var e = document.getElementById('dsb-span-hide-sticky'); if (e) e.remove(); })();"
+        }
+        wv.evaluateJavascript(js, null)
     }
 
     fun syncSpanScrollCssY(targetCssY: Double) {
         val clamped = targetCssY.coerceAtLeast(0.0)
         webView?.let { wv ->
+            lastTopSyncAtMs = SystemClock.uptimeMillis()
             val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
             val targetPx = (clamped * density).toInt()
             if (kotlin.math.abs(wv.scrollY - targetPx) > 2) {
