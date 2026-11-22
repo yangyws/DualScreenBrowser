@@ -125,9 +125,6 @@ class SecondaryBrowserPresentation(
         val btnSendUp = navButton(android.R.drawable.ic_menu_upload, context.getString(R.string.action_send_to_primary)) {
             onSendUrlToPrimary(currentUrl)
         }
-        val btnClose = navButton(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.action_close)) {
-            onRequestClose()
-        }
 
         val btnSize = dp(38)
         topBar.addView(btnBack, LinearLayout.LayoutParams(btnSize, btnSize))
@@ -141,7 +138,6 @@ class SecondaryBrowserPresentation(
         )
         topBar.addView(btnSwap, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(btnSendUp, LinearLayout.LayoutParams(btnSize, btnSize))
-        topBar.addView(btnClose, LinearLayout.LayoutParams(btnSize, btnSize))
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))

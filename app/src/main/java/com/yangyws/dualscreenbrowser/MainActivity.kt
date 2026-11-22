@@ -267,7 +267,7 @@ private fun DualScreenBrowserApp(
         mutableStateOf(findSecondaryDisplay(displayManager))
     }
     var dualScreenActive by remember {
-        mutableStateOf(autoDualScreen && secondaryDisplay != null)
+        mutableStateOf(secondaryDisplay != null)
     }
     var secondaryUrl by remember { mutableStateOf("https://duckduckgo.com") }
     var presentation by remember { mutableStateOf<SecondaryBrowserPresentation?>(null) }
@@ -287,7 +287,7 @@ private fun DualScreenBrowserApp(
         val listener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
                 secondaryDisplay = findSecondaryDisplay(displayManager)
-                if (autoDualScreen && secondaryDisplay != null) {
+                if (secondaryDisplay != null) {
                     dualScreenActive = true
                 }
             }
@@ -720,33 +720,7 @@ private fun DualScreenBrowserApp(
                 }
             }
 
-            // Dual screen quick toggle
-            TactileIconButton(
-                onClick = {
-                    if (secondaryDisplay == null) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.secondary_screen_not_found),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        dualScreenActive = !dualScreenActive
-                        if (!dualScreenActive) spanMode = false
-                    }
-                },
-                active = dualScreenActive
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Devices,
-                    contentDescription = stringResource(
-                        if (dualScreenActive) R.string.action_dual_screen_on else R.string.action_dual_screen_off
-                    ),
-                    tint = if (dualScreenActive) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(19.dp)
-                )
-            }
-
-            // Span Mode quick toggle when Dual Screen is active
+            // Span Mode quick toggle when secondary display is present
             if (dualScreenActive && secondaryDisplay != null) {
                 TactileIconButton(
                     onClick = {
