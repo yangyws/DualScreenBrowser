@@ -88,13 +88,13 @@ class SecondaryBrowserPresentation(
         }
         topBarView = topBar
 
-        val btnBack = navButton(android.R.drawable.ic_media_previous, context.getString(R.string.action_back)) {
+        val btnBack = navButton(R.drawable.ic_arrow_back, context.getString(R.string.action_back)) {
             webView?.let { if (it.canGoBack()) it.goBack() }
         }
-        val btnForward = navButton(android.R.drawable.ic_media_next, context.getString(R.string.action_forward)) {
+        val btnForward = navButton(R.drawable.ic_arrow_forward, context.getString(R.string.action_forward)) {
             webView?.let { if (it.canGoForward()) it.goForward() }
         }
-        val btnRefresh = navButton(android.R.drawable.ic_popup_sync, context.getString(R.string.action_refresh)) {
+        val btnRefresh = navButton(R.drawable.ic_refresh, context.getString(R.string.action_refresh)) {
             webView?.reload()
         }
 
@@ -102,26 +102,36 @@ class SecondaryBrowserPresentation(
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(10).toFloat()
             setColor(Color.parseColor("#252A34"))
-            setStroke(dp(1), Color.parseColor("#33FFFFFF"))
+            setStroke(dp(1), Color.parseColor("#14FFFFFF"))
         }
 
         val addressBar = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
-            setText(initialUrl)
+            setText(UrlResolver.displayHost(initialUrl).ifBlank { initialUrl })
             setTextColor(Color.WHITE)
             setHintTextColor(Color.parseColor("#8A92A6"))
             background = addressDrawable
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setPadding(dp(10), dp(7), dp(10), dp(7))
             textSize = 13.5f
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            setOnFocusChangeListener { v, hasFocus ->
+                val et = v as EditText
+                if (hasFocus) {
+                    et.setText(currentUrl)
+                    et.selectAll()
+                } else {
+                    et.setText(UrlResolver.displayHost(currentUrl).ifBlank { currentUrl })
+                }
+            }
             setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_GO ||
                     (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
                 ) {
                     val target = UrlResolver.resolveInput(v.text.toString(), searchEngineProvider())
                     loadUrl(target)
+                    v.clearFocus()
                     true
                 } else {
                     false
@@ -130,14 +140,14 @@ class SecondaryBrowserPresentation(
         }
         urlInput = addressBar
 
-        val btnSwap = navButton(android.R.drawable.ic_menu_rotate, context.getString(R.string.action_swap_screens)) {
+        val btnSwap = navButton(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
             onSwapScreens(currentUrl)
         }
-        val btnSendUp = navButton(android.R.drawable.ic_menu_upload, context.getString(R.string.action_send_to_primary)) {
+        val btnSendUp = navButton(R.drawable.ic_upload_top, context.getString(R.string.action_send_to_primary)) {
             onSendUrlToPrimary(currentUrl)
         }
 
-        val btnSize = dp(38)
+        val btnSize = dp(36)
         topBar.addView(btnBack, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(btnForward, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(btnRefresh, LinearLayout.LayoutParams(btnSize, btnSize))
@@ -194,7 +204,9 @@ class SecondaryBrowserPresentation(
                     super.onPageFinished(view, url)
                     if (!url.isNullOrBlank()) {
                         currentUrl = url
-                        urlInput?.setText(url)
+                        if (urlInput?.hasFocus() != true) {
+                            urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
+                        }
                         val (forceDark, enableCopy, customScripts) = userScriptsProvider()
                         UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
                         onUrlChanged(url, view?.title.orEmpty())
@@ -364,7 +376,9 @@ class SecondaryBrowserPresentation(
 
     fun loadUrl(url: String) {
         currentUrl = url
-        urlInput?.setText(url)
+        if (urlInput?.hasFocus() != true) {
+            urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
+        }
         webView?.loadUrl(url)
     }
 
