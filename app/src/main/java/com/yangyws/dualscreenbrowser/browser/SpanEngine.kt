@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Presentation
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
@@ -234,6 +236,26 @@ class SpanEngine {
 
     fun zoomBy(factor: Float) {
         virtualWebView?.zoomBy(factor.coerceIn(0.88f, 1.12f))
+    }
+
+    /** Captures a seamless stitched Bitmap of the top and bottom viewports (excluding hinge gap). */
+    fun captureStitchedBitmap(): Bitmap? {
+        val src = latestBitmap ?: return null
+        if (src.isRecycled || virtualWidth <= 0) return null
+        val w = virtualWidth.coerceAtMost(src.width)
+        val topH = topViewportHeight.coerceAtMost(src.height)
+        val botStart = (topViewportHeight + hingeGapPx).coerceAtMost(src.height)
+        val botH = bottomViewportHeight.coerceAtMost(src.height - botStart).coerceAtLeast(0)
+        val outH = (topH + botH).coerceAtLeast(1)
+        val out = Bitmap.createBitmap(w, outH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        if (topH > 0) {
+            canvas.drawBitmap(src, Rect(0, 0, w, topH), Rect(0, 0, w, topH), null)
+        }
+        if (botH > 0) {
+            canvas.drawBitmap(src, Rect(0, botStart, w, botStart + botH), Rect(0, topH, w, topH + botH), null)
+        }
+        return out
     }
 
     fun dispatchMappedTouch(

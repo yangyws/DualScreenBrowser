@@ -80,6 +80,9 @@
     <string name="action_reopen_top">重新開啟上螢幕</string>
     <string name="action_reopen_bottom">重新開啟下螢幕</string>
     <string name="action_bottom_touchpad">下螢幕觸控板</string>
+    <string name="action_screenshot">螢幕截圖</string>
+    <string name="toast_screenshot_saved">已儲存截圖至 Pictures/DualScreenBrowser</string>
+    <string name="toast_screenshot_failed">截圖儲存失敗</string>
     <string name="touchpad_hint">單指：移游標／點擊 · 雙指：捲動／縮放／輕觸回上頁 · 三指輕觸：重整</string>
     <string name="action_gamepad_guide">手把操作說明</string>
     <string name="action_tutorial">新手教學導覽</string>

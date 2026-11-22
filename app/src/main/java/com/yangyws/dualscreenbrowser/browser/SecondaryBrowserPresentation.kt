@@ -3,6 +3,8 @@ package com.yangyws.dualscreenbrowser.browser
 import android.annotation.SuppressLint
 import android.app.Presentation
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -30,6 +32,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import com.yangyws.dualscreenbrowser.R
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import kotlin.math.abs
@@ -314,18 +317,57 @@ class SecondaryBrowserPresentation(
         val topDivider = View(context).apply {
             setBackgroundColor(Color.parseColor("#24FFFFFF"))
         }
+        val bodyRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val btnBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(10).toFloat()
+            setColor(Color.parseColor("#1FFFFFFF"))
+            setStroke(dp(1), Color.parseColor("#24FFFFFF"))
+        }
+        val btnScreenshot = ImageButton(context).apply {
+            setImageResource(R.drawable.ic_screenshot)
+            contentDescription = context.getString(R.string.action_screenshot)
+            background = btnBg
+            setColorFilter(Color.WHITE)
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setOnClickListener { captureCurrentView() }
+        }
+        val vDivider = View(context).apply {
+            setBackgroundColor(Color.parseColor("#1AFFFFFF"))
+        }
+
+        val padArea = FrameLayout(context)
         val hintLabel = TextView(context).apply {
             text = context.getString(R.string.touchpad_hint)
             setTextColor(Color.parseColor("#6E7687"))
             textSize = 11f
             gravity = Gravity.CENTER
-            setPadding(dp(12), 0, dp(12), 0)
+            setPadding(dp(10), 0, dp(10), 0)
         }
+        padArea.addView(hintLabel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        bodyRow.addView(
+            btnScreenshot,
+            LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+                setMargins(dp(10), 0, dp(8), 0)
+            }
+        )
+        bodyRow.addView(
+            vDivider,
+            LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                setMargins(0, dp(14), 0, dp(14))
+            }
+        )
+        bodyRow.addView(padArea, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
 
         container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
-        container.addView(hintLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        container.addView(bodyRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        container.setOnTouchListener { _, event ->
+        padArea.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     lastAvgX = event.x
@@ -400,6 +442,27 @@ class SecondaryBrowserPresentation(
             }
         }
         return container
+    }
+
+    private fun captureCurrentView() {
+        val bmp: Bitmap? = if (spanModeProvider()) {
+            spanEngine.captureStitchedBitmap()
+        } else {
+            val wv = webView
+            if (wv != null && wv.width > 0 && wv.height > 0) {
+                Bitmap.createBitmap(wv.width, wv.height, Bitmap.Config.ARGB_8888).also { b ->
+                    wv.draw(Canvas(b))
+                }
+            } else null
+        }
+        if (bmp == null) {
+            Toast.makeText(context, context.getString(R.string.toast_screenshot_failed), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val saved = ScreenCaptureHelper.saveBitmapToGallery(context, bmp)
+        bmp.recycle()
+        val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
     }
 
     fun updateTouchpadVisibility(visible: Boolean) {

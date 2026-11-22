@@ -80,6 +80,9 @@
     <string name="action_reopen_top">上画面を再表示</string>
     <string name="action_reopen_bottom">下画面を再表示</string>
     <string name="action_bottom_touchpad">下画面タッチパッド</string>
+    <string name="action_screenshot">スクリーンショット</string>
+    <string name="toast_screenshot_saved">Pictures/DualScreenBrowser に保存しました</string>
+    <string name="toast_screenshot_failed">スクリーンショットの保存に失敗しました</string>
     <string name="touchpad_hint">1本指：移動/クリック · 2本指：スクロール/拡大縮小/タップで戻る · 3本指：更新</string>
     <string name="action_gamepad_guide">ゲームパッド操作ガイド</string>
     <string name="action_tutorial">チュートリアル</string>
