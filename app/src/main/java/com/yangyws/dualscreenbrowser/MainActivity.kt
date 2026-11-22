@@ -592,6 +592,23 @@ private fun DualScreenBrowserApp(
                 val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                 Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
             }
+
+            override fun setSpanSource(source: SpanSource) {
+                spanSource = source
+                prefs.spanSource = source
+                val labelRes = if (source == SpanSource.TOP) {
+                    R.string.action_span_source_top
+                } else {
+                    R.string.action_span_source_bottom
+                }
+                Toast.makeText(context, context.getString(labelRes), Toast.LENGTH_SHORT).show()
+                if (spanMode && spanEngine.isRunning()) {
+                    val targetUrl = if (source == SpanSource.BOTTOM) secondaryUrl else activeTab.url
+                    if (targetUrl.isNotBlank() && targetUrl != spanEngine.currentUrl()) {
+                        spanEngine.loadUrl(targetUrl)
+                    }
+                }
+            }
         }
     }
 
@@ -863,7 +880,6 @@ private fun DualScreenBrowserApp(
                                 }
                             },
                             onClick = {
-                                overflowMenuExpanded = false
                                 spanMode = !spanMode
                                 presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
                                 val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
@@ -884,26 +900,8 @@ private fun DualScreenBrowserApp(
                             },
                             leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                             onClick = {
-                                overflowMenuExpanded = false
                                 val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
-                                spanSource = next
-                                prefs.spanSource = next
-                                val labelRes = if (next == SpanSource.TOP) {
-                                    R.string.action_span_source_top
-                                } else {
-                                    R.string.action_span_source_bottom
-                                }
-                                Toast.makeText(context, context.getString(labelRes), Toast.LENGTH_SHORT).show()
-                                if (spanMode && spanEngine.isRunning()) {
-                                    val targetUrl = if (next == SpanSource.BOTTOM) {
-                                        secondaryUrl
-                                    } else {
-                                        activeTab.url
-                                    }
-                                    if (targetUrl.isNotBlank() && targetUrl != spanEngine.currentUrl()) {
-                                        spanEngine.loadUrl(targetUrl)
-                                    }
-                                }
+                                gamepadActions.setSpanSource(next)
                             }
                         )
                         if (!spanMode) {
@@ -1433,7 +1431,8 @@ private fun DualScreenBrowserApp(
                 R.string.gamepad_key_x to R.string.gamepad_desc_x,
                 R.string.gamepad_key_y to R.string.gamepad_desc_y,
                 R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                R.string.gamepad_key_start to R.string.gamepad_desc_start
+                R.string.gamepad_key_start to R.string.gamepad_desc_start,
+                R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
             )
             AlertDialog(
                 onDismissRequest = { activePanel = BrowserPanel.NONE },

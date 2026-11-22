@@ -78,6 +78,8 @@
     <string name="gamepad_desc_select">操作対象を上画面・下画面で切り替え</string>
     <string name="gamepad_key_start">Start ボタン</string>
     <string name="gamepad_desc_start">スパン連結モードのオン／オフを切り替え</string>
+    <string name="gamepad_key_start_dpad">Start + 十字キー 上 / 下</string>
+    <string name="gamepad_desc_start_dpad">スパン元を「上画面」または「下画面」に設定</string>
     <string name="toast_span_on">上下画面スパン連結：オン</string>
     <string name="toast_span_off">上下画面スパン連結：オフ</string>
     <string name="action_find_in_page">ページ内検索</string>

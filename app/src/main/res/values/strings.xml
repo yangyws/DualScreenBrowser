@@ -78,6 +78,8 @@
     <string name="gamepad_desc_select">Switch gamepad target between Top and Bottom screen</string>
     <string name="gamepad_key_start">Start Button</string>
     <string name="gamepad_desc_start">Toggle Cross-Screen Span Mode</string>
+    <string name="gamepad_key_start_dpad">Start + D-Pad Up / Down</string>
+    <string name="gamepad_desc_start_dpad">Set Span Source to Top or Bottom screen</string>
     <string name="toast_span_on">Cross-screen Span Mode ON</string>
     <string name="toast_span_off">Cross-screen Span Mode OFF</string>
     <string name="action_find_in_page">Find in Page</string>

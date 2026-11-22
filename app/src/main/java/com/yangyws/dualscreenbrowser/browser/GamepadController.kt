@@ -20,12 +20,15 @@ interface GamepadActions {
     fun swapScreens()
     fun toggleTargetScreen()
     fun toggleSpanMode()
+    fun setSpanSource(source: SpanSource)
 }
 
 object GamepadController {
     private const val SCROLL_STEP_PX = 180
     private const val STICK_DEADZONE = 0.25f
     private const val STICK_SCROLL_MULTIPLIER = 42f
+    private var isStartHeld = false
+    private var startChordUsed = false
 
     fun handleKeyEvent(
         event: KeyEvent,
@@ -33,17 +36,52 @@ object GamepadController {
         isEditingText: Boolean,
         actions: GamepadActions
     ): Boolean {
-        if (!enabled || event.action != KeyEvent.ACTION_DOWN) return false
+        if (!enabled) return false
+
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount == 0) {
+                        isStartHeld = true
+                        startChordUsed = false
+                    }
+                    return true
+                }
+                KeyEvent.ACTION_UP -> {
+                    val shouldToggle = isStartHeld && !startChordUsed
+                    isStartHeld = false
+                    startChordUsed = false
+                    if (shouldToggle) {
+                        actions.toggleSpanMode()
+                    }
+                    return true
+                }
+            }
+        }
+
+        if (event.action != KeyEvent.ACTION_DOWN) return false
 
         return when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> {
-                if (isEditingText) false else {
+                if (isStartHeld) {
+                    startChordUsed = true
+                    actions.setSpanSource(SpanSource.TOP)
+                    true
+                } else if (isEditingText) {
+                    false
+                } else {
                     actions.scrollActive(-SCROLL_STEP_PX)
                     true
                 }
             }
             KeyEvent.KEYCODE_DPAD_DOWN -> {
-                if (isEditingText) false else {
+                if (isStartHeld) {
+                    startChordUsed = true
+                    actions.setSpanSource(SpanSource.BOTTOM)
+                    true
+                } else if (isEditingText) {
+                    false
+                } else {
                     actions.scrollActive(SCROLL_STEP_PX)
                     true
                 }
@@ -74,10 +112,6 @@ object GamepadController {
             }
             KeyEvent.KEYCODE_BUTTON_SELECT -> {
                 actions.toggleTargetScreen()
-                true
-            }
-            KeyEvent.KEYCODE_BUTTON_START -> {
-                actions.toggleSpanMode()
                 true
             }
             else -> false
