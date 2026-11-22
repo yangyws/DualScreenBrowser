@@ -41,6 +41,12 @@
     <string name="settings_title">設定</string>
     <string name="settings_language">語言</string>
     <string name="settings_language_desc">選擇應用程式顯示語言</string>
+    <string name="settings_theme">主機配色主題</string>
+    <string name="settings_theme_desc">搭配您的 AYN Thor 主機外殼配色</string>
+    <string name="theme_emerald_dark">經典黑綠</string>
+    <string name="theme_rainbow_white">復古白</string>
+    <string name="theme_clear_purple">幻影紫</string>
+    <string name="theme_crimson_black">曜石紅</string>
     <string name="language_system_default">跟隨系統</string>
     <string name="language_zh_tw">繁體中文 (台灣)</string>
     <string name="language_english">English</string>

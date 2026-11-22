@@ -142,6 +142,7 @@ import com.yangyws.dualscreenbrowser.browser.SearchEngine
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
 import com.yangyws.dualscreenbrowser.browser.SpanEngine
 import com.yangyws.dualscreenbrowser.browser.SpanSource
+import com.yangyws.dualscreenbrowser.browser.ThorTheme
 import com.yangyws.dualscreenbrowser.browser.UrlResolver
 import com.yangyws.dualscreenbrowser.browser.UserScript
 import com.yangyws.dualscreenbrowser.browser.UserScriptManager
@@ -175,16 +176,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         launchUrlState = intent?.dataString
         setContent {
+            val prefs = remember { BrowserPrefs(this) }
+            var currentTheme by remember { mutableStateOf(prefs.thorTheme) }
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                    primary = Color(0xFF4CC38A),
-                    background = Color(0xFF101216),
-                    surface = Color(0xFF1A1D24),
-                    surfaceVariant = Color(0xFF252A34)
+                    primary = Color(currentTheme.primaryColor),
+                    background = Color(currentTheme.backgroundColor),
+                    surface = Color(currentTheme.surfaceColor),
+                    surfaceVariant = Color(currentTheme.surfaceVariantColor)
                 )
             ) {
                 DualScreenBrowserApp(
                     externalUrl = launchUrlState,
+                    currentTheme = currentTheme,
+                    onThemeSelected = { selected ->
+                        currentTheme = selected
+                        prefs.thorTheme = selected
+                    },
                     onConsumeExternalUrl = { launchUrlState = null },
                     onRegisterGamepad = { actions, enabled, editing ->
                         gamepadActions = actions
@@ -227,6 +235,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun DualScreenBrowserApp(
     externalUrl: String?,
+    currentTheme: ThorTheme,
+    onThemeSelected: (ThorTheme) -> Unit,
     onConsumeExternalUrl: () -> Unit,
     onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit
 ) {
@@ -346,6 +356,7 @@ private fun DualScreenBrowserApp(
                 barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
                 touchpadVisibleProvider = { bottomTouchpad },
+                themeProvider = { currentTheme },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
@@ -394,6 +405,10 @@ private fun DualScreenBrowserApp(
 
     LaunchedEffect(bottomTouchpad, presentation) {
         presentation?.updateTouchpadVisibility(bottomTouchpad)
+    }
+
+    LaunchedEffect(currentTheme, presentation) {
+        presentation?.updateTheme(currentTheme)
     }
 
     LaunchedEffect(isEditingText) {
@@ -1635,6 +1650,60 @@ private fun DualScreenBrowserApp(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Console Colorway selector
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(stringResource(R.string.settings_theme), fontWeight = FontWeight.Medium, color = Color.White)
+                        Text(stringResource(R.string.settings_theme_desc), fontSize = 12.sp, color = Color.Gray)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val themeLabels = mapOf(
+                                ThorTheme.EMERALD_DARK to R.string.theme_emerald_dark,
+                                ThorTheme.RAINBOW_WHITE to R.string.theme_rainbow_white,
+                                ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
+                                ThorTheme.CRIMSON_BLACK to R.string.theme_crimson_black
+                            )
+                            ThorTheme.entries.forEach { t ->
+                                val selected = t == currentTheme
+                                Surface(
+                                    onClick = { onThemeSelected(t) },
+                                    color = if (selected) Color(t.primaryColor).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (selected) Color(t.primaryColor) else Color.White.copy(alpha = 0.1f)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(t.primaryColor))
+                                        )
+                                        Text(
+                                            text = stringResource(themeLabels[t] ?: R.string.theme_emerald_dark),
+                                            fontSize = 10.sp,
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1880,6 +1949,7 @@ private fun DualScreenBrowserApp(
 
     ThorTutorialOverlay(
         visible = showTutorial,
+        theme = currentTheme,
         onFinish = {
             showTutorial = false
             prefs.tutorialDone = true

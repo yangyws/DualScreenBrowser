@@ -47,6 +47,7 @@ class SecondaryBrowserPresentation(
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
     private val touchpadVisibleProvider: () -> Boolean,
+    private val themeProvider: () -> ThorTheme,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -57,6 +58,7 @@ class SecondaryBrowserPresentation(
 
     private var webView: WebView? = null
     private var spanViewport: SpanViewportView? = null
+    private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
     private var restoreBarBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
@@ -71,19 +73,21 @@ class SecondaryBrowserPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val initialTheme = themeProvider()
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#101216"))
+            setBackgroundColor(initialTheme.backgroundColor)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
+        rootLayout = root
 
         val topBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.parseColor("#1A1D24"))
+            setBackgroundColor(initialTheme.surfaceColor)
             setPadding(dp(8), dp(6), dp(8), dp(6))
             visibility = if (barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
         }
@@ -402,6 +406,15 @@ class SecondaryBrowserPresentation(
         touchpadContainer?.post {
             touchpadContainer?.visibility = if (visible) View.VISIBLE else View.GONE
             touchpadContainer?.parent?.requestLayout()
+        }
+    }
+
+    fun updateTheme(theme: ThorTheme) {
+        rootLayout?.post {
+            rootLayout?.setBackgroundColor(theme.backgroundColor)
+            topBarView?.setBackgroundColor(theme.surfaceColor)
+            touchpadContainer?.setBackgroundColor(theme.surfaceColor)
+            (urlInput?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
         }
     }
 

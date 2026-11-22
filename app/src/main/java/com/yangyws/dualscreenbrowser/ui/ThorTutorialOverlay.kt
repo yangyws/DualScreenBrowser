@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yangyws.dualscreenbrowser.R
+import com.yangyws.dualscreenbrowser.browser.ThorTheme
 
 private data class TutorialStep(
     val titleRes: Int,
@@ -55,6 +56,7 @@ private data class TutorialStep(
 @Composable
 fun ThorTutorialOverlay(
     visible: Boolean,
+    theme: ThorTheme = ThorTheme.EMERALD_DARK,
     onFinish: () -> Unit
 ) {
     val steps = remember {
@@ -80,7 +82,7 @@ fun ThorTutorialOverlay(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                color = Color(0xFF171A21),
+                color = Color(theme.surfaceColor),
                 shape = RoundedCornerShape(18.dp),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
                 modifier = Modifier
@@ -95,6 +97,7 @@ fun ThorTutorialOverlay(
                     // Custom AYN Thor clamshell dual-screen diagram
                     ThorHandheldDiagram(
                         highlightStep = stepIndex,
+                        theme = theme,
                         modifier = Modifier
                             .width(190.dp)
                             .height(210.dp)
@@ -201,13 +204,14 @@ fun ThorTutorialOverlay(
 @Composable
 private fun ThorHandheldDiagram(
     highlightStep: Int,
+    theme: ThorTheme,
     modifier: Modifier = Modifier
 ) {
-    val accent = Color(0xFF4CC38A)
-    val shellFill = Color(0xFF232834)
-    val shellStroke = Color(0xFF4A5368)
+    val accent = Color(theme.primaryColor)
+    val shellFill = Color(theme.shellColor)
+    val shellStroke = if (theme == ThorTheme.RAINBOW_WHITE) Color(0xFF9BA4B8) else Color(0xFF4A5368)
     val screenBg = Color(0xFF12151C)
-    val dimControl = Color(0xFF5D667B)
+    val dimControl = if (theme == ThorTheme.RAINBOW_WHITE) Color(0xFF7D869B) else Color(0xFF5D667B)
 
     Canvas(modifier = modifier) {
         val w = size.width
