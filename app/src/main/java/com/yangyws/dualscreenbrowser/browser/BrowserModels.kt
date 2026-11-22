@@ -93,6 +93,10 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getBoolean("enable_copy_script", true)
         set(value) = prefs.edit().putBoolean("enable_copy_script", value).apply()
 
+    var showSecondaryBar: Boolean
+        get() = prefs.getBoolean("show_secondary_bar", true)
+        set(value) = prefs.edit().putBoolean("show_secondary_bar", value).apply()
+
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
         set(value) = prefs.edit().putString("search_engine", value.id).apply()

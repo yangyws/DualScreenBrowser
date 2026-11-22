@@ -34,7 +34,7 @@ class SecondaryBrowserPresentation(
     private val searchEngineProvider: () -> SearchEngine,
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
-    private val spanModeProvider: () -> Boolean,
+    private val barVisibleProvider: () -> Boolean,
     private val spanOffsetCssProvider: () -> Double?,
     private val onSecondarySpanScrollCss: (Double) -> Unit,
     private val onAdBlocked: () -> Unit,
@@ -71,7 +71,7 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(Color.parseColor("#1A1D24"))
             setPadding(dp(8), dp(6), dp(8), dp(6))
-            visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
+            visibility = if (barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
         }
         topBarView = topBar
 
@@ -143,7 +143,7 @@ class SecondaryBrowserPresentation(
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
-            visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
+            visibility = if (barVisibleProvider()) android.view.View.VISIBLE else android.view.View.GONE
         }
         dividerView = divider
 
@@ -252,10 +252,13 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
-    fun setSpanMode(enabled: Boolean) {
-        val vis = if (enabled) android.view.View.GONE else android.view.View.VISIBLE
-        topBarView?.visibility = vis
-        dividerView?.visibility = vis
+    fun updateBarVisibility(visible: Boolean) {
+        val vis = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+        topBarView?.post {
+            topBarView?.visibility = vis
+            dividerView?.visibility = vis
+            topBarView?.parent?.requestLayout()
+        }
     }
 
     fun syncSpanScrollCssY(targetCssY: Double) {

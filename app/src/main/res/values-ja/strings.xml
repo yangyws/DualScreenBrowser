@@ -59,6 +59,7 @@
     <string name="settings_enable_copy">テキスト選択・コピー制限を解除</string>
     <string name="settings_enable_copy_desc">右クリックや選択が禁止されたページでもコピー可能にする</string>
     <string name="action_span_mode">スパン連結</string>
+    <string name="action_secondary_bar">下画面URLバー</string>
     <string name="toast_span_on">上下画面スパン連結：オン</string>
     <string name="toast_span_off">上下画面スパン連結：オフ</string>
     <string name="action_find_in_page">ページ内検索</string>

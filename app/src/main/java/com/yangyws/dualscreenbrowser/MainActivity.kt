@@ -242,6 +242,7 @@ private fun DualScreenBrowserApp(
     var enableCopyScript by remember { mutableStateOf(prefs.enableCopyScript) }
     var userScripts by remember { mutableStateOf(prefs.loadUserScripts()) }
     var spanMode by remember { mutableStateOf(false) }
+    var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
     val lastBottomSyncAtMs = remember { LongArray(1) }
     var isEditingText by remember { mutableStateOf(false) }
     var findBarVisible by remember { mutableStateOf(false) }
@@ -312,7 +313,7 @@ private fun DualScreenBrowserApp(
                 searchEngineProvider = { searchEngine },
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
-                spanModeProvider = { spanMode },
+                barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanOffsetCssProvider = {
                     if (spanMode && dualScreenActive) {
                         val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
@@ -370,8 +371,8 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, dualScreenActive, presentation) {
-        presentation?.setSpanMode(spanMode && dualScreenActive)
+    LaunchedEffect(spanMode, showSecondaryBar, dualScreenActive, presentation) {
+        presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
     }
 
     // Cleanup WebViews when activity disposes
@@ -677,7 +678,7 @@ private fun DualScreenBrowserApp(
                 TactileIconButton(
                     onClick = {
                         spanMode = !spanMode
-                        presentation?.setSpanMode(spanMode && dualScreenActive)
+                        presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
                         if (spanMode) {
                             val topWv = webViews[activeTabId]
                             val currentBottom = presentation?.currentUrl()
@@ -836,6 +837,21 @@ private fun DualScreenBrowserApp(
                                     context.getString(R.string.toast_swapped_screens),
                                     Toast.LENGTH_SHORT
                                 ).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_secondary_bar)) },
+                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                            trailingIcon = {
+                                if (showSecondaryBar && !spanMode) {
+                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            },
+                            onClick = {
+                                overflowMenuExpanded = false
+                                showSecondaryBar = !showSecondaryBar
+                                prefs.showSecondaryBar = showSecondaryBar
+                                presentation?.updateBarVisibility(showSecondaryBar && !spanMode && dualScreenActive)
                             }
                         )
                     }
