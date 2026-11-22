@@ -19,7 +19,17 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +39,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -119,6 +130,10 @@ import com.yangyws.dualscreenbrowser.browser.UserScript
 import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
+import com.yangyws.dualscreenbrowser.ui.EmptyStateView
+import com.yangyws.dualscreenbrowser.ui.StatusChip
+import com.yangyws.dualscreenbrowser.ui.StrongEaseOut
+import com.yangyws.dualscreenbrowser.ui.TactileIconButton
 
 private enum class BrowserPanel {
     NONE,
@@ -477,32 +492,31 @@ private fun DualScreenBrowserApp(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            IconButton(
+            TactileIconButton(
                 onClick = { webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() } },
-                enabled = canGoBack,
-                modifier = Modifier.size(36.dp)
+                enabled = canGoBack
             ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(20.dp))
             }
-            IconButton(
+            TactileIconButton(
                 onClick = { webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() } },
-                enabled = canGoForward,
-                modifier = Modifier.size(36.dp)
+                enabled = canGoForward
             ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = stringResource(R.string.action_forward))
+                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = stringResource(R.string.action_forward), modifier = Modifier.size(20.dp))
             }
-            IconButton(
+            TactileIconButton(
                 onClick = {
                     val wv = webViews[activeTabId]
                     if (loadProgress in 0.01f..0.99f) wv?.stopLoading() else wv?.reload()
-                },
-                modifier = Modifier.size(36.dp)
+                }
             ) {
                 Icon(
                     imageVector = if (loadProgress in 0.01f..0.99f) Icons.Rounded.Close else Icons.Rounded.Refresh,
-                    contentDescription = stringResource(R.string.action_refresh)
+                    contentDescription = stringResource(R.string.action_refresh),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -510,12 +524,21 @@ private fun DualScreenBrowserApp(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 6.dp)
+                    .padding(horizontal = 4.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(
-                        if (activeTab.isIncognito) Color(0xFF2D223B) else MaterialTheme.colorScheme.surfaceVariant
+                        if (activeTab.isIncognito) Color(0xFF2B2139) else MaterialTheme.colorScheme.surfaceVariant
                     )
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .border(
+                        width = 1.dp,
+                        color = if (isEditingText) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+                        } else {
+                            Color.White.copy(alpha = 0.08f)
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -524,7 +547,7 @@ private fun DualScreenBrowserApp(
                             Icons.Rounded.VisibilityOff,
                             contentDescription = stringResource(R.string.action_incognito),
                             tint = Color(0xFFCE93D8),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                     }
@@ -532,7 +555,7 @@ private fun DualScreenBrowserApp(
                         value = addressText,
                         onValueChange = { addressText = it },
                         singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        textStyle = TextStyle(color = Color.White, fontSize = 13.5.sp),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Uri,
@@ -542,23 +565,34 @@ private fun DualScreenBrowserApp(
                             onGo = { navigateActiveTab(addressText) }
                         ),
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .onFocusChanged { isEditingText = it.isFocused },
                         decorationBox = { inner ->
                             if (addressText.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.url_placeholder),
-                                    color = Color.Gray,
-                                    fontSize = 14.sp
+                                    color = Color(0xFF8A92A6),
+                                    fontSize = 13.5.sp
                                 )
                             }
                             inner()
                         }
                     )
+                    if (isEditingText && addressText.isNotEmpty()) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = Color(0xFF8A92A6),
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clickable { addressText = "" }
+                        )
+                    }
                 }
             }
 
-            IconButton(
+            TactileIconButton(
                 onClick = {
                     if (isBookmarked) {
                         bookmarks = bookmarks.filterNot { it.url == activeTab.url }
@@ -574,16 +608,17 @@ private fun DualScreenBrowserApp(
                         Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.size(36.dp)
+                active = isBookmarked
             ) {
                 Icon(
                     imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                     contentDescription = stringResource(R.string.action_add_bookmark),
-                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White
+                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White,
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
-            IconButton(
+            TactileIconButton(
                 onClick = {
                     val nextDesktop = !activeTab.desktopMode
                     tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
@@ -597,16 +632,17 @@ private fun DualScreenBrowserApp(
                         wv.reload()
                     }
                 },
-                modifier = Modifier.size(36.dp)
+                active = activeTab.desktopMode
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Computer,
                     contentDescription = stringResource(R.string.action_desktop_mode),
-                    tint = if (activeTab.desktopMode) MaterialTheme.colorScheme.primary else Color.White
+                    tint = if (activeTab.desktopMode) MaterialTheme.colorScheme.primary else Color.White,
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
-            IconButton(
+            TactileIconButton(
                 onClick = {
                     findBarVisible = !findBarVisible
                     if (!findBarVisible) {
@@ -616,17 +652,22 @@ private fun DualScreenBrowserApp(
                         webViews[activeTabId]?.clearMatches()
                     }
                 },
-                modifier = Modifier.size(36.dp)
+                active = findBarVisible
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Search,
                     contentDescription = stringResource(R.string.action_find_in_page),
-                    tint = if (findBarVisible) MaterialTheme.colorScheme.primary else Color.White
+                    tint = if (findBarVisible) MaterialTheme.colorScheme.primary else Color.White,
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }
 
-        if (findBarVisible) {
+        AnimatedVisibility(
+            visible = findBarVisible,
+            enter = expandVertically(tween(180, easing = StrongEaseOut)) + fadeIn(tween(140)),
+            exit = shrinkVertically(tween(150, easing = StrongEaseOut)) + fadeOut(tween(110))
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -661,7 +702,7 @@ private fun DualScreenBrowserApp(
                         if (findQuery.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.find_placeholder),
-                                color = Color.Gray,
+                                color = Color(0xFF8A92A6),
                                 fontSize = 14.sp
                             )
                         }
@@ -671,22 +712,23 @@ private fun DualScreenBrowserApp(
                 Text(
                     text = stringResource(R.string.find_matches, findMatchActive, findMatchTotal),
                     fontSize = 12.sp,
+                    style = TextStyle(fontFeatureSettings = "tnum"),
                     color = Color.LightGray,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                IconButton(
+                TactileIconButton(
                     onClick = { webViews[activeTabId]?.findNext(false) },
-                    modifier = Modifier.size(32.dp)
+                    size = 32.dp
                 ) {
-                    Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null)
+                    Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
-                IconButton(
+                TactileIconButton(
                     onClick = { webViews[activeTabId]?.findNext(true) },
-                    modifier = Modifier.size(32.dp)
+                    size = 32.dp
                 ) {
-                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null)
+                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
-                IconButton(
+                TactileIconButton(
                     onClick = {
                         findBarVisible = false
                         findQuery = ""
@@ -694,16 +736,23 @@ private fun DualScreenBrowserApp(
                         findMatchTotal = 0
                         webViews[activeTabId]?.clearMatches()
                     },
-                    modifier = Modifier.size(32.dp)
+                    size = 32.dp
                 ) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close))
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close), modifier = Modifier.size(18.dp))
                 }
             }
         }
 
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+
+        val animatedProgress by animateFloatAsState(
+            targetValue = loadProgress,
+            animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+            label = "webProgress"
+        )
         if (loadProgress in 0.01f..0.99f) {
             LinearProgressIndicator(
-                progress = { loadProgress },
+                progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp)
@@ -808,33 +857,76 @@ private fun DualScreenBrowserApp(
             )
         }
 
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+
+        // Slim status chip strip when dual-screen or ad-blocker has active info
+        if (dualScreenActive || adBlockedCount > 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (dualScreenActive && secondaryDisplay != null) {
+                    StatusChip(
+                        label = if (gamepadTarget == GamepadTargetScreen.TOP) "PAD: TOP" else "PAD: BOTTOM",
+                        accentColor = MaterialTheme.colorScheme.primary
+                    )
+                    if (spanMode) {
+                        StatusChip(
+                            label = stringResource(R.string.action_span_mode),
+                            accentColor = Color(0xFF64B5F6)
+                        )
+                    }
+                }
+                if (adBlockEnabled && adBlockedCount > 0) {
+                    StatusChip(
+                        label = "ADBLOCK $adBlockedCount",
+                        accentColor = Color(0xFFFFB74D)
+                    )
+                }
+            }
+        }
+
         // Bottom Toolbar (Tabs, Bookmarks, History, Dual-Screen Controls, Settings)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .navigationBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { activePanel = BrowserPanel.TABS }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs))
+            Surface(
+                onClick = { activePanel = BrowserPanel.TABS },
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.action_tabs_count, tabs.size),
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(fontFeatureSettings = "tnum")
                     )
                 }
             }
-            IconButton(onClick = { activePanel = BrowserPanel.BOOKMARKS }) {
-                Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.action_bookmarks))
+            TactileIconButton(onClick = { activePanel = BrowserPanel.BOOKMARKS }) {
+                Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.action_bookmarks), modifier = Modifier.size(20.dp))
             }
-            IconButton(onClick = { activePanel = BrowserPanel.HISTORY }) {
-                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.action_history))
+            TactileIconButton(onClick = { activePanel = BrowserPanel.HISTORY }) {
+                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.action_history), modifier = Modifier.size(20.dp))
             }
-            IconButton(
+            TactileIconButton(
                 onClick = {
                     if (secondaryDisplay == null) {
                         Toast.makeText(
@@ -844,19 +936,22 @@ private fun DualScreenBrowserApp(
                         ).show()
                     } else {
                         dualScreenActive = !dualScreenActive
+                        if (!dualScreenActive) spanMode = false
                     }
-                }
+                },
+                active = dualScreenActive
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Devices,
                     contentDescription = stringResource(
                         if (dualScreenActive) R.string.action_dual_screen_on else R.string.action_dual_screen_off
                     ),
-                    tint = if (dualScreenActive) MaterialTheme.colorScheme.primary else Color.White
+                    tint = if (dualScreenActive) MaterialTheme.colorScheme.primary else Color.White,
+                    modifier = Modifier.size(20.dp)
                 )
             }
             if (dualScreenActive && secondaryDisplay != null) {
-                IconButton(
+                TactileIconButton(
                     onClick = {
                         secondaryUrl = activeTab.url
                         presentation?.loadUrl(activeTab.url)
@@ -869,10 +964,11 @@ private fun DualScreenBrowserApp(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.OpenInBrowser,
-                        contentDescription = stringResource(R.string.action_send_to_secondary)
+                        contentDescription = stringResource(R.string.action_send_to_secondary),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(
+                TactileIconButton(
                     onClick = {
                         val bottomUrl = presentation?.currentUrl() ?: secondaryUrl
                         val topUrl = activeTab.url
@@ -888,10 +984,11 @@ private fun DualScreenBrowserApp(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.SwapVert,
-                        contentDescription = stringResource(R.string.action_swap_screens)
+                        contentDescription = stringResource(R.string.action_swap_screens),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(
+                TactileIconButton(
                     onClick = {
                         spanMode = !spanMode
                         if (spanMode) {
@@ -901,17 +998,19 @@ private fun DualScreenBrowserApp(
                         }
                         val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                         Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                    }
+                    },
+                    active = spanMode
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.ViewStream,
                         contentDescription = stringResource(R.string.action_span_mode),
-                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White
+                        tint = if (spanMode) MaterialTheme.colorScheme.primary else Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-            IconButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
-                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.action_settings))
+            TactileIconButton(onClick = { activePanel = BrowserPanel.SETTINGS }) {
+                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.action_settings), modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -994,7 +1093,7 @@ private fun DualScreenBrowserApp(
                 title = { Text(stringResource(R.string.action_bookmarks)) },
                 text = {
                     if (bookmarks.isEmpty()) {
-                        Text(stringResource(R.string.no_bookmarks), color = Color.Gray)
+                        EmptyStateView(Icons.Rounded.BookmarkBorder, stringResource(R.string.no_bookmarks))
                     } else {
                         LazyColumn(modifier = Modifier.height(280.dp)) {
                             items(bookmarks, key = { it.url }) { item ->
@@ -1038,7 +1137,7 @@ private fun DualScreenBrowserApp(
                 title = { Text(stringResource(R.string.action_history)) },
                 text = {
                     if (history.isEmpty()) {
-                        Text(stringResource(R.string.no_history), color = Color.Gray)
+                        EmptyStateView(Icons.Rounded.History, stringResource(R.string.no_history))
                     } else {
                         LazyColumn(modifier = Modifier.height(280.dp)) {
                             items(history, key = { "${it.url}_${it.visitedAtMs}" }) { item ->
@@ -1130,7 +1229,7 @@ private fun DualScreenBrowserApp(
                         }
                         HorizontalDivider()
                         if (userScripts.isEmpty()) {
-                            Text(stringResource(R.string.userscripts_empty), color = Color.Gray, fontSize = 12.sp)
+                            EmptyStateView(Icons.Rounded.Code, stringResource(R.string.userscripts_empty))
                         } else {
                             LazyColumn(modifier = Modifier.height(140.dp)) {
                                 items(userScripts, key = { it.id }) { script ->

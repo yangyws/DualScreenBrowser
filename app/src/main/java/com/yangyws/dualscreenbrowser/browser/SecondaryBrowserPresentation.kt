@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Presentation
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.TypedValue
 import android.text.InputType
 import android.view.Display
 import android.view.Gravity
@@ -50,7 +52,7 @@ class SecondaryBrowserPresentation(
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#121216"))
+            setBackgroundColor(Color.parseColor("#101216"))
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -60,8 +62,8 @@ class SecondaryBrowserPresentation(
         val topBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.parseColor("#1E1E24"))
-            setPadding(12, 8, 12, 8)
+            setBackgroundColor(Color.parseColor("#1A1D24"))
+            setPadding(dp(8), dp(6), dp(8), dp(6))
         }
 
         val btnBack = navButton(android.R.drawable.ic_media_previous, context.getString(R.string.action_back)) {
@@ -74,14 +76,21 @@ class SecondaryBrowserPresentation(
             webView?.reload()
         }
 
+        val addressDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(10).toFloat()
+            setColor(Color.parseColor("#252A34"))
+            setStroke(dp(1), Color.parseColor("#33FFFFFF"))
+        }
+
         val addressBar = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
             setText(initialUrl)
             setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
-            setBackgroundColor(Color.parseColor("#2A2A34"))
-            setPadding(20, 12, 20, 12)
-            textSize = 14f
+            setHintTextColor(Color.parseColor("#8A92A6"))
+            background = addressDrawable
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            textSize = 13.5f
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
@@ -109,18 +118,23 @@ class SecondaryBrowserPresentation(
             onRequestClose()
         }
 
-        topBar.addView(btnBack, LinearLayout.LayoutParams(72, 72))
-        topBar.addView(btnForward, LinearLayout.LayoutParams(72, 72))
-        topBar.addView(btnRefresh, LinearLayout.LayoutParams(72, 72))
+        val btnSize = dp(38)
+        topBar.addView(btnBack, LinearLayout.LayoutParams(btnSize, btnSize))
+        topBar.addView(btnForward, LinearLayout.LayoutParams(btnSize, btnSize))
+        topBar.addView(btnRefresh, LinearLayout.LayoutParams(btnSize, btnSize))
         topBar.addView(
             addressBar,
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                setMargins(12, 0, 12, 0)
+                setMargins(dp(8), 0, dp(8), 0)
             }
         )
-        topBar.addView(btnSwap, LinearLayout.LayoutParams(72, 72))
-        topBar.addView(btnSendUp, LinearLayout.LayoutParams(72, 72))
-        topBar.addView(btnClose, LinearLayout.LayoutParams(72, 72))
+        topBar.addView(btnSwap, LinearLayout.LayoutParams(btnSize, btnSize))
+        topBar.addView(btnSendUp, LinearLayout.LayoutParams(btnSize, btnSize))
+        topBar.addView(btnClose, LinearLayout.LayoutParams(btnSize, btnSize))
+
+        val divider = android.view.View(context).apply {
+            setBackgroundColor(Color.parseColor("#14FFFFFF"))
+        }
 
         val progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -180,17 +194,24 @@ class SecondaryBrowserPresentation(
         webView = wv
 
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6))
+        root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
+        root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
         root.addView(wv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
     }
+
+    private fun dp(value: Int): Int =
+        (value * context.resources.displayMetrics.density).toInt()
 
     private fun navButton(iconRes: Int, desc: String, onClick: () -> Unit): ImageButton =
         ImageButton(context).apply {
             setImageResource(iconRes)
             contentDescription = desc
-            setBackgroundColor(Color.TRANSPARENT)
+            val outValue = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
             setColorFilter(Color.WHITE)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
             setOnClickListener { onClick() }
         }
 
