@@ -61,7 +61,7 @@ class SecondaryBrowserPresentation(
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
     private val isBookmarkedProvider: (String) -> Boolean,
     private val onToggleBookmark: (url: String, title: String) -> Unit,
-    private val onReopenBottom: () -> Unit,
+    private val onReopenTop: () -> Unit,
     private val onUrlChanged: (String, String) -> Unit,
     private val onRequestClose: () -> Unit
 ) : Presentation(outerContext, display) {
@@ -251,7 +251,7 @@ class SecondaryBrowserPresentation(
             popup.menu.add(0, 3, 2, context.getString(R.string.action_screenshot_bottom))
             popup.menu.add(0, 4, 3, context.getString(R.string.action_long_screenshot))
             popup.menu.add(0, 5, 4, context.getString(R.string.action_refresh))
-            popup.menu.add(0, 6, 5, context.getString(R.string.action_reopen_bottom))
+            popup.menu.add(0, 6, 5, context.getString(R.string.action_reopen_top))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> onToggleBookmark(currentUrl, webView?.title.orEmpty())
@@ -273,7 +273,7 @@ class SecondaryBrowserPresentation(
                         Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                     }
                     5 -> reloadPage()
-                    6 -> onReopenBottom()
+                    6 -> onReopenTop()
                 }
                 true
             }

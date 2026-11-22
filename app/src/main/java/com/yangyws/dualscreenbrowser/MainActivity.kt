@@ -425,7 +425,11 @@ private fun DualScreenBrowserApp(
                         Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
                     }
                 },
-                onReopenBottom = { presentationTrigger++ },
+                onReopenTop = {
+                    val tabId = latestActiveTabId
+                    webViews.remove(tabId)?.destroy()
+                    topWebViewTrigger++
+                },
                 onUrlChanged = { url, title ->
                     secondaryUrl = url
                     val entry = HistoryItem(title = title.ifBlank { url }, url = url)
@@ -1144,20 +1148,22 @@ private fun DualScreenBrowserApp(
                         }
                     }
                     HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_reopen_top)) },
-                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            if (spanMode && dualScreenActive) {
-                                spanRestartTrigger++
-                            } else {
-                                webViews.remove(activeTabId)?.destroy()
-                                topWebViewTrigger++
+                    if (secondaryDisplay == null || !dualScreenActive || spanMode) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_reopen_top)) },
+                            leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                            onClick = {
+                                dismissMenu()
+                                if (spanMode && dualScreenActive) {
+                                    spanRestartTrigger++
+                                } else {
+                                    webViews.remove(activeTabId)?.destroy()
+                                    topWebViewTrigger++
+                                }
                             }
-                        }
-                    )
-                    if (secondaryDisplay != null && (spanMode || !dualScreenActive)) {
+                        )
+                    }
+                    if (secondaryDisplay != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_reopen_bottom)) },
                             leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
