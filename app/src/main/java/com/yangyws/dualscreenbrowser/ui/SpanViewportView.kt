@@ -5,6 +5,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
@@ -30,6 +32,19 @@ class SpanViewportView(
 
     init {
         setBackgroundColor(Color.parseColor("#101216"))
+    }
+
+    fun setColorCalibration(brightnessOffset: Int, warmthOffset: Int) {
+        if (!isBottomViewport || (brightnessOffset == 0 && warmthOffset == 0)) {
+            paint.colorFilter = null
+        } else {
+            val base = 1f + brightnessOffset * 0.01f
+            val r = (base + warmthOffset * 0.004f).coerceIn(0.5f, 1.5f)
+            val g = base.coerceIn(0.5f, 1.5f)
+            val b = (base - warmthOffset * 0.005f).coerceIn(0.5f, 1.5f)
+            paint.colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setScale(r, g, b, 1f) })
+        }
+        invalidate()
     }
 
     private val frameListener: (Bitmap) -> Unit = { bmp ->

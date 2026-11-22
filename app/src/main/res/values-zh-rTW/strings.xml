@@ -51,6 +51,11 @@
     <string name="settings_auto_dual_screen_desc">偵測到第二螢幕時自動開啟下螢幕瀏覽視窗</string>
     <string name="settings_hinge_gap">轉軸縫隙補償</string>
     <string name="settings_hinge_gap_desc">調整上下螢幕之間的實體邊框補償距離（%1$d dp）</string>
+    <string name="settings_bottom_brightness">下螢幕亮度微調</string>
+    <string name="settings_bottom_brightness_desc">目前調整：%1$d%%</string>
+    <string name="settings_bottom_warmth">下螢幕色溫微調</string>
+    <string name="settings_bottom_warmth_desc">冷色 ↔ 暖色：%1$d</string>
+    <string name="action_reset">重設</string>
     <string name="settings_javascript">啟用 JavaScript</string>
     <string name="settings_javascript_desc">允許網頁執行 JavaScript</string>
     <string name="settings_adblock">廣告與追蹤阻擋</string>

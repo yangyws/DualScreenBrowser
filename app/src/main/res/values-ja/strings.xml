@@ -51,6 +51,11 @@
     <string name="settings_auto_dual_screen_desc">サブディスプレイ検出時に自動で下画面ブラウザを表示</string>
     <string name="settings_hinge_gap">ヒンジ隙間補正</string>
     <string name="settings_hinge_gap_desc">上下画面間のベゼル補正幅（%1$d dp）</string>
+    <string name="settings_bottom_brightness">下画面の明るさ微調整</string>
+    <string name="settings_bottom_brightness_desc">補正値：%1$d%%</string>
+    <string name="settings_bottom_warmth">下画面の色温度微調整</string>
+    <string name="settings_bottom_warmth_desc">寒色 ↔ 暖色：%1$d</string>
+    <string name="action_reset">リセット</string>
     <string name="settings_javascript">JavaScript を有効にする</string>
     <string name="settings_javascript_desc">Webサイトでの JavaScript 実行を許可</string>
     <string name="settings_adblock">広告・トラッカーブロック</string>

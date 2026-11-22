@@ -259,6 +259,8 @@ private fun DualScreenBrowserApp(
     var spanMode by remember { mutableStateOf(true) }
     var spanSource by remember { mutableStateOf(prefs.spanSource) }
     var hingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
+    var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
+    var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var showSecondaryBar by remember { mutableStateOf(prefs.showSecondaryBar) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
@@ -336,6 +338,7 @@ private fun DualScreenBrowserApp(
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 barVisibleProvider = { showSecondaryBar && !spanMode },
                 spanModeProvider = { spanMode },
+                bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
                     webViews[activeTabId]?.loadUrl(urlFromBottom)
@@ -375,6 +378,10 @@ private fun DualScreenBrowserApp(
 
     LaunchedEffect(spanMode, showSecondaryBar, dualScreenActive, presentation) {
         presentation?.updatePresentationMode(showSecondaryBar, spanMode && dualScreenActive)
+    }
+
+    LaunchedEffect(bottomBrightness, bottomWarmth, presentation) {
+        presentation?.updateBottomColor(bottomBrightness, bottomWarmth)
     }
 
     val viewportReady = topViewportSize.width > 0 && topViewportSize.height > 0
@@ -1618,6 +1625,61 @@ private fun DualScreenBrowserApp(
                                 prefs.hingeGapDp = rounded
                             },
                             valueRange = 0f..48f
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    // Bottom screen brightness & warmth calibration
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_bottom_brightness), fontWeight = FontWeight.Medium, color = Color.White)
+                                Text(
+                                    stringResource(R.string.settings_bottom_brightness_desc, bottomBrightness),
+                                    fontSize = 12.sp,
+                                    color = Color.Gray,
+                                    style = TextStyle(fontFeatureSettings = "tnum")
+                                )
+                            }
+                            if (bottomBrightness != 0 || bottomWarmth != 0) {
+                                TextButton(onClick = {
+                                    bottomBrightness = 0
+                                    bottomWarmth = 0
+                                    prefs.bottomBrightness = 0
+                                    prefs.bottomWarmth = 0
+                                }) {
+                                    Text(stringResource(R.string.action_reset), fontSize = 12.sp)
+                                }
+                            }
+                        }
+                        Slider(
+                            value = bottomBrightness.toFloat(),
+                            onValueChange = {
+                                val v = it.toInt()
+                                bottomBrightness = v
+                                prefs.bottomBrightness = v
+                            },
+                            valueRange = -30f..30f
+                        )
+                        Text(stringResource(R.string.settings_bottom_warmth), fontWeight = FontWeight.Medium, color = Color.White)
+                        Text(
+                            stringResource(R.string.settings_bottom_warmth_desc, bottomWarmth),
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            style = TextStyle(fontFeatureSettings = "tnum")
+                        )
+                        Slider(
+                            value = bottomWarmth.toFloat(),
+                            onValueChange = {
+                                val v = it.toInt()
+                                bottomWarmth = v
+                                prefs.bottomWarmth = v
+                            },
+                            valueRange = -30f..30f
                         )
                     }
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))

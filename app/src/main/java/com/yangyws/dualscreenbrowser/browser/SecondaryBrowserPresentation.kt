@@ -39,6 +39,7 @@ class SecondaryBrowserPresentation(
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val barVisibleProvider: () -> Boolean,
     private val spanModeProvider: () -> Boolean,
+    private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
     private val onSwapScreens: (currentSecondaryUrl: String) -> Unit,
@@ -205,6 +206,8 @@ class SecondaryBrowserPresentation(
         val contentStack = FrameLayout(context)
         val spanView = SpanViewportView(context, spanEngine, isBottomViewport = true).apply {
             visibility = if (spanModeProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            val (b, w) = bottomColorProvider()
+            setColorCalibration(b, w)
         }
         spanViewport = spanView
         wv.visibility = if (spanModeProvider()) android.view.View.GONE else android.view.View.VISIBLE
@@ -263,6 +266,12 @@ class SecondaryBrowserPresentation(
                 progressBar?.visibility = android.view.View.GONE
             }
             topBarView?.parent?.requestLayout()
+        }
+    }
+
+    fun updateBottomColor(brightness: Int, warmth: Int) {
+        spanViewport?.post {
+            spanViewport?.setColorCalibration(brightness, warmth)
         }
     }
 

@@ -51,6 +51,11 @@
     <string name="settings_auto_dual_screen_desc">Automatically open the secondary browser when a second display is available</string>
     <string name="settings_hinge_gap">Hinge Gap Compensation</string>
     <string name="settings_hinge_gap_desc">Vertical bezel offset between screens (%1$d dp)</string>
+    <string name="settings_bottom_brightness">Bottom Screen Brightness</string>
+    <string name="settings_bottom_brightness_desc">Offset: %1$d%%</string>
+    <string name="settings_bottom_warmth">Bottom Screen Color Temp</string>
+    <string name="settings_bottom_warmth_desc">Cool ↔ Warm: %1$d</string>
+    <string name="action_reset">Reset</string>
     <string name="settings_javascript">Enable JavaScript</string>
     <string name="settings_javascript_desc">Allow websites to run JavaScript</string>
     <string name="settings_adblock">Ad &amp; Tracker Blocker</string>

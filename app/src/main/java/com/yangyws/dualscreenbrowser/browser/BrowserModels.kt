@@ -123,6 +123,14 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getInt("hinge_gap_dp", 12).coerceIn(0, 48)
         set(value) = prefs.edit().putInt("hinge_gap_dp", value.coerceIn(0, 48)).apply()
 
+    var bottomBrightness: Int
+        get() = prefs.getInt("bottom_brightness", 0).coerceIn(-30, 30)
+        set(value) = prefs.edit().putInt("bottom_brightness", value.coerceIn(-30, 30)).apply()
+
+    var bottomWarmth: Int
+        get() = prefs.getInt("bottom_warmth", 0).coerceIn(-30, 30)
+        set(value) = prefs.edit().putInt("bottom_warmth", value.coerceIn(-30, 30)).apply()
+
     var searchEngine: SearchEngine
         get() = SearchEngine.fromId(prefs.getString("search_engine", SearchEngine.GOOGLE.id))
         set(value) = prefs.edit().putString("search_engine", value.id).apply()
