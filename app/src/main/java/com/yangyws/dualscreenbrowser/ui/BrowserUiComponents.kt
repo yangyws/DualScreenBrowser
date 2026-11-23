@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -25,13 +26,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
@@ -41,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,11 +54,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 /** Strong ease-out curve matching design-engineering motion tokens. */
 val StrongEaseOut = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
@@ -184,6 +194,91 @@ fun OverflowMenuButton(
             containerColor = Color(0xFF1E222B)
         ) {
             menuContent { expanded = false }
+        }
+    }
+}
+
+/** Draggable floating menu button with isolated recompose scope for the overflow menu. */
+@Composable
+fun FloatingMenuButton(
+    menuContent: @Composable (dismiss: () -> Unit) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val btnSizePx = with(density) { 46.dp.toPx() }
+    val marginPx = with(density) { 14.dp.toPx() }
+    var parentWidth by remember { mutableFloatStateOf(0f) }
+    var parentHeight by remember { mutableFloatStateOf(0f) }
+    var offsetX by remember { mutableFloatStateOf(-1f) }
+    var offsetY by remember { mutableFloatStateOf(-1f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                val w = size.width.toFloat()
+                val h = size.height.toFloat()
+                parentWidth = w
+                parentHeight = h
+                if (w > 0f && h > 0f && (offsetX < 0f || offsetY < 0f)) {
+                    offsetX = (w - btnSizePx - marginPx).coerceAtLeast(marginPx)
+                    offsetY = (h - btnSizePx - marginPx).coerceAtLeast(marginPx)
+                } else if (w > 0f && h > 0f) {
+                    offsetX = offsetX.coerceIn(marginPx, (w - btnSizePx - marginPx).coerceAtLeast(marginPx))
+                    offsetY = offsetY.coerceIn(marginPx, (h - btnSizePx - marginPx).coerceAtLeast(marginPx))
+                }
+            }
+    ) {
+        if (offsetX >= 0f && offsetY >= 0f) {
+            Box(
+                modifier = Modifier.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            ) {
+                Surface(
+                    onClick = { expanded = true },
+                    shape = CircleShape,
+                    color = if (expanded) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                    } else {
+                        Color(0xD9161B24)
+                    },
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (expanded) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.White.copy(alpha = 0.22f)
+                        }
+                    ),
+                    shadowElevation = 6.dp,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .pointerInput(parentWidth, parentHeight) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                val maxX = (parentWidth - btnSizePx - marginPx).coerceAtLeast(marginPx)
+                                val maxY = (parentHeight - btnSizePx - marginPx).coerceAtLeast(marginPx)
+                                offsetX = (offsetX + dragAmount.x).coerceIn(marginPx, maxX)
+                                offsetY = (offsetY + dragAmount.y).coerceIn(marginPx, maxY)
+                            }
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    containerColor = Color(0xFF1E222B)
+                ) {
+                    menuContent { expanded = false }
+                }
+            }
         }
     }
 }

@@ -153,7 +153,7 @@ import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
-import com.yangyws.dualscreenbrowser.ui.OverflowMenuButton
+import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
 import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
@@ -179,6 +179,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyImmersiveFullscreen()
         launchUrlState = intent?.dataString
         setContent {
             val prefs = remember { BrowserPrefs(this) }
@@ -215,6 +216,20 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyImmersiveFullscreen()
+    }
+
+    private fun applyImmersiveFullscreen() {
+        window.setDecorFitsSystemWindows(false)
+        window.insetsController?.let { controller ->
+            controller.hide(android.view.WindowInsets.Type.systemBars())
+            controller.systemBarsBehavior =
+                android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 
@@ -736,7 +751,6 @@ private fun DualScreenBrowserApp(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
     ) {
         // Top Address & Quick Actions Bar
         Row(
@@ -930,276 +944,6 @@ private fun DualScreenBrowserApp(
                     )
                 }
             }
-
-            // Isolated overflow menu so opening ⋮ never recomposes the whole browser screen
-            OverflowMenuButton { dismissMenu ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (isBookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark
-                                )
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                                contentDescription = null,
-                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White
-                            )
-                        },
-                        onClick = {
-                            dismissMenu()
-                            if (isBookmarked) {
-                                bookmarks = bookmarks.filterNot { it.url == activeTab.url }
-                                prefs.saveBookmarks(bookmarks)
-                                Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
-                            } else {
-                                val entry = BookmarkItem(
-                                    title = activeTab.title.ifBlank { activeTab.url },
-                                    url = activeTab.url
-                                )
-                                bookmarks = listOf(entry) + bookmarks
-                                prefs.saveBookmarks(bookmarks)
-                                Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_bookmarks)) },
-                        leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            activePanel = BrowserPanel.BOOKMARKS
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_history)) },
-                        leadingIcon = { Icon(Icons.Rounded.History, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            activePanel = BrowserPanel.HISTORY
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_find_in_page)) },
-                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            findBarVisible = !findBarVisible
-                            if (!findBarVisible) {
-                                findQuery = ""
-                                findMatchActive = 0
-                                findMatchTotal = 0
-                                webViews[activeTabId]?.clearMatches()
-                            }
-                        }
-                    )
-                    if (spanMode && dualScreenActive) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_screenshot)) },
-                            leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
-                            onClick = {
-                                dismissMenu()
-                                val bmp = spanEngine.captureStitchedBitmap()
-                                val saved = bmp?.let { b ->
-                                    ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
-                                } ?: false
-                                val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
-                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    } else {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_screenshot_top)) },
-                            leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
-                            onClick = {
-                                dismissMenu()
-                                val wv = webViews[activeTabId]
-                                val bmp = if (wv != null && wv.width > 0 && wv.height > 0) {
-                                    android.graphics.Bitmap.createBitmap(
-                                        wv.width,
-                                        wv.height,
-                                        android.graphics.Bitmap.Config.ARGB_8888
-                                    ).also { b -> wv.draw(android.graphics.Canvas(b)) }
-                                } else null
-                                val saved = bmp?.let { b ->
-                                    ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
-                                } ?: false
-                                val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
-                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_long_screenshot)) },
-                        leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            val bmp = if (spanMode && spanEngine.isRunning()) {
-                                spanEngine.captureFullPageBitmap()
-                            } else {
-                                val wv = webViews[activeTabId]
-                                if (wv != null && wv.width > 0) {
-                                    val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
-                                    val fullH = (wv.contentHeight * density).toInt().coerceIn(wv.height.coerceAtLeast(1), 12000)
-                                    android.graphics.Bitmap.createBitmap(
-                                        wv.width,
-                                        fullH,
-                                        android.graphics.Bitmap.Config.ARGB_8888
-                                    ).also { b ->
-                                        val prevY = wv.scrollY
-                                        wv.scrollTo(0, 0)
-                                        wv.draw(android.graphics.Canvas(b))
-                                        wv.scrollTo(wv.scrollX, prevY)
-                                    }
-                                } else null
-                            }
-                            val saved = bmp?.let { b ->
-                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
-                            } ?: false
-                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
-                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_desktop_mode)) },
-                        leadingIcon = { Icon(Icons.Rounded.Computer, contentDescription = null) },
-                        trailingIcon = {
-                            if (activeTab.desktopMode) {
-                                Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        },
-                        onClick = {
-                            dismissMenu()
-                            val nextDesktop = !activeTab.desktopMode
-                            tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
-                            webViews[activeTabId]?.let { wv ->
-                                val defaultUa = WebSettings.getDefaultUserAgent(context)
-                                wv.settings.userAgentString = if (nextDesktop) {
-                                    defaultUa.replace("Mobile", "").replace("Android", "X11; Linux x86_64")
-                                } else {
-                                    defaultUa
-                                }
-                                wv.reload()
-                            }
-                        }
-                    )
-                    if (dualScreenActive && secondaryDisplay != null) {
-                        HorizontalDivider()
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_span_mode)) },
-                            leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
-                            trailingIcon = {
-                                if (spanMode) {
-                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                }
-                            },
-                            onClick = {
-                                spanMode = !spanMode
-                                presentation?.updatePresentationMode(spanMode && dualScreenActive)
-                                val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
-                                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (spanSource == SpanSource.TOP) {
-                                            R.string.action_span_source_top
-                                        } else {
-                                            R.string.action_span_source_bottom
-                                        }
-                                    )
-                                )
-                            },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
-                            onClick = {
-                                val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
-                                gamepadActions.setSpanSource(next)
-                            }
-                        )
-                        if (spanMode) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_bottom_touchpad)) },
-                                leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
-                                trailingIcon = {
-                                    if (bottomTouchpad) {
-                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                },
-                                onClick = {
-                                    bottomTouchpad = !bottomTouchpad
-                                    prefs.bottomTouchpad = bottomTouchpad
-                                    presentation?.updateTouchpadVisibility(spanMode && bottomTouchpad)
-                                }
-                            )
-                        }
-                        if (!spanMode) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_swap_screens)) },
-                                leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
-                                onClick = {
-                                    dismissMenu()
-                                    performSwapScreens()
-                                }
-                            )
-                        }
-                    }
-                    HorizontalDivider()
-                    if (secondaryDisplay == null || !dualScreenActive || spanMode) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_reopen_top)) },
-                            leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-                            onClick = {
-                                dismissMenu()
-                                if (spanMode && dualScreenActive) {
-                                    spanRestartTrigger++
-                                } else {
-                                    webViews.remove(activeTabId)?.destroy()
-                                    topWebViewTrigger++
-                                }
-                            }
-                        )
-                    }
-                    if (secondaryDisplay != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_reopen_bottom)) },
-                            leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-                            onClick = {
-                                dismissMenu()
-                                dualScreenActive = true
-                                presentationTrigger++
-                            }
-                        )
-                    }
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_gamepad_guide)) },
-                        leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            activePanel = BrowserPanel.GAMEPAD_GUIDE
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_tutorial)) },
-                        leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            showTutorial = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_settings)) },
-                        leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                        onClick = {
-                            dismissMenu()
-                            activePanel = BrowserPanel.SETTINGS
-                        }
-                    )
-                }
         }
 
         AnimatedVisibility(
@@ -1391,6 +1135,276 @@ private fun DualScreenBrowserApp(
                 AndroidView(
                     factory = { ctx -> SpanViewportView(ctx, spanEngine, isBottomViewport = false) },
                     modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Draggable floating menu button with isolated recompose scope
+            FloatingMenuButton { dismissMenu ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isBookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark
+                            )
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            contentDescription = null,
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White
+                        )
+                    },
+                    onClick = {
+                        dismissMenu()
+                        if (isBookmarked) {
+                            bookmarks = bookmarks.filterNot { it.url == activeTab.url }
+                            prefs.saveBookmarks(bookmarks)
+                            Toast.makeText(context, context.getString(R.string.toast_bookmark_removed), Toast.LENGTH_SHORT).show()
+                        } else {
+                            val entry = BookmarkItem(
+                                title = activeTab.title.ifBlank { activeTab.url },
+                                url = activeTab.url
+                            )
+                            bookmarks = listOf(entry) + bookmarks
+                            prefs.saveBookmarks(bookmarks)
+                            Toast.makeText(context, context.getString(R.string.toast_bookmark_added), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_bookmarks)) },
+                    leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        activePanel = BrowserPanel.BOOKMARKS
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_history)) },
+                    leadingIcon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        activePanel = BrowserPanel.HISTORY
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_find_in_page)) },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        findBarVisible = !findBarVisible
+                        if (!findBarVisible) {
+                            findQuery = ""
+                            findMatchActive = 0
+                            findMatchTotal = 0
+                            webViews[activeTabId]?.clearMatches()
+                        }
+                    }
+                )
+                if (spanMode && dualScreenActive) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_screenshot)) },
+                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                        onClick = {
+                            dismissMenu()
+                            val bmp = spanEngine.captureStitchedBitmap()
+                            val saved = bmp?.let { b ->
+                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                            } ?: false
+                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_screenshot_top)) },
+                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                        onClick = {
+                            dismissMenu()
+                            val wv = webViews[activeTabId]
+                            val bmp = if (wv != null && wv.width > 0 && wv.height > 0) {
+                                android.graphics.Bitmap.createBitmap(
+                                    wv.width,
+                                    wv.height,
+                                    android.graphics.Bitmap.Config.ARGB_8888
+                                ).also { b -> wv.draw(android.graphics.Canvas(b)) }
+                            } else null
+                            val saved = bmp?.let { b ->
+                                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                            } ?: false
+                            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_long_screenshot)) },
+                    leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        val bmp = if (spanMode && spanEngine.isRunning()) {
+                            spanEngine.captureFullPageBitmap()
+                        } else {
+                            val wv = webViews[activeTabId]
+                            if (wv != null && wv.width > 0) {
+                                val density = context.resources.displayMetrics.density.coerceAtLeast(1f)
+                                val fullH = (wv.contentHeight * density).toInt().coerceIn(wv.height.coerceAtLeast(1), 12000)
+                                android.graphics.Bitmap.createBitmap(
+                                    wv.width,
+                                    fullH,
+                                    android.graphics.Bitmap.Config.ARGB_8888
+                                ).also { b ->
+                                    val prevY = wv.scrollY
+                                    wv.scrollTo(0, 0)
+                                    wv.draw(android.graphics.Canvas(b))
+                                    wv.scrollTo(wv.scrollX, prevY)
+                                }
+                            } else null
+                        }
+                        val saved = bmp?.let { b ->
+                            ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+                        } ?: false
+                        val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+                        Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_desktop_mode)) },
+                    leadingIcon = { Icon(Icons.Rounded.Computer, contentDescription = null) },
+                    trailingIcon = {
+                        if (activeTab.desktopMode) {
+                            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        dismissMenu()
+                        val nextDesktop = !activeTab.desktopMode
+                        tabs = tabs.map { if (it.id == activeTab.id) it.copy(desktopMode = nextDesktop) else it }
+                        webViews[activeTabId]?.let { wv ->
+                            val defaultUa = WebSettings.getDefaultUserAgent(context)
+                            wv.settings.userAgentString = if (nextDesktop) {
+                                defaultUa.replace("Mobile", "").replace("Android", "X11; Linux x86_64")
+                            } else {
+                                defaultUa
+                            }
+                            wv.reload()
+                        }
+                    }
+                )
+                if (dualScreenActive && secondaryDisplay != null) {
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_span_mode)) },
+                        leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
+                        trailingIcon = {
+                            if (spanMode) {
+                                Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                        onClick = {
+                            spanMode = !spanMode
+                            presentation?.updatePresentationMode(spanMode && dualScreenActive)
+                            val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (spanSource == SpanSource.TOP) {
+                                        R.string.action_span_source_top
+                                    } else {
+                                        R.string.action_span_source_bottom
+                                    }
+                                )
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                        onClick = {
+                            val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
+                            gamepadActions.setSpanSource(next)
+                        }
+                    )
+                    if (spanMode) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_bottom_touchpad)) },
+                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                            trailingIcon = {
+                                if (bottomTouchpad) {
+                                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            },
+                            onClick = {
+                                bottomTouchpad = !bottomTouchpad
+                                prefs.bottomTouchpad = bottomTouchpad
+                                presentation?.updateTouchpadVisibility(spanMode && bottomTouchpad)
+                            }
+                        )
+                    }
+                    if (!spanMode) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_swap_screens)) },
+                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            onClick = {
+                                dismissMenu()
+                                performSwapScreens()
+                            }
+                        )
+                    }
+                }
+                HorizontalDivider()
+                if (secondaryDisplay == null || !dualScreenActive || spanMode) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_reopen_top)) },
+                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                        onClick = {
+                            dismissMenu()
+                            if (spanMode && dualScreenActive) {
+                                spanRestartTrigger++
+                            } else {
+                                webViews.remove(activeTabId)?.destroy()
+                                topWebViewTrigger++
+                            }
+                        }
+                    )
+                }
+                if (secondaryDisplay != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_reopen_bottom)) },
+                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                        onClick = {
+                            dismissMenu()
+                            dualScreenActive = true
+                            presentationTrigger++
+                        }
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_gamepad_guide)) },
+                    leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        activePanel = BrowserPanel.GAMEPAD_GUIDE
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_tutorial)) },
+                    leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        showTutorial = true
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_settings)) },
+                    leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        activePanel = BrowserPanel.SETTINGS
+                    }
                 )
             }
         }
