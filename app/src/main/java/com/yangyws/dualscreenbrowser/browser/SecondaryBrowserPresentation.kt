@@ -490,7 +490,7 @@ class SecondaryBrowserPresentation(
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = padBg
-            elevation = dp(8).toFloat()
+            elevation = 0f
             clipToOutline = true
             visibility = if (touchpadVisibleProvider()) View.VISIBLE else View.GONE
         }
@@ -1077,7 +1077,7 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.VERTICAL
             background = panelBg
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            elevation = dp(8).toFloat()
+            elevation = 0f
         }
 
         lateinit var popup: PopupWindow
@@ -1353,7 +1353,8 @@ class SecondaryBrowserPresentation(
         val menuWidthPx = dp(304)
         popup = PopupWindow(panel, menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = dp(10).toFloat()
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener { applyFloatingButtonStyle(expanded = false) }
         }
         applyFloatingButtonStyle(expanded = true)
@@ -1403,7 +1404,7 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.VERTICAL
             background = panelBg
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            elevation = dp(8).toFloat()
+            elevation = 0f
         }
 
         lateinit var tabsPopup: PopupWindow
@@ -1508,7 +1509,8 @@ class SecondaryBrowserPresentation(
         val tabsWidthPx = dp(292)
         tabsPopup = PopupWindow(panel, tabsWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = dp(10).toFloat()
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         }
         bottomTabsPopup?.dismiss()
         bottomTabsPopup = tabsPopup
@@ -1558,7 +1560,7 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.VERTICAL
             background = panelBg
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            elevation = dp(8).toFloat()
+            elevation = 0f
         }
 
         lateinit var listPopup: PopupWindow
@@ -1642,7 +1644,8 @@ class SecondaryBrowserPresentation(
         val widthPx = dp(304)
         listPopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = dp(10).toFloat()
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         }
         bottomTabsPopup?.dismiss()
         bottomTabsPopup = listPopup
@@ -1688,7 +1691,7 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER_VERTICAL
             background = panelBg
             setPadding(dp(10), dp(8), dp(8), dp(8))
-            elevation = dp(8).toFloat()
+            elevation = 0f
         }
 
         lateinit var findPopup: PopupWindow
@@ -1764,7 +1767,8 @@ class SecondaryBrowserPresentation(
         val widthPx = dp(304)
         findPopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = dp(10).toFloat()
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             setOnDismissListener { webView?.clearMatches() }
         }
         bottomTabsPopup?.dismiss()
@@ -1809,7 +1813,7 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.VERTICAL
             background = panelBg
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            elevation = dp(8).toFloat()
+            elevation = 0f
         }
 
         lateinit var guidePopup: PopupWindow
@@ -1909,7 +1913,8 @@ class SecondaryBrowserPresentation(
         val widthPx = (availableW - dp(16)).coerceIn(dp(340), dp(440))
         guidePopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = dp(10).toFloat()
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         }
         bottomTabsPopup?.dismiss()
         bottomTabsPopup = guidePopup

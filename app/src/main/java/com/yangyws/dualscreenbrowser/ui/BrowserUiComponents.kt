@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -297,29 +298,39 @@ fun FloatingMenuButton(
             Box(
                 modifier = Modifier.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
             ) {
-                Surface(
-                    onClick = { expanded = true },
-                    shape = CircleShape,
-                    color = if (expanded) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                    } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
-                    },
-                    border = if (isRainbow) {
-                        BorderStroke(1.8.dp, rainbowBrush)
-                    } else {
-                        BorderStroke(
-                            width = 1.dp,
-                            color = if (expanded) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
-                            }
-                        )
-                    },
-                    shadowElevation = 6.dp,
+                val buttonInteraction = remember { MutableInteractionSource() }
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(46.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (expanded) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
+                            } else {
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+                            }
+                        )
+                        .border(
+                            border = if (isRainbow) {
+                                BorderStroke(1.8.dp, rainbowBrush)
+                            } else {
+                                BorderStroke(
+                                    width = 1.dp,
+                                    color = if (expanded) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+                                    }
+                                )
+                            },
+                            shape = CircleShape
+                        )
+                        .clickable(
+                            interactionSource = buttonInteraction,
+                            indication = null,
+                            onClick = { expanded = true }
+                        )
                         .pointerInput(parentWidth, parentHeight) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
@@ -396,7 +407,7 @@ fun FloatingMenuButton(
                                 } else {
                                     BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                                 },
-                                shadowElevation = 10.dp,
+                                shadowElevation = 0.dp,
                                 modifier = Modifier.heightIn(max = maxMenuHeight)
                             ) {
                                 Column(
@@ -423,7 +434,7 @@ fun FloatingMenuButton(
                                 } else {
                                     BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                                 },
-                                shadowElevation = 10.dp,
+                                shadowElevation = 0.dp,
                                 modifier = Modifier.heightIn(max = maxMenuHeight)
                             ) {
                                 extraPopupContent()
@@ -516,8 +527,8 @@ fun SidePanelSheet(
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(tween(160, easing = StrongEaseOut)),
-            exit = fadeOut(tween(130, easing = StrongEaseOut))
+            enter = fadeIn(tween(120, easing = StrongEaseOut)),
+            exit = fadeOut(tween(80, easing = StrongEaseOut))
         ) {
             Box(
                 modifier = Modifier
@@ -533,10 +544,10 @@ fun SidePanelSheet(
 
         AnimatedVisibility(
             visible = visible,
-            enter = slideInHorizontally(tween(200, easing = StrongEaseOut)) { it } +
-                fadeIn(tween(160, easing = StrongEaseOut)),
-            exit = slideOutHorizontally(tween(160, easing = StrongEaseOut)) { it } +
-                fadeOut(tween(120, easing = StrongEaseOut)),
+            enter = slideInHorizontally(tween(150, easing = StrongEaseOut)) { it } +
+                fadeIn(tween(120, easing = StrongEaseOut)),
+            exit = slideOutHorizontally(tween(110, easing = StrongEaseOut)) { it } +
+                fadeOut(tween(80, easing = StrongEaseOut)),
             modifier = Modifier.align(Alignment.CenterEnd)
         ) {
             Surface(
@@ -544,6 +555,7 @@ fun SidePanelSheet(
                 shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                 modifier = Modifier
+                    .graphicsLayer {}
                     .fillMaxHeight()
                     .fillMaxWidth(if (compactWidth) 0.44f else 0.58f)
                     .widthIn(min = if (compactWidth) 260.dp else 300.dp, max = if (compactWidth) 360.dp else 460.dp)

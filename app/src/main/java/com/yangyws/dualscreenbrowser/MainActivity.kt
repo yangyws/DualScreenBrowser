@@ -945,7 +945,9 @@ private fun DualScreenBrowserApp(
                 },
                 update = { container ->
                     // Keep active WebView synced
-                    container.settings.javaScriptEnabled = jsEnabled
+                    if (container.settings.javaScriptEnabled != jsEnabled) {
+                        container.settings.javaScriptEnabled = jsEnabled
+                    }
                     if (webViews[activeTab.id] !== container) {
                         webViews[activeTab.id] = container
                         container.webViewClient = object : WebViewClient() {
