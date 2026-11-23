@@ -265,6 +265,21 @@ class SecondaryBrowserPresentation(
                     et.setText(UrlResolver.displayHost(currentUrl).ifBlank { currentUrl })
                 }
             }
+            setOnKeyListener { v, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            v.focusSearch(View.FOCUS_DOWN)?.requestFocus() ?: false
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            v.focusSearch(View.FOCUS_UP)?.requestFocus() ?: false
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
             setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_GO ||
                     (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
@@ -1221,6 +1236,21 @@ class SecondaryBrowserPresentation(
                 }
                 override fun afterTextChanged(s: Editable?) = Unit
             })
+            setOnKeyListener { v, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            v.focusSearch(View.FOCUS_DOWN)?.requestFocus() ?: false
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            v.focusSearch(View.FOCUS_UP)?.requestFocus() ?: false
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
             setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_GO ||
                     (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
