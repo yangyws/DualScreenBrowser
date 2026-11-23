@@ -179,7 +179,7 @@ class BrowserPrefs(context: Context) {
         set(value) = prefs.edit().putBoolean("tutorial_done", value).apply()
 
     var thorTheme: ThorTheme
-        get() = ThorTheme.fromId(prefs.getString("thor_theme", ThorTheme.BLACK.id))
+        get() = ThorTheme.fromId(prefs.getString("thor_theme", ThorTheme.RAINBOW.id))
         set(value) = prefs.edit().putString("thor_theme", value.id).apply()
 
     var customThemeHue: Float

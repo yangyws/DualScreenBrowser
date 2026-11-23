@@ -56,7 +56,7 @@ private data class TutorialStep(
 @Composable
 fun ThorTutorialOverlay(
     visible: Boolean,
-    theme: ThorTheme = ThorTheme.BLACK,
+    theme: ThorTheme = ThorTheme.RAINBOW,
     customPrimaryColor: Color = Color(theme.primaryColor),
     onFinish: () -> Unit
 ) {
