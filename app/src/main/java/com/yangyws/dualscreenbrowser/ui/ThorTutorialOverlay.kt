@@ -85,7 +85,7 @@ fun ThorTutorialOverlay(
             Surface(
                 color = Color(theme.surfaceColor),
                 shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                 modifier = Modifier
                     .fillMaxWidth(0.86f)
                     .widthIn(max = 580.dp)
@@ -123,7 +123,7 @@ fun ThorTutorialOverlay(
                                                 color = if (i == stepIndex) {
                                                     MaterialTheme.colorScheme.primary
                                                 } else {
-                                                    Color.White.copy(alpha = 0.25f)
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                                                 },
                                                 shape = CircleShape
                                             )
@@ -131,7 +131,7 @@ fun ThorTutorialOverlay(
                                 }
                             }
                             TextButton(onClick = onFinish) {
-                                Text(stringResource(R.string.tutorial_skip), color = Color.Gray, fontSize = 12.sp)
+                                Text(stringResource(R.string.tutorial_skip), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             }
                         }
 
@@ -149,13 +149,13 @@ fun ThorTutorialOverlay(
                                     text = stringResource(step.titleRes),
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = stringResource(step.descRes),
                                     fontSize = 13.sp,
                                     lineHeight = 19.sp,
-                                    color = Color(0xFFB8C0D0)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }

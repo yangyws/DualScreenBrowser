@@ -97,12 +97,12 @@
     <string name="tutorial_done">始める</string>
     <string name="tutorial_step1_title">上下画面スパン連結</string>
     <string name="tutorial_step1_desc">16:9の上画面から8:7の下画面へページやメニューが連続表示されます。設定からヒンジ隙間や下画面の色温度・明るさも調整できます。</string>
-    <string name="tutorial_step2_title">マルチタッチパッド</string>
-    <string name="tutorial_step2_desc">1本指でカーソル移動・タップクリック、2本指でスクロール・ピンチ拡大縮小・タップで戻る、3本指タップで再読み込みできます。</string>
+    <string name="tutorial_step2_title">フローティング・マルチタッチパッド</string>
+    <string name="tutorial_step2_desc">スパン時は1本指でカーソル移動・クリック、2本指でスクロール・拡大縮小・戻る、3本指で更新。左下角でサイズ変更、右下角で位置移動できます。</string>
     <string name="tutorial_step3_title">AYN Thor ゲームパッド操作</string>
     <string name="tutorial_step3_desc">十字キー/スティックでスクロール、L1/R1でタブ切替、L2/R2で戻る/進む、Yで更新、Startでスパン切替、Start+上下でスパン元を選択できます。</string>
-    <string name="tutorial_step4_title">すっきりした上部バー＆パネル</string>
-    <string name="tutorial_step4_desc">アドレス欄タップでURL編集、⋮ メニューからタブ・ブックマーク・履歴・ページ内検索・AdBlock・UserScripts を利用できます。</string>
+    <string name="tutorial_step4_title">全画面＆フローティングメニュー</string>
+    <string name="tutorial_step4_desc">ステータスバーなしの全画面で閲覧できます。ドラッグ可能なフローティングボタンからURL入力、Thor本体配色切替、スクショ、上下画面操作を行えます。</string>
     <string name="gamepad_guide_title">ゲームパッド操作一覧</string>
     <string name="gamepad_key_dpad">十字キー / スティック</string>
     <string name="gamepad_desc_dpad">ページを上下にスクロール</string>
