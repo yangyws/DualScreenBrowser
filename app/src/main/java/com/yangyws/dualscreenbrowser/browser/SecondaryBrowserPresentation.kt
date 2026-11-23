@@ -1294,7 +1294,7 @@ class SecondaryBrowserPresentation(
 
         val bookmarked = isBookmarkedProvider(currentUrl())
         addMenuItem(
-            if (bookmarked) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off,
+            if (bookmarked) R.drawable.ic_bookmark else R.drawable.ic_bookmark_outline,
             context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark),
             highlighted = bookmarked,
             rainbowSlot = 2
@@ -1302,7 +1302,7 @@ class SecondaryBrowserPresentation(
             onToggleBookmark(currentUrl(), webView?.title.orEmpty())
         }
         addMenuItem(
-            android.R.drawable.btn_star_big_on,
+            R.drawable.ic_bookmark,
             context.getString(R.string.action_bookmarks),
             rainbowSlot = 2
         ) {
@@ -1315,7 +1315,7 @@ class SecondaryBrowserPresentation(
             )
         }
         addMenuItem(
-            android.R.drawable.ic_menu_recent_history,
+            R.drawable.ic_history,
             context.getString(R.string.action_history),
             rainbowSlot = 1
         ) {
@@ -1328,7 +1328,7 @@ class SecondaryBrowserPresentation(
             )
         }
         addMenuItem(
-            android.R.drawable.ic_menu_search,
+            R.drawable.ic_search,
             context.getString(R.string.action_find_in_page),
             rainbowSlot = 3
         ) {
@@ -1342,7 +1342,7 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
-        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_long_screenshot), rainbowSlot = 2) {
+        addMenuItem(R.drawable.ic_view_stream, context.getString(R.string.action_long_screenshot), rainbowSlot = 2) {
             val bmp = captureFullPageBitmap()
             val saved = bmp?.let { b ->
                 ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1351,17 +1351,17 @@ class SecondaryBrowserPresentation(
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
         val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
-        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode, rainbowSlot = 3) { toggleDesktopMode() }
+        addMenuItem(R.drawable.ic_computer, desktopLabel, highlighted = desktopMode, rainbowSlot = 3) { toggleDesktopMode() }
         addMenuDivider()
-        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode), rainbowSlot = 3) { onToggleSpanMode() }
+        addMenuItem(R.drawable.ic_view_stream, context.getString(R.string.action_span_mode), rainbowSlot = 3) { onToggleSpanMode() }
         addMenuItem(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens), rainbowSlot = 1) {
             onSwapScreens(currentUrl())
         }
         addMenuDivider()
-        addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
+        addMenuItem(R.drawable.ic_refresh, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
         addMenuDivider()
-        addMenuItem(android.R.drawable.ic_menu_help, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { showBottomGamepadGuidePopup(anchor) }
-        addMenuItem(android.R.drawable.ic_menu_preferences, context.getString(R.string.action_settings), rainbowSlot = 0) { onOpenSettings() }
+        addMenuItem(R.drawable.ic_gamepad, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { showBottomGamepadGuidePopup(anchor) }
+        addMenuItem(R.drawable.ic_settings, context.getString(R.string.action_settings), rainbowSlot = 0) { onOpenSettings() }
 
         val scrollItems = ScrollView(context).apply {
             addView(itemsContainer)
