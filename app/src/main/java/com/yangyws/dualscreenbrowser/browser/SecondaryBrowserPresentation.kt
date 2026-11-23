@@ -35,6 +35,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -70,6 +71,7 @@ class SecondaryBrowserPresentation(
     private var spanViewport: SpanViewportView? = null
     private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
+    private var floatingMenuBtn: ImageButton? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
     private var urlInput: EditText? = null
@@ -395,11 +397,78 @@ class SecondaryBrowserPresentation(
         contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
+        val floatSize = dp(46)
+        val floatMargin = dp(14)
+        val floatBg = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#D9161B24"))
+            setStroke(dp(1), Color.parseColor("#38FFFFFF"))
+        }
+        lateinit var btnFloatMenu: ImageButton
+        btnFloatMenu = ImageButton(context).apply {
+            setImageResource(R.drawable.ic_menu)
+            contentDescription = context.getString(R.string.action_settings)
+            background = floatBg
+            setColorFilter(Color.WHITE)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            elevation = dp(6).toFloat()
+            visibility = if (!spanModeProvider()) View.VISIBLE else View.GONE
+            var downRawX = 0f
+            var downRawY = 0f
+            var startX = 0f
+            var startY = 0f
+            var dragging = false
+            setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downRawX = event.rawX
+                        downRawY = event.rawY
+                        startX = v.x
+                        startY = v.y
+                        dragging = false
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - downRawX
+                        val dy = event.rawY - downRawY
+                        if (abs(dx) > dp(6) || abs(dy) > dp(6)) dragging = true
+                        if (dragging) {
+                            val maxX = (contentStack.width - v.width - floatMargin).toFloat().coerceAtLeast(floatMargin.toFloat())
+                            val maxY = (contentStack.height - v.height - floatMargin).toFloat().coerceAtLeast(floatMargin.toFloat())
+                            v.x = (startX + dx).coerceIn(floatMargin.toFloat(), maxX)
+                            v.y = (startY + dy).coerceIn(floatMargin.toFloat(), maxY)
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (!dragging) {
+                            showBottomFloatingMenu(v)
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+        floatingMenuBtn = btnFloatMenu
+        contentStack.addView(
+            btnFloatMenu,
+            FrameLayout.LayoutParams(floatSize, floatSize).apply {
+                gravity = Gravity.BOTTOM or Gravity.END
+                setMargins(0, 0, floatMargin, floatMargin)
+            }
+        )
+
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
         root.addView(contentStack, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        root.addView(createTouchpadArea(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(112)))
+        root.addView(
+            createTouchpadArea(root),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(112)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        )
         setContentView(root)
         window?.let { win ->
             win.setDecorFitsSystemWindows(false)
@@ -414,7 +483,7 @@ class SecondaryBrowserPresentation(
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun createTouchpadArea(): LinearLayout {
+    private fun createTouchpadArea(rootView: ViewGroup): LinearLayout {
         var lastAvgX = 0f
         var lastAvgY = 0f
         var lastSpanDist = 0f
@@ -457,9 +526,66 @@ class SecondaryBrowserPresentation(
             setTextColor(Color.parseColor("#6E7687"))
             textSize = 11f
             gravity = Gravity.CENTER
-            setPadding(dp(12), 0, dp(12), 0)
+            setPadding(dp(36), 0, dp(36), 0)
         }
         padArea.addView(hintLabel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        fun makeCornerResizeHandle(isLeft: Boolean): ImageView {
+            var downRawX = 0f
+            var downRawY = 0f
+            var startW = 0
+            var startH = 0
+            return ImageView(context).apply {
+                setImageResource(R.drawable.ic_drag_corner)
+                scaleX = if (isLeft) 1f else -1f
+                setPadding(dp(6), dp(6), dp(6), dp(6))
+                alpha = 0.85f
+                setOnTouchListener { _, ev ->
+                    when (ev.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downRawX = ev.rawX
+                            downRawY = ev.rawY
+                            startW = container.width.coerceAtLeast(dp(180))
+                            startH = container.height.coerceAtLeast(dp(72))
+                            true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = ev.rawX - downRawX
+                            val dy = ev.rawY - downRawY
+                            val maxH = (rootView.height - dp(120)).coerceAtLeast(dp(160))
+                            val maxW = rootView.width.coerceAtLeast(dp(260))
+                            val newH = (startH - dy.toInt()).coerceIn(dp(72), maxH)
+                            val widthDelta = if (isLeft) -dx.toInt() * 2 else dx.toInt() * 2
+                            val newW = (startW + widthDelta).coerceIn(dp(180), maxW)
+                            val lp = container.layoutParams as LinearLayout.LayoutParams
+                            lp.height = newH
+                            lp.width = if (newW >= maxW - dp(8)) ViewGroup.LayoutParams.MATCH_PARENT else newW
+                            lp.gravity = Gravity.CENTER_HORIZONTAL
+                            container.layoutParams = lp
+                            container.requestLayout()
+                            true
+                        }
+                        else -> true
+                    }
+                }
+            }
+        }
+
+        val handleSize = dp(30)
+        padArea.addView(
+            makeCornerResizeHandle(isLeft = true),
+            FrameLayout.LayoutParams(handleSize, handleSize).apply {
+                gravity = Gravity.TOP or Gravity.START
+                setMargins(dp(2), dp(2), 0, 0)
+            }
+        )
+        padArea.addView(
+            makeCornerResizeHandle(isLeft = false),
+            FrameLayout.LayoutParams(handleSize, handleSize).apply {
+                gravity = Gravity.TOP or Gravity.END
+                setMargins(0, dp(2), dp(2), 0)
+            }
+        )
 
         container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         container.addView(padArea, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -628,6 +754,150 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
+    private fun showBottomFloatingMenu(anchor: View) {
+        val panelBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(12).toFloat()
+            setColor(Color.parseColor("#FF1E222B"))
+            setStroke(dp(1), Color.parseColor("#28FFFFFF"))
+        }
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelBg
+            setPadding(dp(10), dp(10), dp(10), dp(8))
+            elevation = dp(8).toFloat()
+        }
+
+        lateinit var popup: PopupWindow
+
+        val navRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val btnSize = dp(34)
+        navRow.addView(navButton(R.drawable.ic_arrow_back, context.getString(R.string.action_back)) {
+            popup.dismiss()
+            goBackIfPossible()
+        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        navRow.addView(navButton(R.drawable.ic_arrow_forward, context.getString(R.string.action_forward)) {
+            popup.dismiss()
+            goForwardIfPossible()
+        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        navRow.addView(navButton(R.drawable.ic_refresh, context.getString(R.string.action_refresh)) {
+            popup.dismiss()
+            reloadPage()
+        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        navRow.addView(navButton(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
+            popup.dismiss()
+            onSwapScreens(currentUrl())
+        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        navRow.addView(navButton(R.drawable.ic_upload_top, context.getString(R.string.action_send_to_primary)) {
+            popup.dismiss()
+            onSendUrlToPrimary(currentUrl())
+        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        panel.addView(navRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val urlBoxBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(8).toFloat()
+            setColor(activeTheme.surfaceVariantColor)
+            setStroke(dp(1), Color.parseColor("#22FFFFFF"))
+        }
+        val urlRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = urlBoxBg
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+        }
+        val urlEdit = EditText(context).apply {
+            hint = context.getString(R.string.url_placeholder)
+            setText(currentUrl())
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.parseColor("#8A92A6"))
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            textSize = 13f
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            imeOptions = EditorInfo.IME_ACTION_GO
+            setOnEditorActionListener { v, actionId, event ->
+                if (actionId == EditorInfo.IME_ACTION_GO ||
+                    (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+                ) {
+                    val target = UrlResolver.resolveInput(v.text.toString(), searchEngineProvider())
+                    loadUrl(target)
+                    popup.dismiss()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+        val goBtn = TextView(context).apply {
+            text = context.getString(R.string.action_go)
+            setTextColor(activeTheme.primaryColor)
+            textSize = 12.5f
+            setPadding(dp(8), dp(2), dp(4), dp(2))
+            setOnClickListener {
+                val target = UrlResolver.resolveInput(urlEdit.text.toString(), searchEngineProvider())
+                loadUrl(target)
+                popup.dismiss()
+            }
+        }
+        urlRow.addView(urlEdit, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        urlRow.addView(goBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        panel.addView(urlRow, LinearLayout.LayoutParams(dp(248), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(0, dp(6), 0, dp(6))
+        })
+
+        fun addMenuItem(label: String, onClick: () -> Unit) {
+            val tv = TextView(context).apply {
+                text = label
+                setTextColor(Color.WHITE)
+                textSize = 13.5f
+                setPadding(dp(8), dp(9), dp(8), dp(9))
+                val outValue = TypedValue()
+                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                setBackgroundResource(outValue.resourceId)
+                setOnClickListener {
+                    popup.dismiss()
+                    onClick()
+                }
+            }
+            panel.addView(tv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
+        val bookmarked = isBookmarkedProvider(currentUrl())
+        addMenuItem(context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark)) {
+            onToggleBookmark(currentUrl(), webView?.title.orEmpty())
+        }
+        val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
+        addMenuItem(desktopLabel) { toggleDesktopMode() }
+        addMenuItem(context.getString(R.string.action_screenshot_bottom)) {
+            val bmp = captureViewportBitmap()
+            val saved = bmp?.let { b ->
+                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+            } ?: false
+            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+        }
+        addMenuItem(context.getString(R.string.action_long_screenshot)) {
+            val bmp = captureFullPageBitmap()
+            val saved = bmp?.let { b ->
+                ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
+            } ?: false
+            val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
+            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+        }
+        addMenuItem(context.getString(R.string.action_reopen_top)) { onReopenTop() }
+
+        popup = PopupWindow(panel, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+        }
+        popup.showAtLocation(anchor, Gravity.CENTER, 0, 0)
+    }
+
     fun updatePresentationMode(spanActive: Boolean) {
         val barVis = if (!spanActive) View.VISIBLE else View.GONE
         val spanVis = if (spanActive) View.VISIBLE else View.GONE
@@ -635,6 +905,7 @@ class SecondaryBrowserPresentation(
         topBarView?.post {
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
+            floatingMenuBtn?.visibility = barVis
             spanViewport?.visibility = spanVis
             webView?.visibility = webVis
             if (spanActive) {
