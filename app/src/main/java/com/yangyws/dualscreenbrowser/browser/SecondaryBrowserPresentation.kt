@@ -69,6 +69,7 @@ class SecondaryBrowserPresentation(
     private val onToggleBookmark: (url: String, title: String) -> Unit,
     private val onReopenTop: () -> Unit,
     private val onToggleSpanMode: () -> Unit,
+    private val onOpenThemePicker: () -> Unit,
     private val onForwardKeyEvent: (KeyEvent) -> Boolean,
     private val onForwardMotionEvent: (MotionEvent) -> Boolean,
     private val onUrlChanged: (String, String) -> Unit,
@@ -968,6 +969,13 @@ class SecondaryBrowserPresentation(
             popup.dismiss()
             onSendUrlToPrimary(currentUrl())
         }, LinearLayout.LayoutParams(btnSize, btnSize))
+        val btnPalette = navButton(R.drawable.ic_palette, context.getString(R.string.settings_theme)) {
+            popup.dismiss()
+            onOpenThemePicker()
+        }.apply {
+            setColorFilter(accent)
+        }
+        navRow.addView(btnPalette, LinearLayout.LayoutParams(btnSize, btnSize))
         panel.addView(navRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val urlBoxBg = GradientDrawable().apply {

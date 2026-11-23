@@ -500,6 +500,7 @@ private fun DualScreenBrowserApp(
                     val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                     Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                 },
+                onOpenThemePicker = { showThemePicker = true },
                 onForwardKeyEvent = onForwardKeyEvent,
                 onForwardMotionEvent = onForwardMotionEvent,
                 onUrlChanged = { url, title ->
@@ -1090,6 +1091,7 @@ private fun DualScreenBrowserApp(
                                 dismissMenu()
                                 showThemePicker = true
                             },
+                            active = true,
                             size = 34.dp
                         ) {
                             Icon(
