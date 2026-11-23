@@ -895,7 +895,29 @@ class SecondaryBrowserPresentation(
             isOutsideTouchable = true
             elevation = dp(10).toFloat()
         }
-        popup.showAtLocation(anchor, Gravity.CENTER, 0, 0)
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val menuW = panel.measuredWidth.coerceAtLeast(dp(260))
+        val menuH = panel.measuredHeight.coerceAtLeast(dp(240))
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(menuW + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - menuW).coerceIn(margin, (rootW - menuW - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - menuW - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        popup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
     }
 
     fun updatePresentationMode(spanActive: Boolean) {
