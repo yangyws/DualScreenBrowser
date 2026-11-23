@@ -403,12 +403,14 @@ class SpanEngine {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
             val root = FrameLayout(context).apply {
+                setBackgroundColor(android.graphics.Color.parseColor("#101216"))
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
             }
             val wv = WebView(context).apply {
+                setBackgroundColor(android.graphics.Color.parseColor("#101216"))
                 settings.javaScriptEnabled = jsEnabled
                 settings.domStorageEnabled = true
                 settings.useWideViewPort = true
