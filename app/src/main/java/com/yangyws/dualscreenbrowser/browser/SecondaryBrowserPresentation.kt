@@ -1360,7 +1360,7 @@ class SecondaryBrowserPresentation(
         addMenuDivider()
         addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
         addMenuDivider()
-        addMenuItem(android.R.drawable.ic_menu_help, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { onOpenGamepadGuide() }
+        addMenuItem(android.R.drawable.ic_menu_help, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { showBottomGamepadGuidePopup(anchor) }
         addMenuItem(android.R.drawable.ic_menu_preferences, context.getString(R.string.action_settings), rainbowSlot = 0) { onOpenSettings() }
 
         val scrollItems = ScrollView(context).apply {
@@ -1809,6 +1809,147 @@ class SecondaryBrowserPresentation(
             (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
         }
         findPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+    }
+
+    private fun showBottomGamepadGuidePopup(anchor: View) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val dividerColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#2EFFFFFF")
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelBg
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            elevation = dp(8).toFloat()
+        }
+
+        lateinit var guidePopup: PopupWindow
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = context.getString(R.string.action_gamepad_guide)
+            setTextColor(fgColor)
+            textSize = 14f
+        }
+        val closeBtn = TextView(context).apply {
+            text = "×"
+            setTextColor(mutedFg)
+            textSize = 18f
+            setPadding(dp(10), 0, dp(4), 0)
+            setOnClickListener { guidePopup.dismiss() }
+        }
+        headerRow.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        headerRow.addView(closeBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        panel.addView(headerRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val divider = View(context).apply { setBackgroundColor(dividerColor) }
+        panel.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            setMargins(0, dp(7), 0, dp(7))
+        })
+
+        val mappings = listOf(
+            R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+            R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+            R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+            R.string.gamepad_key_x to R.string.gamepad_desc_x,
+            R.string.gamepad_key_y to R.string.gamepad_desc_y,
+            R.string.gamepad_key_select to R.string.gamepad_desc_select,
+            R.string.gamepad_key_start to R.string.gamepad_desc_start,
+            R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+        )
+        val rainbowChipColors = listOf(
+            ThorTheme.RAINBOW_RED,
+            ThorTheme.RAINBOW_BLUE,
+            ThorTheme.RAINBOW_YELLOW,
+            ThorTheme.RAINBOW_BLUE,
+            ThorTheme.RAINBOW_GREEN,
+            ThorTheme.RAINBOW_YELLOW,
+            ThorTheme.RAINBOW_RED,
+            ThorTheme.RAINBOW_GREEN
+        )
+
+        val listContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        mappings.forEachIndexed { index, (keyRes, descRes) ->
+            val chipColor = if (activeTheme == ThorTheme.RAINBOW) {
+                rainbowChipColors[index % rainbowChipColors.size]
+            } else {
+                accent
+            }
+            val chipBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(6).toFloat()
+                setColor(Color.argb(40, Color.red(chipColor), Color.green(chipColor), Color.blue(chipColor)))
+                setStroke(dp(1), Color.argb(140, Color.red(chipColor), Color.green(chipColor), Color.blue(chipColor)))
+            }
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val keyChip = TextView(context).apply {
+                text = context.getString(keyRes)
+                setTextColor(chipColor)
+                textSize = 11.5f
+                background = chipBg
+                setPadding(dp(8), dp(3), dp(8), dp(3))
+            }
+            val descTv = TextView(context).apply {
+                text = context.getString(descRes)
+                setTextColor(fgColor)
+                textSize = 12.5f
+                setPadding(dp(10), 0, 0, 0)
+            }
+            row.addView(keyChip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            row.addView(descTv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            listContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                if (index > 0) topMargin = dp(7)
+            })
+        }
+
+        val scroll = ScrollView(context).apply { addView(listContainer) }
+        panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val widthPx = dp(312)
+        guidePopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+        }
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = guidePopup
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(dp(340), View.MeasureSpec.AT_MOST)
+        )
+        val menuH = panel.measuredHeight.coerceIn(dp(140), dp(340))
+        guidePopup.height = menuH
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        guidePopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
     }
 
     fun updatePresentationMode(spanActive: Boolean) {
