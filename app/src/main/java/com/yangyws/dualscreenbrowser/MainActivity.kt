@@ -1494,6 +1494,7 @@ private fun DualScreenBrowserApp(
                             }
                         },
                         onClick = {
+                            dismissMenu()
                             spanMode = !spanMode
                             presentation?.updatePresentationMode(spanMode && dualScreenActive)
                             val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off

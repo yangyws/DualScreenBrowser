@@ -333,14 +333,14 @@ fun FloatingMenuButton(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF1E222B),
+                            color = MaterialTheme.colorScheme.surface,
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
                             shadowElevation = 10.dp,
                             modifier = Modifier.heightIn(max = maxMenuHeight)
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .width(IntrinsicSize.Max)
+                                    .width(304.dp)
                                     .verticalScroll(rememberScrollState())
                                     .padding(vertical = 4.dp)
                             ) {

@@ -72,6 +72,7 @@ class SecondaryBrowserPresentation(
     private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
     private var floatingMenuBtn: ImageButton? = null
+    private var bottomMenuPopup: PopupWindow? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
     private var urlInput: EditText? = null
@@ -745,6 +746,9 @@ class SecondaryBrowserPresentation(
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
+            (floatingMenuBtn?.background as? GradientDrawable)?.setColor(
+                Color.argb(217, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor))
+            )
             (touchpadContainer?.background as? GradientDrawable)?.setColor(
                 Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor))
             )
@@ -805,8 +809,8 @@ class SecondaryBrowserPresentation(
         val panelBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(12).toFloat()
-            setColor(Color.parseColor("#FF1E222B"))
-            setStroke(dp(1), Color.parseColor("#28FFFFFF"))
+            setColor(activeTheme.surfaceColor)
+            setStroke(dp(1), Color.parseColor("#24FFFFFF"))
         }
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -942,6 +946,8 @@ class SecondaryBrowserPresentation(
             isOutsideTouchable = true
             elevation = dp(10).toFloat()
         }
+        bottomMenuPopup?.dismiss()
+        bottomMenuPopup = popup
         panel.measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -972,6 +978,10 @@ class SecondaryBrowserPresentation(
         val spanVis = if (spanActive) View.VISIBLE else View.GONE
         val webVis = if (spanActive) View.GONE else View.VISIBLE
         topBarView?.post {
+            if (spanActive) {
+                bottomMenuPopup?.dismiss()
+                bottomMenuPopup = null
+            }
             topBarView?.visibility = barVis
             dividerView?.visibility = barVis
             floatingMenuBtn?.visibility = barVis
