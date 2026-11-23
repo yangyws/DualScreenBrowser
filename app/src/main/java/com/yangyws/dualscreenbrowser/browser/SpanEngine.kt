@@ -142,9 +142,9 @@ class SpanEngine {
         stop()
         stopping = false
 
-        // Scale down oversized resolutions to keep VirtualDisplay + ImageReader fast and smooth
+        // Keep native resolution up to 1920px wide for crisp 1:1 rendering on AYN Thor
         val rawW = widthPx.coerceAtLeast(320)
-        val scale = if (rawW > 760) 760f / rawW.toFloat() else 1f
+        val scale = if (rawW > 1920) 1920f / rawW.toFloat() else 1f
 
         val safeW = (rawW * scale).toInt().coerceAtLeast(320)
         val safeTopH = (topHeightPx * scale).toInt().coerceAtLeast(200)
