@@ -367,7 +367,6 @@ private fun DualScreenBrowserApp(
     var findMatchActive by remember { mutableIntStateOf(0) }
     var findMatchTotal by remember { mutableIntStateOf(0) }
     var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
-    var showThemePicker by remember { mutableStateOf(false) }
     var showGamepadGuidePopup by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
@@ -509,7 +508,6 @@ private fun DualScreenBrowserApp(
                     val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
                     Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                 },
-                onOpenThemePicker = { showThemePicker = true },
                 bookmarksProvider = { latestBookmarks },
                 historyProvider = { history },
                 onOpenGamepadGuide = { activePanel = BrowserPanel.GAMEPAD_GUIDE },
@@ -1177,21 +1175,6 @@ private fun DualScreenBrowserApp(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                        }
-                        TactileIconButton(
-                            onClick = {
-                                dismissMenu()
-                                showThemePicker = true
-                            },
-                            active = true,
-                            size = 34.dp
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Palette,
-                                contentDescription = stringResource(R.string.settings_theme),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
                         }
                         Surface(
                             onClick = {
@@ -2300,66 +2283,6 @@ private fun DualScreenBrowserApp(
                         text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-
-    if (showThemePicker) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showThemePicker = false }) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
-                shadowElevation = 12.dp,
-                modifier = Modifier.widthIn(min = 320.dp, max = 440.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Palette,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_theme),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        TactileIconButton(
-                            onClick = { showThemePicker = false },
-                            size = 30.dp
-                        ) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.action_close),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    ThorThemeSelector(
-                        currentTheme = currentTheme,
-                        customHue = customHue,
-                        customPrimaryInt = customPrimaryInt,
-                        onThemeSelected = onThemeSelected,
-                        onCustomHueChanged = onCustomHueChanged,
-                        compact = false
                     )
                 }
             }

@@ -71,7 +71,6 @@ class SecondaryBrowserPresentation(
     private val onToggleBookmark: (url: String, title: String) -> Unit,
     private val onReopenTop: () -> Unit,
     private val onToggleSpanMode: () -> Unit,
-    private val onOpenThemePicker: () -> Unit,
     private val bookmarksProvider: () -> List<BookmarkItem>,
     private val historyProvider: () -> List<HistoryItem>,
     private val onOpenGamepadGuide: () -> Unit,
@@ -1114,23 +1113,6 @@ class SecondaryBrowserPresentation(
             popup.dismiss()
             onSendUrlToPrimary(currentUrl())
         }.apply { setColorFilter(fgColor) }, LinearLayout.LayoutParams(btnSize, btnSize))
-
-        val palettePillBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(8).toFloat()
-            setColor(Color.argb(38, Color.red(accent), Color.green(accent), Color.blue(accent)))
-        }
-        val btnPalette = navButton(R.drawable.ic_palette, context.getString(R.string.settings_theme)) {
-            popup.dismiss()
-            onOpenThemePicker()
-        }.apply {
-            background = palettePillBg
-            setColorFilter(accent)
-            setPadding(dp(7), dp(7), dp(7), dp(7))
-        }
-        navRow.addView(btnPalette, LinearLayout.LayoutParams(btnSize, btnSize).apply {
-            marginStart = dp(4)
-        })
         navRow.addView(spacer())
 
         val tabsAccent = rainbowSlotColor(1, fgColor)
