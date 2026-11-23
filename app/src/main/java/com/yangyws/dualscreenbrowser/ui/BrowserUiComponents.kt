@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -218,8 +219,30 @@ fun OverflowMenuButton(
 /** Draggable floating menu button with isolated recompose scope for the overflow menu. */
 @Composable
 fun FloatingMenuButton(
+    isRainbow: Boolean = false,
     menuContent: @Composable (dismiss: () -> Unit) -> Unit
 ) {
+    val rainbowBrush = remember {
+        Brush.sweepGradient(
+            listOf(
+                Color(0xFF3B82F6), // X Blue
+                Color(0xFFEAB308), // B Yellow
+                Color(0xFF22C55E), // Y Green
+                Color(0xFFEF4444), // A Red
+                Color(0xFF3B82F6)
+            )
+        )
+    }
+    val rainbowBarBrush = remember {
+        Brush.horizontalGradient(
+            listOf(
+                Color(0xFF3B82F6),
+                Color(0xFFEAB308),
+                Color(0xFF22C55E),
+                Color(0xFFEF4444)
+            )
+        )
+    }
     var expanded by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val btnSizePx = with(density) { 46.dp.toPx() }
@@ -258,14 +281,18 @@ fun FloatingMenuButton(
                     } else {
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
                     },
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (expanded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
-                        }
-                    ),
+                    border = if (isRainbow) {
+                        BorderStroke(1.8.dp, rainbowBrush)
+                    } else {
+                        BorderStroke(
+                            width = 1.dp,
+                            color = if (expanded) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+                            }
+                        )
+                    },
                     shadowElevation = 6.dp,
                     modifier = Modifier
                         .size(46.dp)
@@ -339,7 +366,11 @@ fun FloatingMenuButton(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+                            border = if (isRainbow) {
+                                BorderStroke(1.5.dp, rainbowBarBrush)
+                            } else {
+                                BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+                            },
                             shadowElevation = 10.dp,
                             modifier = Modifier.heightIn(max = maxMenuHeight)
                         ) {

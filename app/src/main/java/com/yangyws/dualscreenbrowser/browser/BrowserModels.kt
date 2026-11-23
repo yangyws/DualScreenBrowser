@@ -23,7 +23,7 @@ enum class ThorTheme(
 ) {
     BLACK("black", false, 0xFFA1AAB8.toInt(), 0xFF0E1014.toInt(), 0xFF181B22.toInt(), 0xFF232832.toInt(), 0xFF16181E.toInt()),
     WHITE("white", true, 0xFF334155.toInt(), 0xFFF3F5F8.toInt(), 0xFFFFFFFF.toInt(), 0xFFE5E9F0.toInt(), 0xFFF2F4F8.toInt()),
-    RAINBOW("rainbow", true, 0xFFD94848.toInt(), 0xFFF2EFE9.toInt(), 0xFFFAF8F4.toInt(), 0xFFE6E2D8.toInt(), 0xFFE3DFD3.toInt()),
+    RAINBOW("rainbow", true, 0xFFD94848.toInt(), 0xFFD8D6D0.toInt(), 0xFFE8E6E0.toInt(), 0xFFCCCAC2.toInt(), 0xFFD6D4CC.toInt()),
     CLEAR_PURPLE("clear_purple", false, 0xFFC084FC.toInt(), 0xFF161026.toInt(), 0xFF241A3D.toInt(), 0xFF332554.toInt(), 0xFF6D44B8.toInt()),
     CUSTOM("custom", false, 0xFFA1AAB8.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt());
 

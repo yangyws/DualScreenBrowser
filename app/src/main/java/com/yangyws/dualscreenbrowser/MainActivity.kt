@@ -999,7 +999,7 @@ private fun DualScreenBrowserApp(
             }
 
             // Draggable floating menu button with isolated recompose scope
-            FloatingMenuButton { dismissMenu ->
+            FloatingMenuButton(isRainbow = currentTheme == ThorTheme.RAINBOW) { dismissMenu ->
                 var menuUrlInput by remember(activeTab.url) { mutableStateOf(activeTab.url) }
                 Column(
                     modifier = Modifier
