@@ -453,6 +453,7 @@ private fun DualScreenBrowserApp(
                 spanModeProvider = { spanMode },
                 touchpadVisibleProvider = { spanMode && bottomTouchpad },
                 themeProvider = { currentTheme },
+                customPrimaryProvider = { customPrimaryInt },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
                 onAdBlocked = { adBlockedCount = AdBlocker.blockedCount() },
                 onSendUrlToPrimary = { urlFromBottom ->
@@ -536,8 +537,8 @@ private fun DualScreenBrowserApp(
         presentation?.updateTouchpadVisibility(spanMode && bottomTouchpad)
     }
 
-    LaunchedEffect(currentTheme, presentation) {
-        presentation?.updateTheme(currentTheme)
+    LaunchedEffect(currentTheme, customPrimaryInt, presentation) {
+        presentation?.updateTheme(currentTheme, customPrimaryInt)
     }
 
     LaunchedEffect(isEditingText) {

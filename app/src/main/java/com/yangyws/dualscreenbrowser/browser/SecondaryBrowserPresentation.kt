@@ -56,6 +56,7 @@ class SecondaryBrowserPresentation(
     private val spanModeProvider: () -> Boolean,
     private val touchpadVisibleProvider: () -> Boolean,
     private val themeProvider: () -> ThorTheme,
+    private val customPrimaryProvider: () -> Int,
     private val bottomColorProvider: () -> Pair<Int, Int>,
     private val onAdBlocked: () -> Unit,
     private val onSendUrlToPrimary: (String) -> Unit,
@@ -74,6 +75,8 @@ class SecondaryBrowserPresentation(
     private var spanViewport: SpanViewportView? = null
     private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
+    private var touchpadMoveHandle: ImageView? = null
+    private var touchpadResizeHandle: ImageView? = null
     private var floatingMenuBtn: ImageButton? = null
     private var bottomMenuPopup: PopupWindow? = null
     private var topBarView: LinearLayout? = null
@@ -89,6 +92,7 @@ class SecondaryBrowserPresentation(
     private var hasLoadedInitialUrl: Boolean = false
     private var desktopMode: Boolean = false
     private var activeTheme: ThorTheme = themeProvider()
+    private var activeCustomPrimary: Int = customPrimaryProvider()
     private val colorPaint = Paint()
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -516,11 +520,13 @@ class SecondaryBrowserPresentation(
             return hypot(event.getX(1) - event.getX(0), event.getY(1) - event.getY(0))
         }
 
+        val padAccent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val padBorderColor = Color.argb(195, Color.red(padAccent), Color.green(padAccent), Color.blue(padAccent))
         val padBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(14).toFloat()
             setColor(Color.argb(228, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)))
-            setStroke(dp(1), Color.parseColor("#38FFFFFF"))
+            setStroke(dp(2), padBorderColor)
         }
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -622,15 +628,19 @@ class SecondaryBrowserPresentation(
         }
 
         val handleSize = dp(30)
+        val resizeHandle = makeResizeHandle().apply { setColorFilter(padAccent) }
+        val moveHandle = makeMoveHandle().apply { setColorFilter(padAccent) }
+        touchpadResizeHandle = resizeHandle
+        touchpadMoveHandle = moveHandle
         padArea.addView(
-            makeResizeHandle(),
+            resizeHandle,
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
                 gravity = Gravity.BOTTOM or Gravity.START
                 setMargins(dp(4), 0, 0, dp(4))
             }
         )
         padArea.addView(
-            makeMoveHandle(),
+            moveHandle,
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
                 gravity = Gravity.BOTTOM or Gravity.END
                 setMargins(0, 0, dp(4), dp(4))
@@ -744,10 +754,13 @@ class SecondaryBrowserPresentation(
         }
     }
 
-    fun updateTheme(theme: ThorTheme) {
+    fun updateTheme(theme: ThorTheme, customPrimaryColor: Int = activeCustomPrimary) {
         activeTheme = theme
+        activeCustomPrimary = customPrimaryColor
+        val accent = theme.effectivePrimary(customPrimaryColor)
         val fgColor = if (theme.isLight) Color.parseColor("#111827") else Color.WHITE
         val borderColor = if (theme.isLight) Color.parseColor("#28000000") else Color.parseColor("#38FFFFFF")
+        val padBorderColor = Color.argb(195, Color.red(accent), Color.green(accent), Color.blue(accent))
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
@@ -758,11 +771,13 @@ class SecondaryBrowserPresentation(
             floatingMenuBtn?.setColorFilter(fgColor)
             (touchpadContainer?.background as? GradientDrawable)?.apply {
                 setColor(Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
-                setStroke(dp(1), borderColor)
+                setStroke(dp(2), padBorderColor)
             }
+            touchpadMoveHandle?.setColorFilter(accent)
+            touchpadResizeHandle?.setColorFilter(accent)
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
-            lockIcon?.setColorFilter(theme.primaryColor)
-            progressBar?.progressTintList = ColorStateList.valueOf(theme.primaryColor)
+            lockIcon?.setColorFilter(accent)
+            progressBar?.progressTintList = ColorStateList.valueOf(accent)
         }
     }
 
