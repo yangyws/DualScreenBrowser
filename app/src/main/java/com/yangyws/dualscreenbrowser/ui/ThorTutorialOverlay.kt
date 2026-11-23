@@ -224,129 +224,134 @@ internal fun ThorHandheldDiagram(
         val w = size.width
         val h = size.height
 
+        val lidCorner = CornerRadius(w * 0.045f, w * 0.045f)
+        val screenCorner = CornerRadius(w * 0.025f, w * 0.025f)
+        val strokeW = (w * 0.016f).coerceIn(1.2f, 3f)
+
         // Top L1/L2 & R1/R2 shoulder triggers
         val shoulderColor = if (highlightStep == 2) accent else dimControl
         drawRoundRect(
             color = shoulderColor,
-            topLeft = Offset(w * 0.14f, h * 0.02f),
-            size = Size(w * 0.18f, h * 0.035f),
-            cornerRadius = CornerRadius(6f, 6f)
+            topLeft = Offset(w * 0.09f, h * 0.02f),
+            size = Size(w * 0.18f, h * 0.032f),
+            cornerRadius = CornerRadius(w * 0.015f, w * 0.015f)
         )
         drawRoundRect(
             color = shoulderColor,
-            topLeft = Offset(w * 0.68f, h * 0.02f),
-            size = Size(w * 0.18f, h * 0.035f),
-            cornerRadius = CornerRadius(6f, 6f)
+            topLeft = Offset(w * 0.73f, h * 0.02f),
+            size = Size(w * 0.18f, h * 0.032f),
+            cornerRadius = CornerRadius(w * 0.015f, w * 0.015f)
         )
 
-        // Top Lid (16:9 screen housing)
-        val lidLeft = w * 0.08f
-        val lidTop = h * 0.06f
-        val lidW = w * 0.84f
-        val lidH = h * 0.39f
+        // Top Lid (16:9 screen housing, same crisp rectangular width as bottom deck)
+        val lidLeft = w * 0.05f
+        val lidTop = h * 0.055f
+        val lidW = w * 0.90f
+        val lidH = h * 0.40f
         drawRoundRect(
             color = shellFill,
             topLeft = Offset(lidLeft, lidTop),
             size = Size(lidW, lidH),
-            cornerRadius = CornerRadius(14f, 14f)
+            cornerRadius = lidCorner
         )
         drawRoundRect(
             color = if (highlightStep == 0 || highlightStep == 3) accent else shellStroke,
             topLeft = Offset(lidLeft, lidTop),
             size = Size(lidW, lidH),
-            cornerRadius = CornerRadius(14f, 14f),
-            style = Stroke(width = 2.5f)
+            cornerRadius = lidCorner,
+            style = Stroke(width = strokeW)
         )
 
-        // Top 16:9 Screen
-        val topScrLeft = w * 0.13f
-        val topScrTop = h * 0.10f
-        val topScrW = w * 0.74f
-        val topScrH = h * 0.31f
+        // Top 6" 16:9 Screen (thin bezels)
+        val topScrLeft = w * 0.095f
+        val topScrTop = h * 0.09f
+        val topScrW = w * 0.81f
+        val topScrH = h * 0.33f
         drawRoundRect(
             color = screenBg,
             topLeft = Offset(topScrLeft, topScrTop),
             size = Size(topScrW, topScrH),
-            cornerRadius = CornerRadius(8f, 8f)
+            cornerRadius = screenCorner
         )
         // Top browser chrome bar highlight (Step 3)
         drawRoundRect(
             color = if (highlightStep == 3) accent else accent.copy(alpha = 0.35f),
             topLeft = Offset(topScrLeft, topScrTop),
             size = Size(topScrW, topScrH * 0.18f),
-            cornerRadius = CornerRadius(6f, 6f)
+            cornerRadius = screenCorner
         )
         // Simulated page lines inside top screen
         val lineColor = if (highlightStep == 0) accent.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.28f)
-        drawLine(lineColor, Offset(topScrLeft + 14f, topScrTop + topScrH * 0.42f), Offset(topScrLeft + topScrW * 0.72f, topScrTop + topScrH * 0.42f), strokeWidth = 4f)
-        drawLine(lineColor, Offset(topScrLeft + 14f, topScrTop + topScrH * 0.62f), Offset(topScrLeft + topScrW * 0.54f, topScrTop + topScrH * 0.62f), strokeWidth = 4f)
-        drawLine(lineColor, Offset(topScrLeft + 14f, topScrTop + topScrH * 0.82f), Offset(topScrLeft + topScrW * 0.80f, topScrTop + topScrH * 0.82f), strokeWidth = 4f)
+        val lineW = (w * 0.012f).coerceIn(1f, 4f)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.42f), Offset(topScrLeft + topScrW * 0.72f, topScrTop + topScrH * 0.42f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.62f), Offset(topScrLeft + topScrW * 0.54f, topScrTop + topScrH * 0.62f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.82f), Offset(topScrLeft + topScrW * 0.80f, topScrTop + topScrH * 0.82f), strokeWidth = lineW)
 
-        // Clamshell Hinge
-        val hingeTop = h * 0.46f
-        val hingeH = h * 0.045f
+        // Clamshell Hinge barrel
+        val hingeTop = h * 0.465f
+        val hingeH = h * 0.042f
         drawRoundRect(
             color = if (highlightStep == 0) accent else shellStroke,
-            topLeft = Offset(w * 0.14f, hingeTop),
-            size = Size(w * 0.72f, hingeH),
-            cornerRadius = CornerRadius(8f, 8f)
+            topLeft = Offset(w * 0.08f, hingeTop),
+            size = Size(w * 0.84f, hingeH),
+            cornerRadius = CornerRadius(w * 0.02f, w * 0.02f)
         )
 
-        // Bottom Deck (controller + 8:7 bottom screen)
-        val deckLeft = w * 0.04f
+        // Bottom Deck (crisp rectangular clamshell body)
+        val deckLeft = w * 0.05f
         val deckTop = h * 0.515f
-        val deckW = w * 0.92f
-        val deckH = h * 0.45f
+        val deckW = w * 0.90f
+        val deckH = h * 0.455f
         drawRoundRect(
             color = shellFill,
             topLeft = Offset(deckLeft, deckTop),
             size = Size(deckW, deckH),
-            cornerRadius = CornerRadius(18f, 18f)
+            cornerRadius = lidCorner
         )
         drawRoundRect(
             color = shellStroke,
             topLeft = Offset(deckLeft, deckTop),
             size = Size(deckW, deckH),
-            cornerRadius = CornerRadius(18f, 18f),
-            style = Stroke(width = 2.5f)
+            cornerRadius = lidCorner,
+            style = Stroke(width = strokeW)
         )
 
-        // Center 8:7 Bottom Screen
-        val botScrLeft = w * 0.30f
+        // Center 3.92" 8:7 Bottom Screen
+        val botScrLeft = w * 0.29f
         val botScrTop = h * 0.55f
-        val botScrW = w * 0.40f
-        val botScrH = h * 0.34f
+        val botScrW = w * 0.42f
+        val botScrH = h * 0.36f
         drawRoundRect(
             color = screenBg,
             topLeft = Offset(botScrLeft, botScrTop),
             size = Size(botScrW, botScrH),
-            cornerRadius = CornerRadius(8f, 8f)
+            cornerRadius = screenCorner
         )
         drawRoundRect(
             color = if (highlightStep == 0) accent else shellStroke.copy(alpha = 0.7f),
             topLeft = Offset(botScrLeft, botScrTop),
             size = Size(botScrW, botScrH),
-            cornerRadius = CornerRadius(8f, 8f),
-            style = Stroke(width = 2f)
+            cornerRadius = screenCorner,
+            style = Stroke(width = (strokeW * 0.85f).coerceAtLeast(1f))
         )
         // Bottom content lines (Step 0) & Touchpad zone (Step 1)
-        drawLine(lineColor, Offset(botScrLeft + 10f, botScrTop + botScrH * 0.22f), Offset(botScrLeft + botScrW * 0.78f, botScrTop + botScrH * 0.22f), strokeWidth = 4f)
-        drawLine(lineColor, Offset(botScrLeft + 10f, botScrTop + botScrH * 0.42f), Offset(botScrLeft + botScrW * 0.62f, botScrTop + botScrH * 0.42f), strokeWidth = 4f)
+        drawLine(lineColor, Offset(botScrLeft + w * 0.03f, botScrTop + botScrH * 0.22f), Offset(botScrLeft + botScrW * 0.78f, botScrTop + botScrH * 0.22f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(botScrLeft + w * 0.03f, botScrTop + botScrH * 0.42f), Offset(botScrLeft + botScrW * 0.62f, botScrTop + botScrH * 0.42f), strokeWidth = lineW)
 
         val padColor = if (highlightStep == 1) accent.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.1f)
         drawRoundRect(
             color = padColor,
             topLeft = Offset(botScrLeft + 3f, botScrTop + botScrH * 0.62f),
             size = Size(botScrW - 6f, botScrH * 0.34f),
-            cornerRadius = CornerRadius(6f, 6f)
+            cornerRadius = screenCorner
         )
         if (highlightStep == 1) {
             drawRoundRect(
                 color = accent,
                 topLeft = Offset(botScrLeft + 3f, botScrTop + botScrH * 0.62f),
                 size = Size(botScrW - 6f, botScrH * 0.34f),
-                cornerRadius = CornerRadius(6f, 6f),
-                style = Stroke(width = 2f)
+                cornerRadius = screenCorner,
+                style = Stroke(width = strokeW)
             )
         }
 
