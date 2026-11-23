@@ -211,7 +211,11 @@ internal fun ThorHandheldDiagram(
     modifier: Modifier = Modifier
 ) {
     val isLightShell = theme == ThorTheme.WHITE || theme == ThorTheme.RAINBOW
-    val shellFill = Color(theme.shellColor)
+    val shellFill = if (theme == ThorTheme.CUSTOM) {
+        accent.copy(alpha = 0.72f)
+    } else {
+        Color(theme.shellColor)
+    }
     val shellStroke = if (isLightShell) Color(0xFF9BA4B8) else Color(0xFF4A5368)
     val screenBg = Color(0xFF12151C)
     val dimControl = if (isLightShell) Color(0xFF7D869B) else Color(0xFF5D667B)

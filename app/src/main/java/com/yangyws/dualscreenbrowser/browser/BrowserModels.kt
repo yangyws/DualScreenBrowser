@@ -20,10 +20,10 @@ enum class ThorTheme(
     val surfaceVariantColor: Int,
     val shellColor: Int
 ) {
-    BLACK("black", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF1D2028.toInt()),
-    WHITE("white", 0xFF4C8DFF.toInt(), 0xFF171A22.toInt(), 0xFF222631.toInt(), 0xFF2E3442.toInt(), 0xFFEAECEF.toInt()),
-    RAINBOW("rainbow", 0xFFF2A93B.toInt(), 0xFF1A1B20.toInt(), 0xFF24262E.toInt(), 0xFF30333E.toInt(), 0xFFDAD7CE.toInt()),
-    CLEAR_PURPLE("clear_purple", 0xFFB388FF.toInt(), 0xFF14101E.toInt(), 0xFF1F182E.toInt(), 0xFF2C2240.toInt(), 0xFF583E91.toInt()),
+    BLACK("black", 0xFF4CC38A.toInt(), 0xFF0E1014.toInt(), 0xFF181B22.toInt(), 0xFF232832.toInt(), 0xFF16181E.toInt()),
+    WHITE("white", 0xFF60A5FA.toInt(), 0xFF1B2029.toInt(), 0xFF262D3A.toInt(), 0xFF333C4D.toInt(), 0xFFF2F4F8.toInt()),
+    RAINBOW("rainbow", 0xFF3B82F6.toInt(), 0xFF1B1C22.toInt(), 0xFF272932.toInt(), 0xFF343744.toInt(), 0xFFE3DFD3.toInt()),
+    CLEAR_PURPLE("clear_purple", 0xFFC084FC.toInt(), 0xFF161026.toInt(), 0xFF241A3D.toInt(), 0xFF332554.toInt(), 0xFF6D44B8.toInt()),
     CUSTOM("custom", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt());
 
     fun effectivePrimary(customColor: Int): Int =
