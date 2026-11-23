@@ -397,6 +397,7 @@ private fun DualScreenBrowserApp(
     var findMatchTotal by remember { mutableIntStateOf(0) }
     var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
     var showThemePicker by remember { mutableStateOf(false) }
+    var showGamepadGuidePopup by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
@@ -1047,7 +1048,86 @@ private fun DualScreenBrowserApp(
             }
 
             // Draggable floating menu button with isolated recompose scope
-            FloatingMenuButton(isRainbow = currentTheme == ThorTheme.RAINBOW) { dismissMenu ->
+            FloatingMenuButton(
+                isRainbow = currentTheme == ThorTheme.RAINBOW,
+                extraPopupExpanded = showGamepadGuidePopup,
+                onDismissExtraPopup = { showGamepadGuidePopup = false },
+                extraPopupContent = {
+                    val guideMappings = listOf(
+                        R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+                        R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+                        R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+                        R.string.gamepad_key_x to R.string.gamepad_desc_x,
+                        R.string.gamepad_key_y to R.string.gamepad_desc_y,
+                        R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                        R.string.gamepad_key_start to R.string.gamepad_desc_start,
+                        R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                    )
+                    val rainbowChipColors = listOf(
+                        Color(ThorTheme.RAINBOW_RED),
+                        Color(ThorTheme.RAINBOW_BLUE),
+                        Color(ThorTheme.RAINBOW_YELLOW),
+                        Color(ThorTheme.RAINBOW_BLUE),
+                        Color(ThorTheme.RAINBOW_GREEN),
+                        Color(ThorTheme.RAINBOW_YELLOW),
+                        Color(ThorTheme.RAINBOW_RED),
+                        Color(ThorTheme.RAINBOW_GREEN)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .widthIn(min = 320.dp, max = 420.dp)
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_gamepad_guide),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable { showGamepadGuidePopup = false }
+                            )
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        guideMappings.forEachIndexed { index, (keyRes, descRes) ->
+                            val chipAccent = if (currentTheme == ThorTheme.RAINBOW) {
+                                rainbowChipColors[index % rainbowChipColors.size]
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                StatusChip(
+                                    label = stringResource(keyRes),
+                                    accentColor = chipAccent
+                                )
+                                Text(
+                                    text = stringResource(descRes),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            ) { dismissMenu ->
                 var menuUrlInput by remember(activeTab.url) { mutableStateOf(activeTab.url) }
                 Column(
                     modifier = Modifier
@@ -1527,7 +1607,7 @@ private fun DualScreenBrowserApp(
                     leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
                     onClick = {
                         dismissMenu()
-                        activePanel = BrowserPanel.GAMEPAD_GUIDE
+                        showGamepadGuidePopup = true
                     }
                 )
                 DropdownMenuItem(

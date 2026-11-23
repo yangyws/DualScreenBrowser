@@ -223,6 +223,9 @@ fun OverflowMenuButton(
 @Composable
 fun FloatingMenuButton(
     isRainbow: Boolean = false,
+    extraPopupExpanded: Boolean = false,
+    onDismissExtraPopup: () -> Unit = {},
+    extraPopupContent: (@Composable () -> Unit)? = null,
     menuContent: @Composable (dismiss: () -> Unit) -> Unit
 ) {
     val rainbowBrush = remember {
@@ -318,7 +321,7 @@ fun FloatingMenuButton(
                         )
                     }
                 }
-                if (expanded) {
+                if (expanded || (extraPopupExpanded && extraPopupContent != null)) {
                     val gapPx = with(density) { 8.dp.roundToPx() }
                     val edgeMarginPx = with(density) { 8.dp.roundToPx() }
                     val openAbove = (offsetY + btnSizePx / 2f) > (parentHeight / 2f)
@@ -361,29 +364,51 @@ fun FloatingMenuButton(
                             }
                         }
                     }
-                    Popup(
-                        popupPositionProvider = positionProvider,
-                        onDismissRequest = { expanded = false },
-                        properties = PopupProperties(focusable = true)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = if (isRainbow) {
-                                BorderStroke(1.5.dp, rainbowBarBrush)
-                            } else {
-                                BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
-                            },
-                            shadowElevation = 10.dp,
-                            modifier = Modifier.heightIn(max = maxMenuHeight)
+                    if (expanded) {
+                        Popup(
+                            popupPositionProvider = positionProvider,
+                            onDismissRequest = { expanded = false },
+                            properties = PopupProperties(focusable = true)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .width(304.dp)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(vertical = 4.dp)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = if (isRainbow) {
+                                    BorderStroke(1.5.dp, rainbowBarBrush)
+                                } else {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+                                },
+                                shadowElevation = 10.dp,
+                                modifier = Modifier.heightIn(max = maxMenuHeight)
                             ) {
-                                menuContent { expanded = false }
+                                Column(
+                                    modifier = Modifier
+                                        .width(304.dp)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(vertical = 4.dp)
+                                ) {
+                                    menuContent { expanded = false }
+                                }
+                            }
+                        }
+                    } else if (extraPopupExpanded && extraPopupContent != null) {
+                        Popup(
+                            popupPositionProvider = positionProvider,
+                            onDismissRequest = onDismissExtraPopup,
+                            properties = PopupProperties(focusable = true)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = if (isRainbow) {
+                                    BorderStroke(1.5.dp, rainbowBarBrush)
+                                } else {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+                                },
+                                shadowElevation = 10.dp,
+                                modifier = Modifier.heightIn(max = maxMenuHeight)
+                            ) {
+                                extraPopupContent()
                             }
                         }
                     }
