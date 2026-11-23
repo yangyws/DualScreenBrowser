@@ -2041,87 +2041,21 @@ private fun DualScreenBrowserApp(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Console Colorway selector
+                    // Console Colorway selector (unified with Palette dialog)
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(stringResource(R.string.settings_theme), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         Text(stringResource(R.string.settings_theme_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            val themeLabels = mapOf(
-                                ThorTheme.BLACK to R.string.theme_black,
-                                ThorTheme.WHITE to R.string.theme_white,
-                                ThorTheme.RAINBOW to R.string.theme_rainbow,
-                                ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
-                                ThorTheme.CUSTOM to R.string.theme_custom
-                            )
-                            ThorTheme.entries.forEach { t ->
-                                val selected = t == currentTheme
-                                val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
-                                Surface(
-                                    onClick = { onThemeSelected(t) },
-                                    color = if (selected) chipPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (selected) chipPrimary else MaterialTheme.colorScheme.outline
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        if (t == ThorTheme.RAINBOW) {
-                                            Column(
-                                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                modifier = Modifier.size(14.dp)
-                                            ) {
-                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_RED)))
-                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(0xFFEAB308)))
-                                                }
-                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_BLUE)))
-                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_GREEN)))
-                                                }
-                                            }
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(chipPrimary)
-                                            )
-                                        }
-                                        Text(
-                                            text = stringResource(themeLabels[t] ?: R.string.theme_black),
-                                            fontSize = 9.5.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        if (currentTheme == ThorTheme.CUSTOM) {
-                            Text(
-                                text = stringResource(R.string.settings_custom_hue),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            HueColorSlider(
-                                hue = customHue,
-                                onHueChange = onCustomHueChanged
-                            )
-                        }
+                        ThorThemeSelector(
+                            currentTheme = currentTheme,
+                            customHue = customHue,
+                            customPrimaryInt = customPrimaryInt,
+                            onThemeSelected = onThemeSelected,
+                            onCustomHueChanged = onCustomHueChanged,
+                            compact = true
+                        )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -2419,67 +2353,14 @@ private fun DualScreenBrowserApp(
                         }
                     }
 
-                    val themeLabels = mapOf(
-                        ThorTheme.BLACK to R.string.theme_black,
-                        ThorTheme.WHITE to R.string.theme_white,
-                        ThorTheme.RAINBOW to R.string.theme_rainbow,
-                        ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
-                        ThorTheme.CUSTOM to R.string.theme_custom
+                    ThorThemeSelector(
+                        currentTheme = currentTheme,
+                        customHue = customHue,
+                        customPrimaryInt = customPrimaryInt,
+                        onThemeSelected = onThemeSelected,
+                        onCustomHueChanged = onCustomHueChanged,
+                        compact = false
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        ThorTheme.entries.forEach { t ->
-                            val selected = t == currentTheme
-                            val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
-                            Surface(
-                                onClick = { onThemeSelected(t) },
-                                color = if (selected) chipPrimary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(
-                                    width = if (selected) 1.5.dp else 1.dp,
-                                    color = if (selected) chipPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    ThorHandheldDiagram(
-                                        highlightStep = if (selected) 0 else -1,
-                                        theme = t,
-                                        accent = chipPrimary,
-                                        modifier = Modifier.size(width = 44.dp, height = 50.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(themeLabels[t] ?: R.string.theme_black),
-                                        fontSize = 10.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (currentTheme == ThorTheme.CUSTOM) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = stringResource(R.string.settings_custom_hue),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            HueColorSlider(
-                                hue = customHue,
-                                onHueChange = onCustomHueChanged
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -2494,6 +2375,85 @@ private fun DualScreenBrowserApp(
             prefs.tutorialDone = true
         }
     )
+}
+
+@Composable
+private fun ThorThemeSelector(
+    currentTheme: ThorTheme,
+    customHue: Float,
+    customPrimaryInt: Int,
+    onThemeSelected: (ThorTheme) -> Unit,
+    onCustomHueChanged: (Float) -> Unit,
+    compact: Boolean
+) {
+    val themeLabels = mapOf(
+        ThorTheme.BLACK to R.string.theme_black,
+        ThorTheme.WHITE to R.string.theme_white,
+        ThorTheme.RAINBOW to R.string.theme_rainbow,
+        ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
+        ThorTheme.CUSTOM to R.string.theme_custom
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
+        ) {
+            ThorTheme.entries.forEach { t ->
+                val selected = t == currentTheme
+                val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
+                Surface(
+                    onClick = { onThemeSelected(t) },
+                    color = if (selected) chipPrimary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(
+                        width = if (selected) 1.5.dp else 1.dp,
+                        color = if (selected) chipPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                    ),
+                    shape = RoundedCornerShape(if (compact) 8.dp else 10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = if (compact) 2.dp else 4.dp,
+                            vertical = if (compact) 6.dp else 8.dp
+                        ),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 5.dp)
+                    ) {
+                        ThorHandheldDiagram(
+                            highlightStep = if (selected) 0 else -1,
+                            theme = t,
+                            accent = chipPrimary,
+                            modifier = Modifier.size(
+                                width = if (compact) 34.dp else 44.dp,
+                                height = if (compact) 38.dp else 50.dp
+                            )
+                        )
+                        Text(
+                            text = stringResource(themeLabels[t] ?: R.string.theme_black),
+                            fontSize = if (compact) 9.sp else 10.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+        if (currentTheme == ThorTheme.CUSTOM) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_custom_hue),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HueColorSlider(
+                    hue = customHue,
+                    onHueChange = onCustomHueChanged
+                )
+            }
+        }
+    }
 }
 
 private fun findSecondaryDisplay(dm: DisplayManager): Display? =
