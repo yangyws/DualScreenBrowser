@@ -6,8 +6,9 @@
     <group
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="1.05"
-        android:scaleY="1.05">
+        android:scaleX="0.78"
+        android:scaleY="0.78"
+        android:translateY="1.5">
         <path
             android:fillColor="#7B7E8A"
             android:pathData="M29,20h11a1.5,1.5 0,0 1,1.5 1.5v1.5h-14v-1.5a1.5,1.5 0,0 1,1.5 -1.5z" />
