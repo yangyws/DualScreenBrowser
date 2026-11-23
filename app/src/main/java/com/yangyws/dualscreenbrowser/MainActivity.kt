@@ -2195,7 +2195,7 @@ private fun DualScreenBrowserApp(
                                         highlightStep = if (selected) 0 else -1,
                                         theme = t,
                                         accent = chipPrimary,
-                                        modifier = Modifier.size(width = 48.dp, height = 44.dp)
+                                        modifier = Modifier.size(width = 44.dp, height = 50.dp)
                                     )
                                     Text(
                                         text = stringResource(themeLabels[t] ?: R.string.theme_black),

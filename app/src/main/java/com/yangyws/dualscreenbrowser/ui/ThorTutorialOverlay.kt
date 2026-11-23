@@ -254,11 +254,11 @@ internal fun ThorHandheldDiagram(
             cornerRadius = CornerRadius(w * 0.015f, w * 0.015f)
         )
 
-        // Top Lid (16:9 screen housing, same crisp rectangular width as bottom deck)
+        // Top Lid (16:9 screen housing, balanced clamshell proportions)
         val lidLeft = w * 0.05f
-        val lidTop = h * 0.055f
+        val lidTop = h * 0.05f
         val lidW = w * 0.90f
-        val lidH = h * 0.40f
+        val lidH = h * 0.42f
         drawRoundRect(
             color = shellFill,
             topLeft = Offset(lidLeft, lidTop),
@@ -273,11 +273,11 @@ internal fun ThorHandheldDiagram(
             style = Stroke(width = strokeW)
         )
 
-        // Top 6" 16:9 Screen (thin bezels)
+        // Top 6" 16:9 Screen (thin bezels, un-squished 16:9 ratio)
         val topScrLeft = w * 0.095f
-        val topScrTop = h * 0.09f
+        val topScrTop = h * 0.078f
         val topScrW = w * 0.81f
-        val topScrH = h * 0.33f
+        val topScrH = h * 0.365f
         drawRoundRect(
             color = screenBg,
             topLeft = Offset(topScrLeft, topScrTop),
@@ -288,7 +288,7 @@ internal fun ThorHandheldDiagram(
         drawRoundRect(
             color = if (highlightStep == 3) accent else accent.copy(alpha = 0.35f),
             topLeft = Offset(topScrLeft, topScrTop),
-            size = Size(topScrW, topScrH * 0.18f),
+            size = Size(topScrW, topScrH * 0.16f),
             cornerRadius = screenCorner
         )
         // Simulated page lines inside top screen
@@ -299,8 +299,8 @@ internal fun ThorHandheldDiagram(
         drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.82f), Offset(topScrLeft + topScrW * 0.80f, topScrTop + topScrH * 0.82f), strokeWidth = lineW)
 
         // Clamshell Hinge barrel
-        val hingeTop = h * 0.465f
-        val hingeH = h * 0.042f
+        val hingeTop = h * 0.478f
+        val hingeH = h * 0.036f
         drawRoundRect(
             color = if (highlightStep == 0) accent else shellStroke,
             topLeft = Offset(w * 0.08f, hingeTop),
