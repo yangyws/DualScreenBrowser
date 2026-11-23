@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -31,9 +32,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Menu
@@ -63,8 +67,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
 /** Strong ease-out curve matching design-engineering motion tokens. */
@@ -273,19 +283,71 @@ fun FloatingMenuButton(
                         )
                     }
                 }
-                val openAbove = (offsetY + btnSizePx / 2f) > (parentHeight / 2f)
-                val maxMenuHeight = with(density) {
-                    val available = if (openAbove) offsetY - marginPx else parentHeight - (offsetY + btnSizePx) - marginPx
-                    available.coerceAtLeast(btnSizePx * 3f).toDp()
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    offset = if (openAbove) DpOffset(0.dp, (-54).dp) else DpOffset(0.dp, 8.dp),
-                    containerColor = Color(0xFF1E222B),
-                    modifier = Modifier.heightIn(max = maxMenuHeight)
-                ) {
-                    menuContent { expanded = false }
+                if (expanded) {
+                    val gapPx = with(density) { 8.dp.roundToPx() }
+                    val edgeMarginPx = with(density) { 8.dp.roundToPx() }
+                    val openAbove = (offsetY + btnSizePx / 2f) > (parentHeight / 2f)
+                    val maxMenuHeight = with(density) {
+                        val available = if (openAbove) {
+                            offsetY - marginPx - 8.dp.toPx()
+                        } else {
+                            parentHeight - (offsetY + btnSizePx) - marginPx - 8.dp.toPx()
+                        }
+                        available.coerceAtLeast(160.dp.toPx()).toDp()
+                    }
+                    val positionProvider = remember(openAbove, gapPx, edgeMarginPx) {
+                        object : PopupPositionProvider {
+                            override fun calculatePosition(
+                                anchorBounds: IntRect,
+                                windowSize: IntSize,
+                                layoutDirection: LayoutDirection,
+                                popupContentSize: IntSize
+                            ): IntOffset {
+                                val alignRight = anchorBounds.center.x > windowSize.width / 2
+                                val rawX = if (alignRight) {
+                                    anchorBounds.right - popupContentSize.width
+                                } else {
+                                    anchorBounds.left
+                                }
+                                val x = rawX.coerceIn(
+                                    edgeMarginPx,
+                                    (windowSize.width - popupContentSize.width - edgeMarginPx).coerceAtLeast(edgeMarginPx)
+                                )
+                                val rawY = if (openAbove) {
+                                    anchorBounds.top - popupContentSize.height - gapPx
+                                } else {
+                                    anchorBounds.bottom + gapPx
+                                }
+                                val y = rawY.coerceIn(
+                                    edgeMarginPx,
+                                    (windowSize.height - popupContentSize.height - edgeMarginPx).coerceAtLeast(edgeMarginPx)
+                                )
+                                return IntOffset(x, y)
+                            }
+                        }
+                    }
+                    Popup(
+                        popupPositionProvider = positionProvider,
+                        onDismissRequest = { expanded = false },
+                        properties = PopupProperties(focusable = true)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF1E222B),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                            shadowElevation = 10.dp,
+                            modifier = Modifier.heightIn(max = maxMenuHeight)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .width(IntrinsicSize.Max)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                menuContent { expanded = false }
+                            }
+                        }
+                    }
                 }
             }
         }
