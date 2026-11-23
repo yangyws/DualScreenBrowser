@@ -202,7 +202,9 @@ class MainActivity : ComponentActivity() {
                     onPrimary = Color.White,
                     onBackground = Color(0xFF111827),
                     onSurface = Color(0xFF111827),
-                    onSurfaceVariant = Color(0xFF475569)
+                    onSurfaceVariant = Color(0xFF475569),
+                    outline = Color(0x33111827),
+                    outlineVariant = Color(0x24111827)
                 )
             } else {
                 darkColorScheme(
@@ -213,7 +215,9 @@ class MainActivity : ComponentActivity() {
                     onPrimary = Color(0xFF0E1014),
                     onBackground = Color.White,
                     onSurface = Color.White,
-                    onSurfaceVariant = Color(0xFF94A3B8)
+                    onSurfaceVariant = Color(0xFF94A3B8),
+                    outline = Color(0x33FFFFFF),
+                    outlineVariant = Color(0x22FFFFFF)
                 )
             }
             MaterialTheme(colorScheme = colorScheme) {
@@ -1184,7 +1188,7 @@ private fun DualScreenBrowserApp(
                         )
                     }
                 }
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 DropdownMenuItem(
                     text = {
                         Text(
@@ -1197,7 +1201,7 @@ private fun DualScreenBrowserApp(
                         Icon(
                             imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             contentDescription = null,
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else Color.White
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -1338,7 +1342,7 @@ private fun DualScreenBrowserApp(
                     }
                 )
                 if (dualScreenActive && secondaryDisplay != null) {
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_span_mode)) },
                         leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
@@ -1400,7 +1404,7 @@ private fun DualScreenBrowserApp(
                         )
                     }
                 }
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 if (secondaryDisplay == null || !dualScreenActive) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_top)) },
@@ -1427,7 +1431,7 @@ private fun DualScreenBrowserApp(
                         }
                     )
                 }
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_gamepad_guide)) },
                     leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
@@ -1716,7 +1720,7 @@ private fun DualScreenBrowserApp(
                         Spacer(Modifier.width(4.dp))
                         Text(stringResource(R.string.userscripts_add))
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     if (userScripts.isEmpty()) {
                         EmptyStateView(Icons.Rounded.Code, stringResource(R.string.userscripts_empty))
                     } else {
@@ -1870,7 +1874,7 @@ private fun DualScreenBrowserApp(
                             )
                         }
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier
@@ -1888,7 +1892,7 @@ private fun DualScreenBrowserApp(
                         }
                         Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.primary)
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier
@@ -1907,7 +1911,7 @@ private fun DualScreenBrowserApp(
                         }
                         Text(searchEngine.label, color = MaterialTheme.colorScheme.primary)
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Hinge gap compensation slider
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1928,7 +1932,7 @@ private fun DualScreenBrowserApp(
                             valueRange = 0f..48f
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Bottom screen brightness & warmth calibration
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1983,7 +1987,7 @@ private fun DualScreenBrowserApp(
                             valueRange = -30f..30f
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2003,7 +2007,7 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2027,7 +2031,7 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2046,7 +2050,7 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2067,7 +2071,7 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2086,7 +2090,7 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier
@@ -2103,7 +2107,7 @@ private fun DualScreenBrowserApp(
                         }
                         Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary, style = TextStyle(fontFeatureSettings = "tnum"))
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Text(
                         text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),

@@ -497,9 +497,9 @@ fun SidePanelSheet(
             modifier = Modifier.align(Alignment.CenterEnd)
         ) {
             Surface(
-                color = Color(0xFF171A21),
+                color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.09f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(if (compactWidth) 0.44f else 0.58f)
@@ -521,7 +521,7 @@ fun SidePanelSheet(
                             text = title,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -535,14 +535,14 @@ fun SidePanelSheet(
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
                     Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                     Spacer(Modifier.height(10.dp))
                     content()
                 }
