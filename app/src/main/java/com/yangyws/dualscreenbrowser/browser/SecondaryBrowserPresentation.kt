@@ -1900,15 +1900,18 @@ class SecondaryBrowserPresentation(
             val keyChip = TextView(context).apply {
                 text = context.getString(keyRes)
                 setTextColor(chipColor)
-                textSize = 11.5f
+                textSize = 11f
+                maxLines = 1
                 background = chipBg
-                setPadding(dp(8), dp(3), dp(8), dp(3))
+                setPadding(dp(7), dp(3), dp(7), dp(3))
             }
             val descTv = TextView(context).apply {
                 text = context.getString(descRes)
                 setTextColor(fgColor)
-                textSize = 12.5f
-                setPadding(dp(10), 0, 0, 0)
+                textSize = 12f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(dp(8), 0, 0, 0)
             }
             row.addView(keyChip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             row.addView(descTv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -1920,7 +1923,8 @@ class SecondaryBrowserPresentation(
         val scroll = ScrollView(context).apply { addView(listContainer) }
         panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        val widthPx = dp(312)
+        val availableW = rootLayout?.width ?: context.resources.displayMetrics.widthPixels
+        val widthPx = (availableW - dp(16)).coerceIn(dp(340), dp(440))
         guidePopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = dp(10).toFloat()

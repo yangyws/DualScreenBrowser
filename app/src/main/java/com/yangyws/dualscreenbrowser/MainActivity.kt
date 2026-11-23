@@ -1873,7 +1873,7 @@ private fun DualScreenBrowserApp(
                     Color(ThorTheme.RAINBOW_GREEN)
                 )
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
@@ -1884,21 +1884,33 @@ private fun DualScreenBrowserApp(
                         } else {
                             MaterialTheme.colorScheme.primary
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (currentTheme == ThorTheme.RAINBOW) chipAccent.copy(alpha = 0.28f) else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            StatusChip(
-                                label = stringResource(keyRes),
-                                accentColor = chipAccent
-                            )
-                            Text(
-                                text = stringResource(descRes),
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 9.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                StatusChip(
+                                    label = stringResource(keyRes),
+                                    accentColor = chipAccent
+                                )
+                                Text(
+                                    text = stringResource(descRes),
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
