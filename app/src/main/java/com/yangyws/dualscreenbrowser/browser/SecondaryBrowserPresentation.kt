@@ -730,13 +730,25 @@ class SecondaryBrowserPresentation(
             applyFloatingButtonStyle(expanded = bottomMenuPopup?.isShowing == true)
             floatingMenuBtn?.setColorFilter(fgColor)
             touchpadContainer?.background = padBg
-            touchpadMoveHandle?.setColorFilter(accent)
-            touchpadResizeHandle?.setColorFilter(accent)
+            touchpadMoveHandle?.setColorFilter(rainbowSlotColor(1, accent))
+            touchpadResizeHandle?.setColorFilter(rainbowSlotColor(3, accent))
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
             lockIcon?.setColorFilter(accent)
             progressBar?.progressTintList = ColorStateList.valueOf(accent)
         }
     }
+
+    private fun rainbowSlotColor(slot: Int, fallback: Int): Int =
+        if (activeTheme == ThorTheme.RAINBOW) {
+            when (slot % 4) {
+                0 -> ThorTheme.RAINBOW_RED
+                1 -> ThorTheme.RAINBOW_BLUE
+                2 -> ThorTheme.RAINBOW_YELLOW
+                else -> ThorTheme.RAINBOW_GREEN
+            }
+        } else {
+            fallback
+        }
 
     private fun updateNavButtons(wv: WebView?) {
         val backOk = wv?.canGoBack() == true
@@ -1117,11 +1129,17 @@ class SecondaryBrowserPresentation(
         })
         navRow.addView(spacer())
 
+        val tabsAccent = rainbowSlotColor(1, fgColor)
+        val tabsBorder = if (activeTheme == ThorTheme.RAINBOW) {
+            Color.argb(145, Color.red(tabsAccent), Color.green(tabsAccent), Color.blue(tabsAccent))
+        } else {
+            borderColor
+        }
         val tabsPillBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(8).toFloat()
             setColor(activeTheme.surfaceVariantColor)
-            setStroke(dp(1), borderColor)
+            setStroke(dp(1), tabsBorder)
         }
         val tabsPill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1136,11 +1154,11 @@ class SecondaryBrowserPresentation(
         }
         val tabIcon = ImageView(context).apply {
             setImageResource(R.drawable.ic_tab)
-            setColorFilter(fgColor)
+            setColorFilter(tabsAccent)
         }
         val tabCountLabel = TextView(context).apply {
             text = "${bottomTabs.size.coerceAtLeast(1)}"
-            setTextColor(fgColor)
+            setTextColor(tabsAccent)
             textSize = 12f
             setPadding(dp(4), 0, 0, 0)
         }
@@ -1204,7 +1222,7 @@ class SecondaryBrowserPresentation(
         clearBtn.setOnClickListener { urlEdit.setText("") }
         val goBtn = TextView(context).apply {
             text = context.getString(R.string.action_go)
-            setTextColor(accent)
+            setTextColor(rainbowSlotColor(1, accent))
             textSize = 12.5f
             setPadding(dp(6), dp(2), dp(2), dp(2))
             setOnClickListener {
@@ -1219,7 +1237,14 @@ class SecondaryBrowserPresentation(
         panel.addView(urlRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         addDivider(verticalMarginDp = 7)
 
-        fun addMenuItem(iconRes: Int, label: String, highlighted: Boolean = false, onClick: () -> Unit) {
+        fun addMenuItem(
+            iconRes: Int,
+            label: String,
+            highlighted: Boolean = false,
+            rainbowSlot: Int? = null,
+            onClick: () -> Unit
+        ) {
+            val itemAccent = rainbowSlot?.let { rainbowSlotColor(it, accent) } ?: accent
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -1232,13 +1257,18 @@ class SecondaryBrowserPresentation(
                     onClick()
                 }
             }
+            val iconTint = when {
+                highlighted -> itemAccent
+                activeTheme == ThorTheme.RAINBOW && rainbowSlot != null -> rainbowSlotColor(rainbowSlot, fgColor)
+                else -> fgColor
+            }
             val icon = ImageView(context).apply {
                 setImageResource(iconRes)
-                setColorFilter(if (highlighted) accent else fgColor)
+                setColorFilter(iconTint)
             }
             val tv = TextView(context).apply {
                 text = label
-                setTextColor(if (highlighted) accent else fgColor)
+                setTextColor(if (highlighted) itemAccent else fgColor)
                 textSize = 13.5f
                 setPadding(dp(10), 0, 0, 0)
             }
@@ -1251,13 +1281,14 @@ class SecondaryBrowserPresentation(
         addMenuItem(
             if (bookmarked) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off,
             context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark),
-            highlighted = bookmarked
+            highlighted = bookmarked,
+            rainbowSlot = 2
         ) {
             onToggleBookmark(currentUrl(), webView?.title.orEmpty())
         }
         val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
-        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode) { toggleDesktopMode() }
-        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_screenshot_bottom)) {
+        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode, rainbowSlot = 3) { toggleDesktopMode() }
+        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_screenshot_bottom), rainbowSlot = 2) {
             val bmp = captureViewportBitmap()
             val saved = bmp?.let { b ->
                 ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1265,7 +1296,7 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
-        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_long_screenshot)) {
+        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_long_screenshot), rainbowSlot = 2) {
             val bmp = captureFullPageBitmap()
             val saved = bmp?.let { b ->
                 ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1273,11 +1304,11 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
-        addMenuItem(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
+        addMenuItem(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens), rainbowSlot = 1) {
             onSwapScreens(currentUrl())
         }
-        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode)) { onToggleSpanMode() }
-        addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top)) { onReopenTop() }
+        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode), rainbowSlot = 3) { onToggleSpanMode() }
+        addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
 
         val menuWidthPx = dp(304)
         popup = PopupWindow(panel, menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
@@ -1346,7 +1377,7 @@ class SecondaryBrowserPresentation(
         }
         val newTabBtn = TextView(context).apply {
             text = "+ ${context.getString(R.string.action_new_tab)}"
-            setTextColor(accent)
+            setTextColor(rainbowSlotColor(3, accent))
             textSize = 13f
             setPadding(dp(10), dp(4), dp(4), dp(4))
             setOnClickListener {
@@ -1366,14 +1397,15 @@ class SecondaryBrowserPresentation(
         val listContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
+        val tabsActiveAccent = rainbowSlotColor(1, accent)
         bottomTabs.forEachIndexed { index, tab ->
             val isActive = tab.id == activeBottomTabId
             val rowBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(9).toFloat()
                 if (isActive) {
-                    setColor(Color.argb(38, Color.red(accent), Color.green(accent), Color.blue(accent)))
-                    setStroke(dp(1), accent)
+                    setColor(Color.argb(38, Color.red(tabsActiveAccent), Color.green(tabsActiveAccent), Color.blue(tabsActiveAccent)))
+                    setStroke(dp(1), tabsActiveAccent)
                 } else {
                     setColor(activeTheme.surfaceVariantColor)
                 }
@@ -1396,7 +1428,7 @@ class SecondaryBrowserPresentation(
             }
             val tvTitle = TextView(context).apply {
                 text = tabTitle
-                setTextColor(if (isActive) accent else fgColor)
+                setTextColor(if (isActive) tabsActiveAccent else fgColor)
                 textSize = 13f
                 maxLines = 1
             }

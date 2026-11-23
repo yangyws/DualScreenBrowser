@@ -193,9 +193,14 @@ class MainActivity : ComponentActivity() {
             var customHue by remember { mutableFloatStateOf(prefs.customThemeHue) }
             val customPrimaryInt = android.graphics.Color.HSVToColor(floatArrayOf(customHue, 0.65f, 0.92f))
             val effectivePrimary = Color(currentTheme.effectivePrimary(customPrimaryInt))
+            val isRainbowTheme = currentTheme == ThorTheme.RAINBOW
+            val effectiveSecondary = if (isRainbowTheme) Color(ThorTheme.RAINBOW_BLUE) else effectivePrimary
+            val effectiveTertiary = if (isRainbowTheme) Color(ThorTheme.RAINBOW_GREEN) else effectivePrimary
             val colorScheme = if (currentTheme.isLight) {
                 lightColorScheme(
                     primary = effectivePrimary,
+                    secondary = effectiveSecondary,
+                    tertiary = effectiveTertiary,
                     background = Color(currentTheme.backgroundColor),
                     surface = Color(currentTheme.surfaceColor),
                     surfaceVariant = Color(currentTheme.surfaceVariantColor),
@@ -209,6 +214,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 darkColorScheme(
                     primary = effectivePrimary,
+                    secondary = effectiveSecondary,
+                    tertiary = effectiveTertiary,
                     background = Color(currentTheme.backgroundColor),
                     surface = Color(currentTheme.surfaceColor),
                     surfaceVariant = Color(currentTheme.surfaceVariantColor),
@@ -1108,18 +1115,31 @@ private fun DualScreenBrowserApp(
                             },
                             shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                            border = BorderStroke(
+                                1.dp,
+                                if (currentTheme == ThorTheme.RAINBOW) {
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                }
+                            )
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(14.dp))
+                                Icon(
+                                    Icons.Rounded.Tab,
+                                    contentDescription = stringResource(R.string.action_tabs),
+                                    tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(14.dp)
+                                )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = stringResource(R.string.action_tabs_count, tabs.size),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
+                                    color = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
                                     style = TextStyle(fontFeatureSettings = "tnum")
                                 )
                             }
@@ -1177,7 +1197,7 @@ private fun DualScreenBrowserApp(
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.action_go),
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier
@@ -1200,10 +1220,16 @@ private fun DualScreenBrowserApp(
                         )
                     },
                     leadingIcon = {
+                        val rainbowGold = Color(ThorTheme.RAINBOW_YELLOW)
                         Icon(
                             imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             contentDescription = null,
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            tint = when {
+                                isBookmarked && currentTheme == ThorTheme.RAINBOW -> rainbowGold
+                                isBookmarked -> MaterialTheme.colorScheme.primary
+                                currentTheme == ThorTheme.RAINBOW -> rainbowGold
+                                else -> MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     },
                     onClick = {
@@ -1225,7 +1251,13 @@ private fun DualScreenBrowserApp(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_bookmarks)) },
-                    leadingIcon = { Icon(Icons.Rounded.Bookmark, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Bookmark,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         activePanel = BrowserPanel.BOOKMARKS
@@ -1233,7 +1265,13 @@ private fun DualScreenBrowserApp(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_history)) },
-                    leadingIcon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.History,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         activePanel = BrowserPanel.HISTORY
@@ -1241,7 +1279,13 @@ private fun DualScreenBrowserApp(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_find_in_page)) },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         findBarVisible = !findBarVisible
@@ -1322,10 +1366,20 @@ private fun DualScreenBrowserApp(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_desktop_mode)) },
-                    leadingIcon = { Icon(Icons.Rounded.Computer, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Computer,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     trailingIcon = {
                         if (activeTab.desktopMode) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                            )
                         }
                     },
                     onClick = {
@@ -1847,12 +1901,29 @@ private fun DualScreenBrowserApp(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(14.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(chipPrimary)
-                                        )
+                                        if (t == ThorTheme.RAINBOW) {
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier.size(14.dp)
+                                            ) {
+                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_RED)))
+                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(0xFFEAB308)))
+                                                }
+                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_BLUE)))
+                                                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(Color(ThorTheme.RAINBOW_GREEN)))
+                                                }
+                                            }
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(14.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(chipPrimary)
+                                            )
+                                        }
                                         Text(
                                             text = stringResource(themeLabels[t] ?: R.string.theme_black),
                                             fontSize = 9.5.sp,
@@ -1892,7 +1963,7 @@ private fun DualScreenBrowserApp(
                             Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                             Text(stringResource(R.string.settings_language_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.tertiary)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -1911,7 +1982,7 @@ private fun DualScreenBrowserApp(
                             Text(stringResource(R.string.settings_search_engine), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                             Text(stringResource(R.string.settings_search_engine_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(searchEngine.label, color = MaterialTheme.colorScheme.primary)
+                        Text(searchEngine.label, color = MaterialTheme.colorScheme.secondary)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -2107,7 +2178,11 @@ private fun DualScreenBrowserApp(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         }
-                        Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary, style = TextStyle(fontFeatureSettings = "tnum"))
+                        Text(
+                            "${userScripts.size}",
+                            color = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.primary,
+                            style = TextStyle(fontFeatureSettings = "tnum")
+                        )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 

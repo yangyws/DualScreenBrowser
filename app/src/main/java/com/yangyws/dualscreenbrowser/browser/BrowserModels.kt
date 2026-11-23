@@ -31,6 +31,11 @@ enum class ThorTheme(
         if (this == CUSTOM) customColor else primaryColor
 
     companion object {
+        const val RAINBOW_RED = 0xFFD94848.toInt()
+        const val RAINBOW_BLUE = 0xFF2563EB.toInt()
+        const val RAINBOW_YELLOW = 0xFFCA8A04.toInt()
+        const val RAINBOW_GREEN = 0xFF16A34A.toInt()
+
         fun fromId(id: String?): ThorTheme = when (id) {
             "emerald_dark", "black" -> BLACK
             "rainbow_white", "rainbow" -> RAINBOW
