@@ -824,88 +824,6 @@ private fun DualScreenBrowserApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        AnimatedVisibility(
-            visible = findBarVisible,
-            enter = expandVertically(tween(180, easing = StrongEaseOut)) + fadeIn(tween(140)),
-            exit = shrinkVertically(tween(150, easing = StrongEaseOut)) + fadeOut(tween(110))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BasicTextField(
-                    value = findQuery,
-                    onValueChange = { q ->
-                        findQuery = q
-                        val wv = webViews[activeTabId]
-                        if (wv != null) {
-                            if (q.isEmpty()) {
-                                wv.clearMatches()
-                                findMatchActive = 0
-                                findMatchTotal = 0
-                            } else {
-                                wv.setFindListener { activeOrdinal, numberOfMatches, _ ->
-                                    findMatchTotal = numberOfMatches
-                                    findMatchActive = if (numberOfMatches > 0) activeOrdinal + 1 else 0
-                                }
-                                wv.findAllAsync(q)
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.weight(1f),
-                    decorationBox = { inner ->
-                        if (findQuery.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.find_placeholder),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp
-                            )
-                        }
-                        inner()
-                    }
-                )
-                Text(
-                    text = stringResource(R.string.find_matches, findMatchActive, findMatchTotal),
-                    fontSize = 12.sp,
-                    style = TextStyle(fontFeatureSettings = "tnum"),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                TactileIconButton(
-                    onClick = { webViews[activeTabId]?.findNext(false) },
-                    size = 32.dp
-                ) {
-                    Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
-                TactileIconButton(
-                    onClick = { webViews[activeTabId]?.findNext(true) },
-                    size = 32.dp
-                ) {
-                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
-                TactileIconButton(
-                    onClick = {
-                        findBarVisible = false
-                        findQuery = ""
-                        findMatchActive = 0
-                        findMatchTotal = 0
-                        webViews[activeTabId]?.clearMatches()
-                    },
-                    size = 32.dp
-                ) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close), modifier = Modifier.size(18.dp))
-                }
-            }
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-
         val animatedProgress by animateFloatAsState(
             targetValue = loadProgress,
             animationSpec = tween(durationMillis = 120, easing = LinearEasing),
@@ -1021,10 +939,113 @@ private fun DualScreenBrowserApp(
             // Draggable floating menu button with isolated recompose scope
             FloatingMenuButton(
                 isRainbow = currentTheme == ThorTheme.RAINBOW,
-                extraPopupExpanded = showGamepadGuidePopup,
-                onDismissExtraPopup = { showGamepadGuidePopup = false },
+                extraPopupExpanded = showGamepadGuidePopup || findBarVisible,
+                onDismissExtraPopup = {
+                    showGamepadGuidePopup = false
+                    if (findBarVisible) {
+                        findBarVisible = false
+                        findQuery = ""
+                        findMatchActive = 0
+                        findMatchTotal = 0
+                        webViews[activeTabId]?.clearMatches()
+                    }
+                },
                 extraPopupContent = {
-                    val guideMappings = listOf(
+                    if (findBarVisible) {
+                        Row(
+                            modifier = Modifier
+                                .width(304.dp)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BasicTextField(
+                                    value = findQuery,
+                                    onValueChange = { q ->
+                                        findQuery = q
+                                        val wv = webViews[activeTabId]
+                                        if (wv != null) {
+                                            if (q.isEmpty()) {
+                                                wv.clearMatches()
+                                                findMatchActive = 0
+                                                findMatchTotal = 0
+                                            } else {
+                                                wv.setFindListener { activeOrdinal, numberOfMatches, _ ->
+                                                    findMatchTotal = numberOfMatches
+                                                    findMatchActive = if (numberOfMatches > 0) activeOrdinal + 1 else 0
+                                                }
+                                                wv.findAllAsync(q)
+                                            }
+                                        }
+                                    },
+                                    singleLine = true,
+                                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    decorationBox = { inner ->
+                                        if (findQuery.isEmpty()) {
+                                            Text(
+                                                text = stringResource(R.string.find_placeholder),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                        inner()
+                                    }
+                                )
+                            }
+                            Text(
+                                text = "$findMatchActive/$findMatchTotal",
+                                fontSize = 12.sp,
+                                style = TextStyle(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp)
+                            )
+                            Text(
+                                text = "▲",
+                                fontSize = 14.sp,
+                                color = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_BLUE) else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { webViews[activeTabId]?.findNext(false) }
+                                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                            )
+                            Text(
+                                text = "▼",
+                                fontSize = 14.sp,
+                                color = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_GREEN) else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { webViews[activeTabId]?.findNext(true) }
+                                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                            )
+                            Text(
+                                text = "×",
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .clickable {
+                                        findBarVisible = false
+                                        findQuery = ""
+                                        findMatchActive = 0
+                                        findMatchTotal = 0
+                                        webViews[activeTabId]?.clearMatches()
+                                    }
+                                    .padding(start = 6.dp, end = 2.dp, top = 2.dp, bottom = 2.dp)
+                            )
+                        }
+                    } else {
+                        val guideMappings = listOf(
                         R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
                         R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
                         R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
@@ -1096,6 +1117,7 @@ private fun DualScreenBrowserApp(
                                 )
                             }
                         }
+                    }
                     }
                 }
             ) { dismissMenu ->
@@ -1358,6 +1380,7 @@ private fun DualScreenBrowserApp(
                     },
                     onClick = {
                         dismissMenu()
+                        showGamepadGuidePopup = false
                         findBarVisible = !findBarVisible
                         if (!findBarVisible) {
                             findQuery = ""
@@ -1623,6 +1646,7 @@ private fun DualScreenBrowserApp(
                     },
                     onClick = {
                         dismissMenu()
+                        findBarVisible = false
                         showGamepadGuidePopup = true
                     }
                 )
