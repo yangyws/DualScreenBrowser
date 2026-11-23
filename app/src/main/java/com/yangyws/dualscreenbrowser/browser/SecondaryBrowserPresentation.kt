@@ -1260,7 +1260,7 @@ class SecondaryBrowserPresentation(
         fun addMenuDivider() {
             val line = View(context).apply { setBackgroundColor(dividerColor) }
             itemsContainer.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
-                setMargins(0, dp(3), 0, dp(3))
+                setMargins(0, dp(4), 0, dp(4))
             })
         }
 
@@ -1275,7 +1275,7 @@ class SecondaryBrowserPresentation(
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(8), dp(5), dp(8), dp(5))
+                setPadding(dp(8), dp(9), dp(8), dp(9))
                 val outValue = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
                 setBackgroundResource(outValue.resourceId)
