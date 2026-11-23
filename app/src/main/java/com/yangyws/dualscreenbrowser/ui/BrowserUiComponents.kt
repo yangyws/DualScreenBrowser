@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -56,7 +57,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -351,6 +356,73 @@ fun FloatingMenuButton(
                 }
             }
         }
+    }
+}
+
+/** Compact clamshell AYN Thor handheld icon tinted for each ThorTheme option. */
+@Composable
+fun MiniThorThemeIcon(
+    shellColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val lidW = w * 0.88f
+        val lidH = h * 0.40f
+        val lidX = (w - lidW) / 2f
+        drawRoundRect(
+            color = shellColor,
+            topLeft = Offset(lidX, h * 0.04f),
+            size = Size(lidW, lidH),
+            cornerRadius = CornerRadius(w * 0.1f, w * 0.1f)
+        )
+        drawRoundRect(
+            color = Color(0xFF0E131B),
+            topLeft = Offset(lidX + lidW * 0.09f, h * 0.08f),
+            size = Size(lidW * 0.82f, lidH * 0.78f),
+            cornerRadius = CornerRadius(w * 0.05f, w * 0.05f)
+        )
+        drawRoundRect(
+            color = accentColor,
+            topLeft = Offset(w * 0.34f, h * 0.45f),
+            size = Size(w * 0.32f, h * 0.07f),
+            cornerRadius = CornerRadius(w * 0.03f, w * 0.03f)
+        )
+        val botW = w * 0.92f
+        val botH = h * 0.42f
+        val botX = (w - botW) / 2f
+        val botY = h * 0.53f
+        drawRoundRect(
+            color = shellColor,
+            topLeft = Offset(botX, botY),
+            size = Size(botW, botH),
+            cornerRadius = CornerRadius(w * 0.1f, w * 0.1f)
+        )
+        drawRoundRect(
+            color = Color(0xFF0E131B),
+            topLeft = Offset(w * 0.25f, botY + botH * 0.12f),
+            size = Size(w * 0.50f, botH * 0.72f),
+            cornerRadius = CornerRadius(w * 0.05f, w * 0.05f)
+        )
+        drawCircle(
+            color = accentColor,
+            radius = w * 0.055f,
+            center = Offset(botX + botW * 0.12f, botY + botH * 0.46f)
+        )
+        drawCircle(
+            color = accentColor,
+            radius = w * 0.055f,
+            center = Offset(botX + botW * 0.88f, botY + botH * 0.46f)
+        )
+        drawRoundRect(
+            color = accentColor.copy(alpha = 0.5f),
+            topLeft = Offset(lidX, h * 0.04f),
+            size = Size(lidW, lidH),
+            cornerRadius = CornerRadius(w * 0.1f, w * 0.1f),
+            style = Stroke(width = 1.5f)
+        )
     }
 }
 

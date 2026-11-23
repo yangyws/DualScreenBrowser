@@ -75,6 +75,7 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.OpenInBrowser
@@ -156,6 +157,7 @@ import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
 import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
+import com.yangyws.dualscreenbrowser.ui.MiniThorThemeIcon
 import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
@@ -318,6 +320,7 @@ private fun DualScreenBrowserApp(
     var findMatchActive by remember { mutableIntStateOf(0) }
     var findMatchTotal by remember { mutableIntStateOf(0) }
     var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
+    var showThemePicker by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
@@ -1029,6 +1032,20 @@ private fun DualScreenBrowserApp(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                        }
+                        TactileIconButton(
+                            onClick = {
+                                dismissMenu()
+                                showThemePicker = true
+                            },
+                            size = 34.dp
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Palette,
+                                contentDescription = stringResource(R.string.settings_theme),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                         Surface(
                             onClick = {
@@ -2046,6 +2063,127 @@ private fun DualScreenBrowserApp(
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
+                }
+            }
+        }
+    }
+
+    if (showThemePicker) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showThemePicker = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                shadowElevation = 12.dp,
+                modifier = Modifier.widthIn(min = 320.dp, max = 440.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_theme),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                        TactileIconButton(
+                            onClick = { showThemePicker = false },
+                            size = 30.dp
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    val themeLabels = mapOf(
+                        ThorTheme.BLACK to R.string.theme_black,
+                        ThorTheme.WHITE to R.string.theme_white,
+                        ThorTheme.RAINBOW to R.string.theme_rainbow,
+                        ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
+                        ThorTheme.CUSTOM to R.string.theme_custom
+                    )
+                    val shellColors = mapOf(
+                        ThorTheme.BLACK to Color(0xFF1F242E),
+                        ThorTheme.WHITE to Color(0xFFE7ECF3),
+                        ThorTheme.RAINBOW to Color(0xFFD6DAE4),
+                        ThorTheme.CLEAR_PURPLE to Color(0xFF563B8C),
+                        ThorTheme.CUSTOM to Color(customPrimaryInt).copy(alpha = 0.72f)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ThorTheme.entries.forEach { t ->
+                            val selected = t == currentTheme
+                            val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
+                            val shellColor = shellColors[t] ?: Color(0xFF1F242E)
+                            Surface(
+                                onClick = { onThemeSelected(t) },
+                                color = if (selected) chipPrimary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(
+                                    width = if (selected) 1.5.dp else 1.dp,
+                                    color = if (selected) chipPrimary else Color.White.copy(alpha = 0.1f)
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    MiniThorThemeIcon(
+                                        shellColor = shellColor,
+                                        accentColor = chipPrimary,
+                                        modifier = Modifier.size(width = 34.dp, height = 38.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(themeLabels[t] ?: R.string.theme_black),
+                                        fontSize = 10.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) Color.White else Color.LightGray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (currentTheme == ThorTheme.CUSTOM) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_custom_hue),
+                                fontSize = 12.sp,
+                                color = Color.LightGray
+                            )
+                            Slider(
+                                value = customHue,
+                                onValueChange = onCustomHueChanged,
+                                valueRange = 0f..360f
+                            )
+                        }
+                    }
                 }
             }
         }
