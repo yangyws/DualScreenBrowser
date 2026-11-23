@@ -1210,13 +1210,22 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = urlBoxBg
+            isFocusable = true
             setPadding(dp(10), dp(6), dp(8), dp(6))
+        }
+        val urlPreview = TextView(context).apply {
+            text = currentUrl().ifBlank { context.getString(R.string.url_placeholder) }
+            setTextColor(if (currentUrl().isBlank()) mutedFg else fgColor)
+            textSize = 13f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         }
         val clearBtn = TextView(context).apply {
             text = "×"
             setTextColor(mutedFg)
             textSize = 16f
             setPadding(dp(4), 0, dp(4), 0)
+            visibility = View.GONE
         }
         val urlEdit = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
@@ -1227,6 +1236,7 @@ class SecondaryBrowserPresentation(
             setPadding(0, 0, 0, 0)
             textSize = 13f
             isSingleLine = true
+            visibility = View.GONE
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
             addTextChangedListener(object : TextWatcher {
@@ -1264,7 +1274,30 @@ class SecondaryBrowserPresentation(
                 }
             }
         }
-        clearBtn.visibility = if (urlEdit.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        fun enterUrlEditMode() {
+            urlRow.isFocusable = false
+            urlPreview.visibility = View.GONE
+            urlEdit.visibility = View.VISIBLE
+            clearBtn.visibility = if (urlEdit.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+            urlEdit.requestFocus()
+            urlEdit.setSelection(urlEdit.text?.length ?: 0)
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            imm?.showSoftInput(urlEdit, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+        urlRow.setOnFocusChangeListener { _, hasFocus ->
+            urlBoxBg.setStroke(if (hasFocus) dp(2) else dp(1), if (hasFocus) accent else borderColor)
+        }
+        urlRow.setOnClickListener { enterUrlEditMode() }
+        urlRow.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN &&
+                (keyCode == KeyEvent.KEYCODE_BUTTON_A || keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+            ) {
+                enterUrlEditMode()
+                true
+            } else {
+                false
+            }
+        }
         clearBtn.setOnClickListener { urlEdit.setText("") }
         val goBtn = TextView(context).apply {
             text = context.getString(R.string.action_go)
@@ -1277,6 +1310,7 @@ class SecondaryBrowserPresentation(
                 popup.dismiss()
             }
         }
+        urlRow.addView(urlPreview, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         urlRow.addView(urlEdit, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         urlRow.addView(clearBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         urlRow.addView(goBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))

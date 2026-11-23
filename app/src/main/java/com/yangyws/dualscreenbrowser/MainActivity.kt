@@ -122,7 +122,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -1301,56 +1305,108 @@ private fun DualScreenBrowserApp(
                         }
                     }
 
+                    var urlEditing by remember { mutableStateOf(false) }
+                    var urlRowFocused by remember { mutableStateOf(false) }
+                    val urlFocusRequester = remember { FocusRequester() }
+                    LaunchedEffect(urlEditing) {
+                        if (urlEditing) {
+                            urlFocusRequester.requestFocus()
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(9.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f), RoundedCornerShape(9.dp))
+                            .border(
+                                width = if (urlRowFocused || urlEditing) 1.5.dp else 1.dp,
+                                color = if (urlRowFocused || urlEditing) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+                                },
+                                shape = RoundedCornerShape(9.dp)
+                            )
+                            .then(
+                                if (!urlEditing) {
+                                    Modifier
+                                        .onFocusChanged { urlRowFocused = it.isFocused }
+                                        .focusable()
+                                        .clickable { urlEditing = true }
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            if (keyEvent.type == KeyEventType.KeyDown &&
+                                                (keyEvent.key == Key.ButtonA || keyEvent.key == Key.Enter || keyEvent.key == Key.DirectionCenter)
+                                            ) {
+                                                urlEditing = true
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                }
+                            )
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val focusManager = LocalFocusManager.current
-                        BasicTextField(
-                            value = menuUrlInput,
-                            onValueChange = { menuUrlInput = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Uri,
-                                imeAction = ImeAction.Go
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onGo = {
-                                    dismissMenu()
-                                    navigateActiveTab(menuUrlInput)
-                                }
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .onPreviewKeyEvent { keyEvent ->
-                                    if (keyEvent.type == KeyEventType.KeyDown) {
-                                        when (keyEvent.key) {
-                                            Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
-                                            Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
-                                            else -> false
-                                        }
-                                    } else {
-                                        false
+                        if (!urlEditing) {
+                            Text(
+                                text = menuUrlInput.ifBlank { stringResource(R.string.url_placeholder) },
+                                color = if (menuUrlInput.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            BasicTextField(
+                                value = menuUrlInput,
+                                onValueChange = { menuUrlInput = it },
+                                singleLine = true,
+                                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Uri,
+                                    imeAction = ImeAction.Go
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onGo = {
+                                        dismissMenu()
+                                        navigateActiveTab(menuUrlInput)
                                     }
-                                },
-                            decorationBox = { inner ->
-                                if (menuUrlInput.isEmpty()) {
-                                    Text(
-                                        text = stringResource(R.string.url_placeholder),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 13.sp
-                                    )
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(urlFocusRequester)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.type == KeyEventType.KeyDown) {
+                                            when (keyEvent.key) {
+                                                Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+                                                Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+                                                Key.Escape, Key.Back, Key.ButtonB -> {
+                                                    urlEditing = false
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    },
+                                decorationBox = { inner ->
+                                    if (menuUrlInput.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.url_placeholder),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    inner()
                                 }
-                                inner()
-                            }
-                        )
+                            )
+                        }
                         if (menuUrlInput.isNotEmpty()) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
