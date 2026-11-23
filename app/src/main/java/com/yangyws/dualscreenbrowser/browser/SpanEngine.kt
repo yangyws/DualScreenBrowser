@@ -58,6 +58,8 @@ class SpanEngine {
     private var virtualScale: Float = 1f
     var bottomViewportHeight: Int = 0
         private set
+    var bottomWidthRatio: Float = 1f
+        private set
     var totalHeight: Int = 0
         private set
 
@@ -129,6 +131,7 @@ class SpanEngine {
         widthPx: Int,
         topHeightPx: Int,
         bottomHeightPx: Int,
+        bottomWidthPx: Int = widthPx,
         hingeGapPx: Int = 0,
         dpi: Int,
         initialUrl: String,
@@ -158,6 +161,7 @@ class SpanEngine {
         virtualScale = scale
         this.hingeGapPx = safeGap
         bottomViewportHeight = safeBottomH
+        bottomWidthRatio = (bottomWidthPx.toFloat() / rawW.toFloat()).coerceIn(0.25f, 1f)
         totalHeight = safeTotalH
 
         val thread = HandlerThread("SpanFrameThread", Process.THREAD_PRIORITY_DISPLAY).apply { start() }
@@ -319,10 +323,20 @@ class SpanEngine {
         val wv = virtualWebView ?: return false
         if (viewWidth <= 0 || viewHeight <= 0 || virtualWidth <= 0) return false
 
+        val regionLeft = if (isBottomViewport) {
+            ((virtualWidth - virtualWidth * bottomWidthRatio) / 2f).coerceAtLeast(0f)
+        } else {
+            0f
+        }
+        val regionWidth = if (isBottomViewport) {
+            (virtualWidth * bottomWidthRatio).coerceAtLeast(1f)
+        } else {
+            virtualWidth.toFloat()
+        }
         val regionTop = if (isBottomViewport) (topViewportHeight + hingeGapPx).toFloat() else 0f
         val regionHeight = if (isBottomViewport) bottomViewportHeight.toFloat() else topViewportHeight.toFloat()
 
-        val scaleX = virtualWidth.toFloat() / viewWidth.toFloat()
+        val scaleX = regionWidth / viewWidth.toFloat()
         val scaleY = regionHeight / viewHeight.toFloat()
 
         val pointerCount = event.pointerCount
@@ -332,7 +346,7 @@ class SpanEngine {
         val coords = Array(pointerCount) { i ->
             MotionEvent.PointerCoords().also {
                 event.getPointerCoords(i, it)
-                it.x *= scaleX
+                it.x = regionLeft + it.x * scaleX
                 it.y = regionTop + it.y * scaleY
             }
         }

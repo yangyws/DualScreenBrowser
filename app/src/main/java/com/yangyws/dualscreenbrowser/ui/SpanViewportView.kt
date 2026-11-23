@@ -99,14 +99,26 @@ class SpanViewportView(
         val right = engine.virtualWidth.coerceAtMost(bmp.width)
         if (bottom <= top || right <= 0) return
 
-        srcRect.set(0, top, right, bottom)
+        val srcLeft: Int
+        val srcRight: Int
+        if (isBottomViewport && engine.bottomWidthRatio < 0.99f) {
+            val sliceW = (right * engine.bottomWidthRatio).toInt().coerceIn(1, right)
+            srcLeft = ((right - sliceW) / 2).coerceAtLeast(0)
+            srcRight = (srcLeft + sliceW).coerceAtMost(right)
+        } else {
+            srcLeft = 0
+            srcRight = right
+        }
+
+        srcRect.set(srcLeft, top, srcRight, bottom)
         dstRect.set(0f, 0f, width.toFloat(), height.toFloat())
         canvas.drawBitmap(bmp, srcRect, dstRect, paint)
 
-        if (engine.cursorVisible && engine.virtualWidth > 0 && bottom > top) {
+        if (engine.cursorVisible && srcRight > srcLeft && bottom > top) {
+            val cx = engine.cursorX
             val cy = engine.cursorY
-            if (cy >= top && cy <= bottom) {
-                val drawX = (engine.cursorX / engine.virtualWidth.toFloat()) * width.toFloat()
+            if (cx >= srcLeft && cx <= srcRight && cy >= top && cy <= bottom) {
+                val drawX = ((cx - srcLeft) / (srcRight - srcLeft).toFloat()) * width.toFloat()
                 val drawY = ((cy - top) / (bottom - top).toFloat()) * height.toFloat()
                 val radius = (width.coerceAtMost(height) * 0.018f).coerceIn(10f, 18f)
                 canvas.drawCircle(drawX, drawY, radius, cursorOuterPaint)

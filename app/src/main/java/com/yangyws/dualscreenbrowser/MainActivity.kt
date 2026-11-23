@@ -637,16 +637,13 @@ private fun DualScreenBrowserApp(
             val secMetrics = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             secDisplay.getRealMetrics(secMetrics)
-            val secAspect = if (secMetrics.widthPixels > 0 && secMetrics.heightPixels > 0) {
-                val minDim = minOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
-                val maxDim = maxOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
-                val rawH = if (topW >= topH) minDim else maxDim
-                val rawW = if (topW >= topH) maxDim else minDim
-                rawH / rawW
+            val (bottomW, bottomH) = if (secMetrics.widthPixels > 0 && secMetrics.heightPixels > 0) {
+                val minDim = minOf(secMetrics.widthPixels, secMetrics.heightPixels)
+                val maxDim = maxOf(secMetrics.widthPixels, secMetrics.heightPixels)
+                if (topW >= topH) maxDim to minDim else minDim to maxDim
             } else {
-                7f / 8f
+                (topW * 0.6458f).toInt().coerceAtLeast(240) to (topW * 0.5625f).toInt().coerceAtLeast(240)
             }
-            val bottomH = (topW * secAspect).toInt().coerceAtLeast(240)
             val dpi = context.resources.displayMetrics.densityDpi
             val gapPx = (hingeGapDp * context.resources.displayMetrics.density).toInt()
             val spanInitialUrl = if (spanSource == SpanSource.BOTTOM) {
@@ -660,6 +657,7 @@ private fun DualScreenBrowserApp(
                 widthPx = topW,
                 topHeightPx = topH,
                 bottomHeightPx = bottomH,
+                bottomWidthPx = bottomW,
                 hingeGapPx = gapPx,
                 dpi = dpi,
                 initialUrl = spanInitialUrl,
