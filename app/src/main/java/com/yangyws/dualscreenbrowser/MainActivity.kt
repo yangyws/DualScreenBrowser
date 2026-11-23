@@ -1832,13 +1832,28 @@ private fun DualScreenBrowserApp(
                     R.string.gamepad_key_start to R.string.gamepad_desc_start,
                     R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
                 )
+                val rainbowChipColors = listOf(
+                    Color(ThorTheme.RAINBOW_RED),
+                    Color(ThorTheme.RAINBOW_BLUE),
+                    Color(ThorTheme.RAINBOW_YELLOW),
+                    Color(ThorTheme.RAINBOW_BLUE),
+                    Color(ThorTheme.RAINBOW_GREEN),
+                    Color(ThorTheme.RAINBOW_YELLOW),
+                    Color(ThorTheme.RAINBOW_RED),
+                    Color(ThorTheme.RAINBOW_GREEN)
+                )
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    mappings.forEach { (keyRes, descRes) ->
+                    mappings.forEachIndexed { index, (keyRes, descRes) ->
+                        val chipAccent = if (currentTheme == ThorTheme.RAINBOW) {
+                            rainbowChipColors[index % rainbowChipColors.size]
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1846,7 +1861,7 @@ private fun DualScreenBrowserApp(
                         ) {
                             StatusChip(
                                 label = stringResource(keyRes),
-                                accentColor = MaterialTheme.colorScheme.primary
+                                accentColor = chipAccent
                             )
                             Text(
                                 text = stringResource(descRes),
