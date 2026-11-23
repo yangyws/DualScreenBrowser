@@ -574,6 +574,8 @@ class SecondaryBrowserPresentation(
             var downRawY = 0f
             var startW = 0
             var startH = 0
+            var startX = 0f
+            var startY = 0f
             return ImageView(context).apply {
                 setImageResource(R.drawable.ic_drag_corner)
                 scaleX = -1f
@@ -586,6 +588,8 @@ class SecondaryBrowserPresentation(
                             downRawY = ev.rawY
                             startW = container.width.coerceAtLeast(dp(180))
                             startH = container.height.coerceAtLeast(dp(72))
+                            startX = container.x
+                            startY = container.y
                             true
                         }
                         MotionEvent.ACTION_MOVE -> {
@@ -593,8 +597,8 @@ class SecondaryBrowserPresentation(
                             val dy = ev.rawY - downRawY
                             val maxH = (parentStack.height - dp(16)).coerceAtLeast(dp(160))
                             val maxW = (parentStack.width - dp(16)).coerceAtLeast(dp(240))
-                            val newH = (startH - dy.toInt()).coerceIn(dp(72), maxH)
-                            val newW = (startW + dx.toInt()).coerceIn(dp(180), maxW)
+                            val newH = (startH + dy.toInt()).coerceIn(dp(72), maxH)
+                            val newW = (startW - dx.toInt()).coerceIn(dp(180), maxW)
                             val lp = container.layoutParams as FrameLayout.LayoutParams
                             lp.height = newH
                             lp.width = newW
@@ -602,8 +606,8 @@ class SecondaryBrowserPresentation(
                             val margin = dp(6).toFloat()
                             val maxX = (parentStack.width - newW - margin).coerceAtLeast(margin)
                             val maxY = (parentStack.height - newH - margin).coerceAtLeast(margin)
-                            container.x = container.x.coerceIn(margin, maxX)
-                            container.y = container.y.coerceIn(margin, maxY)
+                            container.x = (startX + (startW - newW)).coerceIn(margin, maxX)
+                            container.y = startY.coerceIn(margin, maxY)
                             container.requestLayout()
                             true
                         }
@@ -615,17 +619,17 @@ class SecondaryBrowserPresentation(
 
         val handleSize = dp(30)
         padArea.addView(
-            makeMoveHandle(),
+            makeResizeHandle(),
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
-                gravity = Gravity.TOP or Gravity.START
-                setMargins(dp(4), dp(4), 0, 0)
+                gravity = Gravity.BOTTOM or Gravity.START
+                setMargins(dp(4), 0, 0, dp(4))
             }
         )
         padArea.addView(
-            makeResizeHandle(),
+            makeMoveHandle(),
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
-                gravity = Gravity.TOP or Gravity.END
-                setMargins(0, dp(4), dp(4), 0)
+                gravity = Gravity.BOTTOM or Gravity.END
+                setMargins(0, 0, dp(4), dp(4))
             }
         )
 
