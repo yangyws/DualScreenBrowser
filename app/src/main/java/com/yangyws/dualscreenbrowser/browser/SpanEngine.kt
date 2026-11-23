@@ -38,7 +38,7 @@ class SpanEngine {
     private var presentation: VirtualWebPresentation? = null
     private var virtualWebView: WebView? = null
 
-    private val backBuffers = arrayOfNulls<Bitmap>(3)
+    private val backBuffers = arrayOfNulls<Bitmap>(2)
     private var bufferIndex = 0
     private val bufferLock = Any()
 
@@ -142,9 +142,9 @@ class SpanEngine {
         stop()
         stopping = false
 
-        // Keep native resolution up to 1920px wide for crisp 1:1 rendering on AYN Thor
+        // Balance crisp rendering with safe VirtualDisplay + ImageReader memory bandwidth (1280px cap)
         val rawW = widthPx.coerceAtLeast(320)
-        val scale = if (rawW > 1920) 1920f / rawW.toFloat() else 1f
+        val scale = if (rawW > 1280) 1280f / rawW.toFloat() else 1f
 
         val safeW = (rawW * scale).toInt().coerceAtLeast(320)
         val safeTopH = (topHeightPx * scale).toInt().coerceAtLeast(200)
@@ -164,7 +164,7 @@ class SpanEngine {
         frameThread = thread
         val handler = Handler(thread.looper)
 
-        val reader = ImageReader.newInstance(safeW, safeTotalH, PixelFormat.RGBA_8888, 3)
+        val reader = ImageReader.newInstance(safeW, safeTotalH, PixelFormat.RGBA_8888, 2)
         imageReader = reader
 
         reader.setOnImageAvailableListener({ r ->

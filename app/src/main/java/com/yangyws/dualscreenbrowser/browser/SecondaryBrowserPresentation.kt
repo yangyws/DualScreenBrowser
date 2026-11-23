@@ -2070,7 +2070,6 @@ class SecondaryBrowserPresentation(
                 setOnClickListener {
                     settingsBridge.onSelectTheme(t)
                     settingsPopup.dismiss()
-                    anchor.post { showBottomSettingsPopup(anchor) }
                 }
             }
             val dotBg = GradientDrawable().apply {

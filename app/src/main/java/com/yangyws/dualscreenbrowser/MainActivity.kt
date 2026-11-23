@@ -450,8 +450,8 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    // Manage SecondaryBrowserPresentation lifecycle
-    DisposableEffect(dualScreenActive, secondaryDisplay, jsEnabled, presentationTrigger) {
+    // Manage SecondaryBrowserPresentation lifecycle (do not tear down Presentation on jsEnabled toggle)
+    DisposableEffect(dualScreenActive, secondaryDisplay, presentationTrigger) {
         val targetDisplay = secondaryDisplay
         if (dualScreenActive && targetDisplay != null) {
             val pres = SecondaryBrowserPresentation(
