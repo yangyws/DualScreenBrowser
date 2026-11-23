@@ -1391,27 +1391,36 @@ class SecondaryBrowserPresentation(
         bottomMenuPopup?.dismiss()
         bottomTabsPopup?.dismiss()
         bottomMenuPopup = popup
-        val maxMenuH = ((rootLayout?.height ?: context.resources.displayMetrics.heightPixels) - dp(24)).coerceIn(dp(240), dp(440))
-        panel.measure(
-            View.MeasureSpec.makeMeasureSpec(menuWidthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(maxMenuH, View.MeasureSpec.AT_MOST)
-        )
-        val menuW = menuWidthPx
-        val menuH = panel.measuredHeight.coerceIn(dp(240), maxMenuH)
-        popup.height = menuH
+        showAnchoredPopup(popup, panel, anchor, menuWidthPx)
+    }
+
+    private fun showAnchoredPopup(popup: PopupWindow, panel: View, anchor: View, widthPx: Int) {
         val loc = IntArray(2)
         anchor.getLocationInWindow(loc)
-        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(menuW + dp(16))
-        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(dp(240))
         val margin = dp(8)
         val gap = dp(8)
-        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
-            (loc[0] + anchor.width - menuW).coerceIn(margin, (rootW - menuW - margin).coerceAtLeast(margin))
+        val openAbove = (loc[1] + anchor.height / 2) > (rootH / 2)
+        val availableH = if (openAbove) {
+            (loc[1] - gap - margin).coerceAtLeast(dp(120))
         } else {
-            loc[0].coerceIn(margin, (rootW - menuW - margin).coerceAtLeast(margin))
+            (rootH - (loc[1] + anchor.height + gap) - margin).coerceAtLeast(dp(120))
         }
-        val targetY = if (loc[1] - menuH - gap >= margin) {
-            loc[1] - menuH - gap
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(availableH, View.MeasureSpec.AT_MOST)
+        )
+        val menuH = panel.measuredHeight.coerceIn(dp(48), availableH)
+        popup.width = widthPx
+        popup.height = menuH
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (openAbove) {
+            (loc[1] - menuH - gap).coerceAtLeast(margin)
         } else {
             (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
         }
@@ -2266,30 +2275,7 @@ class SecondaryBrowserPresentation(
         }
         bottomTabsPopup?.dismiss()
         bottomTabsPopup = settingsPopup
-        val maxH = ((rootLayout?.height ?: context.resources.displayMetrics.heightPixels) - dp(24)).coerceIn(dp(220), dp(420))
-        panel.measure(
-            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(maxH, View.MeasureSpec.AT_MOST)
-        )
-        val menuH = panel.measuredHeight.coerceIn(dp(220), maxH)
-        settingsPopup.height = menuH
-        val loc = IntArray(2)
-        anchor.getLocationInWindow(loc)
-        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
-        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
-        val margin = dp(8)
-        val gap = dp(8)
-        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
-            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
-        } else {
-            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
-        }
-        val targetY = if (loc[1] - menuH - gap >= margin) {
-            loc[1] - menuH - gap
-        } else {
-            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
-        }
-        settingsPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+        showAnchoredPopup(settingsPopup, panel, anchor, widthPx)
     }
 
     fun updatePresentationMode(spanActive: Boolean) {
