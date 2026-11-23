@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = remember { BrowserPrefs(this) }
             var currentTheme by remember { mutableStateOf(prefs.thorTheme) }
+            LaunchedEffect(Unit) { syncLauncherIcon(currentTheme) }
             var customHue by remember { mutableFloatStateOf(prefs.customThemeHue) }
             val customPrimaryInt = android.graphics.Color.HSVToColor(floatArrayOf(customHue, 0.65f, 0.92f))
             val effectivePrimary = Color(currentTheme.effectivePrimary(customPrimaryInt))
