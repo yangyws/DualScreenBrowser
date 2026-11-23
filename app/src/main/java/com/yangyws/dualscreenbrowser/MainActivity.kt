@@ -1873,7 +1873,7 @@ private fun DualScreenBrowserApp(
                     Color(ThorTheme.RAINBOW_GREEN)
                 )
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.SpaceEvenly,
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
@@ -1884,33 +1884,25 @@ private fun DualScreenBrowserApp(
                         } else {
                             MaterialTheme.colorScheme.primary
                         }
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                if (currentTheme == ThorTheme.RAINBOW) chipAccent.copy(alpha = 0.28f) else MaterialTheme.colorScheme.outlineVariant
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 10.dp, vertical = 9.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                StatusChip(
-                                    label = stringResource(keyRes),
-                                    accentColor = chipAccent
-                                )
-                                Text(
-                                    text = stringResource(descRes),
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                            StatusChip(
+                                label = stringResource(keyRes),
+                                accentColor = chipAccent
+                            )
+                            Text(
+                                text = stringResource(descRes),
+                                fontSize = 12.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
