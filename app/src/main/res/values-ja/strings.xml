@@ -134,6 +134,6 @@
     <string name="userscripts_code_hint">JavaScript コード</string>
     <string name="userscripts_empty">カスタムスクリプトはまだありません</string>
     <string name="settings_version">バージョン %1$s</string>
-    <string name="action_hide_top_bar">上部URLバーを隠す（全画面）</string>
+    <string name="action_hide_top_bar">URLバーを隠す（全画面）</string>
     <string name="action_go">移動</string>
 </resources>

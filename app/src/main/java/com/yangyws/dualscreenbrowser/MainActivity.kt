@@ -414,6 +414,7 @@ private fun DualScreenBrowserApp(
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 spanModeProvider = { spanMode },
+                hideBarProvider = { hideTopBar },
                 touchpadVisibleProvider = { spanMode && bottomTouchpad },
                 themeProvider = { currentTheme },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
@@ -471,7 +472,7 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, dualScreenActive, presentation, activeTabId) {
+    LaunchedEffect(spanMode, dualScreenActive, hideTopBar, presentation, activeTabId) {
         val spanActive = spanMode && dualScreenActive
         presentation?.updatePresentationMode(spanActive)
         webViews[activeTabId]?.let { wv ->
