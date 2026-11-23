@@ -177,6 +177,7 @@ private enum class BrowserPanel {
 
 class MainActivity : ComponentActivity() {
     private var launchUrlState by mutableStateOf<String?>(null)
+    private var topScreenActiveState by mutableStateOf(true)
     private var gamepadActions: GamepadActions? = null
     private var gamepadEnabledFlag: Boolean = true
     private var isEditingTextFlag: Boolean = false
@@ -200,6 +201,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 DualScreenBrowserApp(
                     externalUrl = launchUrlState,
+                    topScreenActive = topScreenActiveState,
                     currentTheme = currentTheme,
                     customHue = customHue,
                     customPrimaryInt = customPrimaryInt,
@@ -221,6 +223,16 @@ class MainActivity : ComponentActivity() {
             }
         }
         window.decorView.post { applyImmersiveFullscreen() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        topScreenActiveState = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        topScreenActiveState = false
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -268,6 +280,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun DualScreenBrowserApp(
     externalUrl: String?,
+    topScreenActive: Boolean,
     currentTheme: ThorTheme,
     customHue: Float,
     customPrimaryInt: Int,
@@ -449,6 +462,10 @@ private fun DualScreenBrowserApp(
                     val tabId = latestActiveTabId
                     webViews.remove(tabId)?.destroy()
                     topWebViewTrigger++
+                    val reopenIntent = Intent(context, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    }
+                    context.startActivity(reopenIntent)
                 },
                 onUrlChanged = { url, title ->
                     secondaryUrl = url
@@ -473,8 +490,8 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, dualScreenActive, presentation, activeTabId) {
-        val spanActive = spanMode && dualScreenActive
+    LaunchedEffect(spanMode, dualScreenActive, topScreenActive, presentation, activeTabId) {
+        val spanActive = spanMode && dualScreenActive && topScreenActive
         presentation?.updatePresentationMode(spanActive)
         webViews[activeTabId]?.let { wv ->
             if (spanActive) wv.onPause() else wv.onResume()
@@ -1353,7 +1370,7 @@ private fun DualScreenBrowserApp(
                     }
                 }
                 HorizontalDivider()
-                if (secondaryDisplay == null || !dualScreenActive || spanMode) {
+                if (secondaryDisplay == null || !dualScreenActive) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_top)) },
                         leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
