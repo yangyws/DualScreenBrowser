@@ -1415,7 +1415,13 @@ private fun DualScreenBrowserApp(
                 if (spanMode && dualScreenActive) {
                     CompactMenuItem(
                         text = { Text(stringResource(R.string.action_screenshot)) },
-                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.CameraAlt,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         onClick = {
                             dismissMenu()
                             val bmp = spanEngine.captureStitchedBitmap()
@@ -1429,7 +1435,13 @@ private fun DualScreenBrowserApp(
                 } else {
                     CompactMenuItem(
                         text = { Text(stringResource(R.string.action_screenshot_top)) },
-                        leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.CameraAlt,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         onClick = {
                             dismissMenu()
                             val wv = webViews[activeTabId]
@@ -1450,7 +1462,13 @@ private fun DualScreenBrowserApp(
                 }
                 CompactMenuItem(
                     text = { Text(stringResource(R.string.action_long_screenshot)) },
-                    leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.ViewStream,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         val bmp = if (spanMode && spanEngine.isRunning()) {
@@ -1516,10 +1534,16 @@ private fun DualScreenBrowserApp(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     CompactMenuItem(
                         text = { Text(stringResource(R.string.action_span_mode)) },
-                        leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.ViewStream,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         trailingIcon = {
                             if (spanMode) {
-                                Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
                             }
                         },
                         onClick = {
@@ -1543,7 +1567,13 @@ private fun DualScreenBrowserApp(
                                     )
                                 )
                             },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.SwapVert,
+                                    contentDescription = null,
+                                    tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             onClick = {
                                 val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
                                 gamepadActions.setSpanSource(next)
@@ -1551,7 +1581,13 @@ private fun DualScreenBrowserApp(
                         )
                         CompactMenuItem(
                             text = { Text(stringResource(R.string.action_bottom_touchpad)) },
-                            leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.Devices,
+                                    contentDescription = null,
+                                    tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             trailingIcon = {
                                 if (bottomTouchpad) {
                                     Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -1567,7 +1603,13 @@ private fun DualScreenBrowserApp(
                     if (!spanMode) {
                         CompactMenuItem(
                             text = { Text(stringResource(R.string.action_swap_screens)) },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.SwapVert,
+                                    contentDescription = null,
+                                    tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             onClick = {
                                 dismissMenu()
                                 performSwapScreens()
@@ -1579,7 +1621,13 @@ private fun DualScreenBrowserApp(
                 if (secondaryDisplay == null || !dualScreenActive) {
                     CompactMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_top)) },
-                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         onClick = {
                             dismissMenu()
                             if (spanMode && dualScreenActive) {
@@ -1594,7 +1642,13 @@ private fun DualScreenBrowserApp(
                 if (secondaryDisplay != null) {
                     CompactMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_bottom)) },
-                        leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = null,
+                                tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         onClick = {
                             dismissMenu()
                             dualScreenActive = true
@@ -1605,7 +1659,13 @@ private fun DualScreenBrowserApp(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 CompactMenuItem(
                     text = { Text(stringResource(R.string.action_gamepad_guide)) },
-                    leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.SportsEsports,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         showGamepadGuidePopup = true
@@ -1613,7 +1673,13 @@ private fun DualScreenBrowserApp(
                 )
                 CompactMenuItem(
                     text = { Text(stringResource(R.string.action_tutorial)) },
-                    leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Devices,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         showTutorial = true
@@ -1621,7 +1687,13 @@ private fun DualScreenBrowserApp(
                 )
                 CompactMenuItem(
                     text = { Text(stringResource(R.string.action_settings)) },
-                    leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = null,
+                            tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
                     onClick = {
                         dismissMenu()
                         activePanel = BrowserPanel.SETTINGS
