@@ -14,17 +14,18 @@ enum class SpanSource {
 
 enum class ThorTheme(
     val id: String,
+    val isLight: Boolean,
     val primaryColor: Int,
     val backgroundColor: Int,
     val surfaceColor: Int,
     val surfaceVariantColor: Int,
     val shellColor: Int
 ) {
-    BLACK("black", 0xFF4CC38A.toInt(), 0xFF0E1014.toInt(), 0xFF181B22.toInt(), 0xFF232832.toInt(), 0xFF16181E.toInt()),
-    WHITE("white", 0xFF60A5FA.toInt(), 0xFF1B2029.toInt(), 0xFF262D3A.toInt(), 0xFF333C4D.toInt(), 0xFFF2F4F8.toInt()),
-    RAINBOW("rainbow", 0xFF3B82F6.toInt(), 0xFF1B1C22.toInt(), 0xFF272932.toInt(), 0xFF343744.toInt(), 0xFFE3DFD3.toInt()),
-    CLEAR_PURPLE("clear_purple", 0xFFC084FC.toInt(), 0xFF161026.toInt(), 0xFF241A3D.toInt(), 0xFF332554.toInt(), 0xFF6D44B8.toInt()),
-    CUSTOM("custom", 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt());
+    BLACK("black", false, 0xFF4CC38A.toInt(), 0xFF0E1014.toInt(), 0xFF181B22.toInt(), 0xFF232832.toInt(), 0xFF16181E.toInt()),
+    WHITE("white", true, 0xFF2563EB.toInt(), 0xFFF3F5F8.toInt(), 0xFFFFFFFF.toInt(), 0xFFE5E9F0.toInt(), 0xFFF2F4F8.toInt()),
+    RAINBOW("rainbow", true, 0xFF2563EB.toInt(), 0xFFF2EFE9.toInt(), 0xFFFAF8F4.toInt(), 0xFFE6E2D8.toInt(), 0xFFE3DFD3.toInt()),
+    CLEAR_PURPLE("clear_purple", false, 0xFFC084FC.toInt(), 0xFF161026.toInt(), 0xFF241A3D.toInt(), 0xFF332554.toInt(), 0xFF6D44B8.toInt()),
+    CUSTOM("custom", false, 0xFF4CC38A.toInt(), 0xFF101216.toInt(), 0xFF1A1D24.toInt(), 0xFF252A34.toInt(), 0xFF232834.toInt());
 
     fun effectivePrimary(customColor: Int): Int =
         if (this == CUSTOM) customColor else primaryColor

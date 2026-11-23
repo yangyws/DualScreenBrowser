@@ -254,16 +254,16 @@ fun FloatingMenuButton(
                     onClick = { expanded = true },
                     shape = CircleShape,
                     color = if (expanded) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
                     } else {
-                        Color(0xD9161B24)
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
                     },
                     border = BorderStroke(
                         width = 1.dp,
                         color = if (expanded) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            Color.White.copy(alpha = 0.22f)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
                         }
                     ),
                     shadowElevation = 6.dp,
@@ -283,7 +283,7 @@ fun FloatingMenuButton(
                         Icon(
                             imageVector = Icons.Rounded.Menu,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -339,7 +339,7 @@ fun FloatingMenuButton(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                             shadowElevation = 10.dp,
                             modifier = Modifier.heightIn(max = maxMenuHeight)
                         ) {

@@ -413,7 +413,7 @@ class SecondaryBrowserPresentation(
             setImageResource(R.drawable.ic_menu)
             contentDescription = context.getString(R.string.action_settings)
             background = floatBg
-            setColorFilter(Color.WHITE)
+            setColorFilter(if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE)
             setPadding(dp(12), dp(12), dp(12), dp(12))
             elevation = dp(6).toFloat()
             visibility = if (!spanModeProvider()) View.VISIBLE else View.GONE
@@ -746,15 +746,20 @@ class SecondaryBrowserPresentation(
 
     fun updateTheme(theme: ThorTheme) {
         activeTheme = theme
+        val fgColor = if (theme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val borderColor = if (theme.isLight) Color.parseColor("#28000000") else Color.parseColor("#38FFFFFF")
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
-            (floatingMenuBtn?.background as? GradientDrawable)?.setColor(
-                Color.argb(217, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor))
-            )
-            (touchpadContainer?.background as? GradientDrawable)?.setColor(
-                Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor))
-            )
+            (floatingMenuBtn?.background as? GradientDrawable)?.apply {
+                setColor(Color.argb(224, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
+                setStroke(dp(1), borderColor)
+            }
+            floatingMenuBtn?.setColorFilter(fgColor)
+            (touchpadContainer?.background as? GradientDrawable)?.apply {
+                setColor(Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
+                setStroke(dp(1), borderColor)
+            }
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
             lockIcon?.setColorFilter(theme.primaryColor)
             progressBar?.progressTintList = ColorStateList.valueOf(theme.primaryColor)
@@ -784,7 +789,7 @@ class SecondaryBrowserPresentation(
             val outValue = TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
-            setColorFilter(Color.WHITE)
+            setColorFilter(if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             setOnClickListener { onClick() }
         }
@@ -809,11 +814,14 @@ class SecondaryBrowserPresentation(
     }
 
     private fun showBottomFloatingMenu(anchor: View) {
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val borderColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#24FFFFFF")
         val panelBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(12).toFloat()
             setColor(activeTheme.surfaceColor)
-            setStroke(dp(1), Color.parseColor("#24FFFFFF"))
+            setStroke(dp(1), borderColor)
         }
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -855,7 +863,7 @@ class SecondaryBrowserPresentation(
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(8).toFloat()
             setColor(activeTheme.surfaceVariantColor)
-            setStroke(dp(1), Color.parseColor("#22FFFFFF"))
+            setStroke(dp(1), borderColor)
         }
         val urlRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -866,8 +874,8 @@ class SecondaryBrowserPresentation(
         val urlEdit = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
             setText(currentUrl())
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.parseColor("#8A92A6"))
+            setTextColor(fgColor)
+            setHintTextColor(mutedFg)
             setBackgroundColor(Color.TRANSPARENT)
             setPadding(0, 0, 0, 0)
             textSize = 13f
@@ -907,7 +915,7 @@ class SecondaryBrowserPresentation(
         fun addMenuItem(label: String, onClick: () -> Unit) {
             val tv = TextView(context).apply {
                 text = label
-                setTextColor(Color.WHITE)
+                setTextColor(fgColor)
                 textSize = 13.5f
                 setPadding(dp(8), dp(9), dp(8), dp(9))
                 val outValue = TypedValue()

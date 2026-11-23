@@ -104,6 +104,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -191,14 +192,30 @@ class MainActivity : ComponentActivity() {
             var customHue by remember { mutableFloatStateOf(prefs.customThemeHue) }
             val customPrimaryInt = android.graphics.Color.HSVToColor(floatArrayOf(customHue, 0.65f, 0.92f))
             val effectivePrimary = Color(currentTheme.effectivePrimary(customPrimaryInt))
-            MaterialTheme(
-                colorScheme = darkColorScheme(
+            val colorScheme = if (currentTheme.isLight) {
+                lightColorScheme(
                     primary = effectivePrimary,
                     background = Color(currentTheme.backgroundColor),
                     surface = Color(currentTheme.surfaceColor),
-                    surfaceVariant = Color(currentTheme.surfaceVariantColor)
+                    surfaceVariant = Color(currentTheme.surfaceVariantColor),
+                    onPrimary = Color.White,
+                    onBackground = Color(0xFF111827),
+                    onSurface = Color(0xFF111827),
+                    onSurfaceVariant = Color(0xFF475569)
                 )
-            ) {
+            } else {
+                darkColorScheme(
+                    primary = effectivePrimary,
+                    background = Color(currentTheme.backgroundColor),
+                    surface = Color(currentTheme.surfaceColor),
+                    surfaceVariant = Color(currentTheme.surfaceVariantColor),
+                    onPrimary = Color(0xFF0E1014),
+                    onBackground = Color.White,
+                    onSurface = Color.White,
+                    onSurfaceVariant = Color(0xFF94A3B8)
+                )
+            }
+            MaterialTheme(colorScheme = colorScheme) {
                 DualScreenBrowserApp(
                     externalUrl = launchUrlState,
                     topScreenActive = topScreenActiveState,
@@ -1083,7 +1100,7 @@ private fun DualScreenBrowserApp(
                             },
                             shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
@@ -1106,7 +1123,7 @@ private fun DualScreenBrowserApp(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(9.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f), RoundedCornerShape(9.dp))
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1114,7 +1131,7 @@ private fun DualScreenBrowserApp(
                             value = menuUrlInput,
                             onValueChange = { menuUrlInput = it },
                             singleLine = true,
-                            textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Uri,
@@ -2102,7 +2119,7 @@ private fun DualScreenBrowserApp(
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                 shadowElevation = 12.dp,
                 modifier = Modifier.widthIn(min = 320.dp, max = 440.dp)
             ) {
@@ -2129,7 +2146,7 @@ private fun DualScreenBrowserApp(
                                 text = stringResource(R.string.settings_theme),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         TactileIconButton(
@@ -2163,7 +2180,7 @@ private fun DualScreenBrowserApp(
                                 color = if (selected) chipPrimary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(
                                     width = if (selected) 1.5.dp else 1.dp,
-                                    color = if (selected) chipPrimary else Color.White.copy(alpha = 0.1f)
+                                    color = if (selected) chipPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                 ),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
@@ -2183,7 +2200,7 @@ private fun DualScreenBrowserApp(
                                         text = stringResource(themeLabels[t] ?: R.string.theme_black),
                                         fontSize = 10.sp,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selected) Color.White else Color.LightGray,
+                                        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
