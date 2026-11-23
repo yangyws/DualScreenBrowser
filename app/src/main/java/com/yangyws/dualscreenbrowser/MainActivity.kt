@@ -508,6 +508,10 @@ private fun DualScreenBrowserApp(
                     Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                 },
                 onOpenThemePicker = { showThemePicker = true },
+                bookmarksProvider = { latestBookmarks },
+                historyProvider = { history },
+                onOpenGamepadGuide = { activePanel = BrowserPanel.GAMEPAD_GUIDE },
+                onOpenSettings = { activePanel = BrowserPanel.SETTINGS },
                 onForwardKeyEvent = onForwardKeyEvent,
                 onForwardMotionEvent = onForwardMotionEvent,
                 onUrlChanged = { url, title ->

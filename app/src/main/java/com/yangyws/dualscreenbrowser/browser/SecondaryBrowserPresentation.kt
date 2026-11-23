@@ -72,6 +72,10 @@ class SecondaryBrowserPresentation(
     private val onReopenTop: () -> Unit,
     private val onToggleSpanMode: () -> Unit,
     private val onOpenThemePicker: () -> Unit,
+    private val bookmarksProvider: () -> List<BookmarkItem>,
+    private val historyProvider: () -> List<HistoryItem>,
+    private val onOpenGamepadGuide: () -> Unit,
+    private val onOpenSettings: () -> Unit,
     private val onForwardKeyEvent: (KeyEvent) -> Boolean,
     private val onForwardMotionEvent: (MotionEvent) -> Boolean,
     private val onUrlChanged: (String, String) -> Unit,
@@ -1237,6 +1241,17 @@ class SecondaryBrowserPresentation(
         panel.addView(urlRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         addDivider(verticalMarginDp = 7)
 
+        val itemsContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        fun addMenuDivider() {
+            val line = View(context).apply { setBackgroundColor(dividerColor) }
+            itemsContainer.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+                setMargins(0, dp(5), 0, dp(5))
+            })
+        }
+
         fun addMenuItem(
             iconRes: Int,
             label: String,
@@ -1274,7 +1289,7 @@ class SecondaryBrowserPresentation(
             }
             row.addView(icon, LinearLayout.LayoutParams(dp(18), dp(18)))
             row.addView(tv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            panel.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            itemsContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
         val bookmarked = isBookmarkedProvider(currentUrl())
@@ -1286,8 +1301,39 @@ class SecondaryBrowserPresentation(
         ) {
             onToggleBookmark(currentUrl(), webView?.title.orEmpty())
         }
-        val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
-        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode, rainbowSlot = 3) { toggleDesktopMode() }
+        addMenuItem(
+            android.R.drawable.btn_star_big_on,
+            context.getString(R.string.action_bookmarks),
+            rainbowSlot = 2
+        ) {
+            val entries = bookmarksProvider().map { it.title.ifBlank { it.url } to it.url }
+            showBottomListPopup(
+                anchor = anchor,
+                title = context.getString(R.string.action_bookmarks),
+                emptyMessage = context.getString(R.string.no_bookmarks),
+                items = entries
+            )
+        }
+        addMenuItem(
+            android.R.drawable.ic_menu_recent_history,
+            context.getString(R.string.action_history),
+            rainbowSlot = 1
+        ) {
+            val entries = historyProvider().map { it.title.ifBlank { it.url } to it.url }
+            showBottomListPopup(
+                anchor = anchor,
+                title = context.getString(R.string.action_history),
+                emptyMessage = context.getString(R.string.no_history),
+                items = entries
+            )
+        }
+        addMenuItem(
+            android.R.drawable.ic_menu_search,
+            context.getString(R.string.action_find_in_page),
+            rainbowSlot = 3
+        ) {
+            showBottomFindPopup(anchor)
+        }
         addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_screenshot_bottom), rainbowSlot = 2) {
             val bmp = captureViewportBitmap()
             val saved = bmp?.let { b ->
@@ -1304,11 +1350,23 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
+        val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
+        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode, rainbowSlot = 3) { toggleDesktopMode() }
+        addMenuDivider()
+        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode), rainbowSlot = 3) { onToggleSpanMode() }
         addMenuItem(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens), rainbowSlot = 1) {
             onSwapScreens(currentUrl())
         }
-        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode), rainbowSlot = 3) { onToggleSpanMode() }
+        addMenuDivider()
         addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
+        addMenuDivider()
+        addMenuItem(android.R.drawable.ic_menu_help, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { onOpenGamepadGuide() }
+        addMenuItem(android.R.drawable.ic_menu_preferences, context.getString(R.string.action_settings), rainbowSlot = 0) { onOpenSettings() }
+
+        val scrollItems = ScrollView(context).apply {
+            addView(itemsContainer)
+        }
+        panel.addView(scrollItems, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val menuWidthPx = dp(304)
         popup = PopupWindow(panel, menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
@@ -1320,12 +1378,14 @@ class SecondaryBrowserPresentation(
         bottomMenuPopup?.dismiss()
         bottomTabsPopup?.dismiss()
         bottomMenuPopup = popup
+        val maxMenuH = ((rootLayout?.height ?: context.resources.displayMetrics.heightPixels) - dp(24)).coerceIn(dp(240), dp(440))
         panel.measure(
             View.MeasureSpec.makeMeasureSpec(menuWidthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            View.MeasureSpec.makeMeasureSpec(maxMenuH, View.MeasureSpec.AT_MOST)
         )
         val menuW = menuWidthPx
-        val menuH = panel.measuredHeight.coerceAtLeast(dp(240))
+        val menuH = panel.measuredHeight.coerceIn(dp(240), maxMenuH)
+        popup.height = menuH
         val loc = IntArray(2)
         anchor.getLocationInWindow(loc)
         val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(menuW + dp(16))
@@ -1493,6 +1553,262 @@ class SecondaryBrowserPresentation(
             (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
         }
         tabsPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+    }
+
+    private fun showBottomListPopup(
+        anchor: View,
+        title: String,
+        emptyMessage: String,
+        items: List<Pair<String, String>>
+    ) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val dividerColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#2EFFFFFF")
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelBg
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            elevation = dp(8).toFloat()
+        }
+
+        lateinit var listPopup: PopupWindow
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = title
+            setTextColor(fgColor)
+            textSize = 14f
+        }
+        val closeBtn = TextView(context).apply {
+            text = "×"
+            setTextColor(mutedFg)
+            textSize = 18f
+            setPadding(dp(10), 0, dp(4), 0)
+            setOnClickListener { listPopup.dismiss() }
+        }
+        headerRow.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        headerRow.addView(closeBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        panel.addView(headerRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val divider = View(context).apply { setBackgroundColor(dividerColor) }
+        panel.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            setMargins(0, dp(7), 0, dp(7))
+        })
+
+        val listContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        if (items.isEmpty()) {
+            val emptyTv = TextView(context).apply {
+                text = emptyMessage
+                setTextColor(mutedFg)
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(16), dp(8), dp(16))
+            }
+            listContainer.addView(emptyTv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        } else {
+            items.take(40).forEachIndexed { index, (itemTitle, itemUrl) ->
+                val rowBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(9).toFloat()
+                    setColor(activeTheme.surfaceVariantColor)
+                }
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = rowBg
+                    setPadding(dp(10), dp(8), dp(10), dp(8))
+                    setOnClickListener {
+                        listPopup.dismiss()
+                        loadUrl(itemUrl)
+                    }
+                }
+                val tvTitle = TextView(context).apply {
+                    text = itemTitle
+                    setTextColor(fgColor)
+                    textSize = 13f
+                    maxLines = 1
+                }
+                val tvUrl = TextView(context).apply {
+                    text = UrlResolver.displayHost(itemUrl).ifBlank { itemUrl }
+                    setTextColor(mutedFg)
+                    textSize = 11f
+                    maxLines = 1
+                }
+                row.addView(tvTitle)
+                row.addView(tvUrl)
+                listContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    if (index > 0) topMargin = dp(6)
+                })
+            }
+        }
+
+        val scroll = ScrollView(context).apply { addView(listContainer) }
+        panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val widthPx = dp(304)
+        listPopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+        }
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = listPopup
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(dp(340), View.MeasureSpec.AT_MOST)
+        )
+        val menuH = panel.measuredHeight.coerceIn(dp(120), dp(340))
+        listPopup.height = menuH
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        listPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+    }
+
+    private fun showBottomFindPopup(anchor: View) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val borderColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#24FFFFFF")
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = panelBg
+            setPadding(dp(10), dp(8), dp(8), dp(8))
+            elevation = dp(8).toFloat()
+        }
+
+        lateinit var findPopup: PopupWindow
+        val matchCountView = TextView(context).apply {
+            text = "0/0"
+            setTextColor(mutedFg)
+            textSize = 12f
+            setPadding(dp(6), 0, dp(6), 0)
+        }
+        val inputBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(8).toFloat()
+            setColor(activeTheme.surfaceVariantColor)
+            setStroke(dp(1), borderColor)
+        }
+        val findEdit = EditText(context).apply {
+            hint = context.getString(R.string.find_placeholder)
+            setTextColor(fgColor)
+            setHintTextColor(mutedFg)
+            background = inputBg
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            textSize = 13f
+            isSingleLine = true
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val q = s?.toString().orEmpty()
+                    val wv = webView ?: return
+                    if (q.isEmpty()) {
+                        wv.clearMatches()
+                        matchCountView.text = "0/0"
+                    } else {
+                        wv.setFindListener { activeOrdinal, numberOfMatches, _ ->
+                            val current = if (numberOfMatches > 0) activeOrdinal + 1 else 0
+                            matchCountView.text = "$current/$numberOfMatches"
+                        }
+                        wv.findAllAsync(q)
+                    }
+                }
+                override fun afterTextChanged(s: Editable?) = Unit
+            })
+        }
+        val prevBtn = TextView(context).apply {
+            text = "▲"
+            setTextColor(rainbowSlotColor(1, accent))
+            textSize = 14f
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+            setOnClickListener { webView?.findNext(false) }
+        }
+        val nextBtn = TextView(context).apply {
+            text = "▼"
+            setTextColor(rainbowSlotColor(3, accent))
+            textSize = 14f
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+            setOnClickListener { webView?.findNext(true) }
+        }
+        val closeBtn = TextView(context).apply {
+            text = "×"
+            setTextColor(mutedFg)
+            textSize = 18f
+            setPadding(dp(6), dp(2), dp(4), dp(2))
+            setOnClickListener {
+                webView?.clearMatches()
+                findPopup.dismiss()
+            }
+        }
+        panel.addView(findEdit, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        panel.addView(matchCountView)
+        panel.addView(prevBtn)
+        panel.addView(nextBtn)
+        panel.addView(closeBtn)
+
+        val widthPx = dp(304)
+        findPopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+            setOnDismissListener { webView?.clearMatches() }
+        }
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = findPopup
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val menuH = panel.measuredHeight.coerceAtLeast(dp(48))
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        findPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
     }
 
     fun updatePresentationMode(spanActive: Boolean) {
