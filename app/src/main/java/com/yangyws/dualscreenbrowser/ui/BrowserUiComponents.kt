@@ -16,6 +16,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -264,6 +269,7 @@ fun OverflowMenuButton(
 @Composable
 fun FloatingMenuButton(
     isRainbow: Boolean = false,
+    onStartPressed: (() -> Unit)? = null,
     extraPopupExpanded: Boolean = false,
     onDismissExtraPopup: () -> Unit = {},
     extraPopupContent: (@Composable () -> Unit)? = null,
@@ -430,7 +436,19 @@ fun FloatingMenuButton(
                                     BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                                 },
                                 shadowElevation = 0.dp,
-                                modifier = Modifier.heightIn(max = maxMenuHeight)
+                                modifier = Modifier
+                                    .heightIn(max = maxMenuHeight)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.key == Key.ButtonStart) {
+                                            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                                expanded = false
+                                                onStartPressed?.invoke()
+                                            }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -457,7 +475,19 @@ fun FloatingMenuButton(
                                     BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                                 },
                                 shadowElevation = 0.dp,
-                                modifier = Modifier.heightIn(max = maxMenuHeight)
+                                modifier = Modifier
+                                    .heightIn(max = maxMenuHeight)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.key == Key.ButtonStart) {
+                                            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                                expanded = false
+                                                onStartPressed?.invoke()
+                                            }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
                             ) {
                                 extraPopupContent()
                             }

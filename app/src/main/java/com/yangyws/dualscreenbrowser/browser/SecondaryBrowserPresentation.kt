@@ -2424,6 +2424,14 @@ class SecondaryBrowserPresentation(
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                bottomMenuPopup?.dismiss()
+                bottomTabsPopup?.dismiss()
+                onForwardKeyEvent(event)
+            }
+            return true
+        }
         if (bottomMenuPopup?.isShowing != true && bottomTabsPopup?.isShowing != true && urlInput?.hasFocus() != true && onForwardKeyEvent(event)) {
             return true
         }

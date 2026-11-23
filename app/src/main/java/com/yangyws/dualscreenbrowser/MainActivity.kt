@@ -1002,6 +1002,7 @@ private fun DualScreenBrowserApp(
             // Draggable floating menu button with isolated recompose scope
             FloatingMenuButton(
                 isRainbow = currentTheme == ThorTheme.RAINBOW,
+                onStartPressed = { gamepadActions.toggleSpanMode() },
                 extraPopupExpanded = showGamepadGuidePopup || findBarVisible,
                 onDismissExtraPopup = {
                     showGamepadGuidePopup = false
