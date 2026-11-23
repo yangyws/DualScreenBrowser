@@ -200,14 +200,36 @@ fun CompactMenuItem(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
-    androidx.compose.material3.DropdownMenuItem(
-        text = text,
-        onClick = onClick,
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-        modifier = modifier.height(34.dp)
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(34.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp)
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+            androidx.compose.material3.LocalTextStyle provides androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 13.5.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        ) {
+            if (leadingIcon != null) {
+                Box(modifier = Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                    leadingIcon()
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                text()
+            }
+            if (trailingIcon != null) {
+                Spacer(Modifier.width(8.dp))
+                trailingIcon()
+            }
+        }
+    }
 }
 
 /** Isolates overflow menu open/close state into its own recompose scope so opening ⋮ is instant. */

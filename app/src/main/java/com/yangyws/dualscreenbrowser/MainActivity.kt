@@ -881,19 +881,7 @@ private fun DualScreenBrowserApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        val animatedProgress by animateFloatAsState(
-            targetValue = loadProgress,
-            animationSpec = tween(durationMillis = 120, easing = LinearEasing),
-            label = "webProgress"
-        )
-        if (loadProgress in 0.01f..0.99f) {
-            LinearProgressIndicator(
-                progress = { animatedProgress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-            )
-        }
+        TopLoadProgressBar(loadProgressProvider = { loadProgress })
 
         // Main WebView container (uses full vertical space below top bar)
         Box(
@@ -933,7 +921,6 @@ private fun DualScreenBrowserApp(
                                 val reqUrl = request?.url?.toString()
                                 if (adBlockEnabled && AdBlocker.shouldBlockUrl(reqUrl)) {
                                     AdBlocker.recordBlocked()
-                                    adBlockedCount = AdBlocker.blockedCount()
                                     return AdBlocker.emptyResponse()
                                 }
                                 return super.shouldInterceptRequest(view, request)
@@ -949,6 +936,7 @@ private fun DualScreenBrowserApp(
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
+                                adBlockedCount = AdBlocker.blockedCount()
                                 canGoBack = view?.canGoBack() == true
                                 canGoForward = view?.canGoForward() == true
                                 if (!url.isNullOrBlank()) {
@@ -2381,6 +2369,24 @@ private fun DualScreenBrowserApp(
             prefs.tutorialDone = true
         }
     )
+}
+
+@Composable
+private fun TopLoadProgressBar(loadProgressProvider: () -> Float) {
+    val progress = loadProgressProvider()
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+        label = "webProgress"
+    )
+    if (progress in 0.01f..0.99f) {
+        LinearProgressIndicator(
+            progress = { animatedProgress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+        )
+    }
 }
 
 @Composable
