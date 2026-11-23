@@ -179,13 +179,13 @@ fun EmptyStateView(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.Gray.copy(alpha = 0.7f),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.size(32.dp)
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = message,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp
         )
     }
@@ -205,14 +205,14 @@ fun OverflowMenuButton(
             Icon(
                 imageVector = Icons.Rounded.MoreVert,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp)
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = Color(0xFF1E222B)
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             menuContent { expanded = false }
         }

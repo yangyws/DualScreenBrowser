@@ -845,14 +845,14 @@ private fun DualScreenBrowserApp(
                         }
                     },
                     singleLine = true,
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier.weight(1f),
                     decorationBox = { inner ->
                         if (findQuery.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.find_placeholder),
-                                color = Color(0xFF8A92A6),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                         }
@@ -863,7 +863,7 @@ private fun DualScreenBrowserApp(
                     text = stringResource(R.string.find_matches, findMatchActive, findMatchTotal),
                     fontSize = 12.sp,
                     style = TextStyle(fontFeatureSettings = "tnum"),
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 TactileIconButton(
@@ -893,7 +893,7 @@ private fun DualScreenBrowserApp(
             }
         }
 
-        HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
         val animatedProgress by animateFloatAsState(
             targetValue = loadProgress,
@@ -1156,7 +1156,7 @@ private fun DualScreenBrowserApp(
                                 if (menuUrlInput.isEmpty()) {
                                     Text(
                                         text = stringResource(R.string.url_placeholder),
-                                        color = Color(0xFF8A92A6),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 13.sp
                                     )
                                 }
@@ -1168,7 +1168,7 @@ private fun DualScreenBrowserApp(
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = stringResource(R.string.action_close),
-                                tint = Color(0xFF8A92A6),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
                                     .size(15.dp)
                                     .clickable { menuUrlInput = "" }
@@ -1524,7 +1524,7 @@ private fun DualScreenBrowserApp(
                             },
                             border = BorderStroke(
                                 1.dp,
-                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.08f)
+                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else MaterialTheme.colorScheme.outlineVariant
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
@@ -1550,7 +1550,7 @@ private fun DualScreenBrowserApp(
                                         Text(
                                             text = UrlResolver.displayHost(tab.url).ifBlank { "New" },
                                             fontSize = 11.sp,
-                                            color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.LightGray,
+                                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.weight(1f)
@@ -1560,7 +1560,7 @@ private fun DualScreenBrowserApp(
                                         Icon(
                                             Icons.Rounded.Close,
                                             contentDescription = stringResource(R.string.action_close),
-                                            tint = Color.LightGray,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(14.dp)
                                         )
                                     }
@@ -1570,14 +1570,14 @@ private fun DualScreenBrowserApp(
                                     text = tab.title.ifBlank { stringResource(R.string.untitled_page) },
                                     fontSize = 13.sp,
                                     fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = tab.url,
                                     fontSize = 11.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1604,8 +1604,8 @@ private fun DualScreenBrowserApp(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.title, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.url, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 TactileIconButton(
                                     onClick = {
@@ -1614,10 +1614,10 @@ private fun DualScreenBrowserApp(
                                     },
                                     size = 32.dp
                                 ) {
-                                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_remove_bookmark), tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_remove_bookmark), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                 }
                             }
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }
@@ -1637,7 +1637,7 @@ private fun DualScreenBrowserApp(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.history_cleared_prompt), color = Color.White, fontSize = 13.sp)
+                            Text(stringResource(R.string.history_cleared_prompt), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                             TextButton(onClick = {
                                 history = backup
                                 prefs.saveHistory(backup)
@@ -1663,10 +1663,10 @@ private fun DualScreenBrowserApp(
                                     }
                                     .padding(vertical = 8.dp)
                             ) {
-                                Text(item.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(item.url, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(item.title, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(item.url, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }
@@ -1735,8 +1735,8 @@ private fun DualScreenBrowserApp(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(script.name, color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(script.matchPattern, fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(script.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(script.matchPattern, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     Switch(
                                         checked = script.enabled,
@@ -1754,7 +1754,7 @@ private fun DualScreenBrowserApp(
                                         },
                                         size = 32.dp
                                     ) {
-                                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_close), tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.action_close), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
@@ -1793,7 +1793,7 @@ private fun DualScreenBrowserApp(
                             Text(
                                 text = stringResource(descRes),
                                 fontSize = 13.sp,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -1816,8 +1816,8 @@ private fun DualScreenBrowserApp(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(stringResource(R.string.settings_theme), fontWeight = FontWeight.Medium, color = Color.White)
-                        Text(stringResource(R.string.settings_theme_desc), fontSize = 12.sp, color = Color.Gray)
+                        Text(stringResource(R.string.settings_theme), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.settings_theme_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -1837,7 +1837,7 @@ private fun DualScreenBrowserApp(
                                     color = if (selected) chipPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                                     border = BorderStroke(
                                         1.dp,
-                                        if (selected) chipPrimary else Color.White.copy(alpha = 0.1f)
+                                        if (selected) chipPrimary else MaterialTheme.colorScheme.outline
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)
@@ -1856,7 +1856,7 @@ private fun DualScreenBrowserApp(
                                         Text(
                                             text = stringResource(themeLabels[t] ?: R.string.theme_black),
                                             fontSize = 9.5.sp,
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -1889,8 +1889,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_language_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_language_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(stringResource(currentLang.labelRes), color = MaterialTheme.colorScheme.primary)
                     }
@@ -1908,8 +1908,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_search_engine), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_search_engine_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_search_engine), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_search_engine_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(searchEngine.label, color = MaterialTheme.colorScheme.primary)
                     }
@@ -1917,11 +1917,11 @@ private fun DualScreenBrowserApp(
 
                     // Hinge gap compensation slider
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.settings_hinge_gap), fontWeight = FontWeight.Medium, color = Color.White)
+                        Text(stringResource(R.string.settings_hinge_gap), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             stringResource(R.string.settings_hinge_gap_desc, pendingHingeGapDp),
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = TextStyle(fontFeatureSettings = "tnum")
                         )
                         Slider(
@@ -1944,11 +1944,11 @@ private fun DualScreenBrowserApp(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_bottom_brightness), fontWeight = FontWeight.Medium, color = Color.White)
+                                Text(stringResource(R.string.settings_bottom_brightness), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
                                     stringResource(R.string.settings_bottom_brightness_desc, bottomBrightness),
                                     fontSize = 12.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = TextStyle(fontFeatureSettings = "tnum")
                                 )
                             }
@@ -1972,11 +1972,11 @@ private fun DualScreenBrowserApp(
                             },
                             valueRange = -30f..30f
                         )
-                        Text(stringResource(R.string.settings_bottom_warmth), fontWeight = FontWeight.Medium, color = Color.White)
+                        Text(stringResource(R.string.settings_bottom_warmth), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             stringResource(R.string.settings_bottom_warmth_desc, bottomWarmth),
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = TextStyle(fontFeatureSettings = "tnum")
                         )
                         Slider(
@@ -1997,8 +1997,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_javascript), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_javascript_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_javascript), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_javascript_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = jsEnabled,
@@ -2017,11 +2017,11 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_adblock), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_adblock), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 stringResource(R.string.settings_adblock_desc, adBlockedCount),
                                 fontSize = 12.sp,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = TextStyle(fontFeatureSettings = "tnum")
                             )
                         }
@@ -2041,8 +2041,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_gamepad), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_gamepad_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_gamepad), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_gamepad_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = gamepadEnabled,
@@ -2060,8 +2060,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_force_dark_web), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_force_dark_web_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_force_dark_web), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_force_dark_web_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = forceDarkWeb,
@@ -2081,8 +2081,8 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.settings_enable_copy), fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(stringResource(R.string.settings_enable_copy_desc), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.settings_enable_copy), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.settings_enable_copy_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = enableCopyScript,
@@ -2103,9 +2103,9 @@ private fun DualScreenBrowserApp(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Code, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.Code, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium, color = Color.White)
+                            Text(stringResource(R.string.settings_userscripts), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Text("${userScripts.size}", color = MaterialTheme.colorScheme.primary, style = TextStyle(fontFeatureSettings = "tnum"))
                     }
@@ -2114,7 +2114,7 @@ private fun DualScreenBrowserApp(
                     Text(
                         text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
