@@ -158,6 +158,7 @@ import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
 import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
+import com.yangyws.dualscreenbrowser.ui.HueColorSlider
 import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
@@ -1860,12 +1861,11 @@ private fun DualScreenBrowserApp(
                             Text(
                                 text = stringResource(R.string.settings_custom_hue),
                                 fontSize = 12.sp,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Slider(
-                                value = customHue,
-                                onValueChange = onCustomHueChanged,
-                                valueRange = 0f..360f
+                            HueColorSlider(
+                                hue = customHue,
+                                onHueChange = onCustomHueChanged
                             )
                         }
                     }
@@ -2210,16 +2210,15 @@ private fun DualScreenBrowserApp(
                     }
 
                     if (currentTheme == ThorTheme.CUSTOM) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 text = stringResource(R.string.settings_custom_hue),
                                 fontSize = 12.sp,
-                                color = Color.LightGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Slider(
-                                value = customHue,
-                                onValueChange = onCustomHueChanged,
-                                valueRange = 0f..360f
+                            HueColorSlider(
+                                hue = customHue,
+                                onHueChange = onCustomHueChanged
                             )
                         }
                     }

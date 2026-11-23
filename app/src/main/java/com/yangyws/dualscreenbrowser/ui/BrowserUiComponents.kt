@@ -13,6 +13,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -545,5 +548,71 @@ fun SidePanelSheet(
                 }
             }
         }
+    }
+}
+
+/** Full-spectrum 360-degree rainbow hue slider with live color preview thumb. */
+@Composable
+fun HueColorSlider(
+    hue: Float,
+    onHueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val spectrumColors = remember {
+        listOf(
+            Color.hsv(0f, 0.72f, 0.94f),
+            Color.hsv(60f, 0.72f, 0.94f),
+            Color.hsv(120f, 0.72f, 0.94f),
+            Color.hsv(180f, 0.72f, 0.94f),
+            Color.hsv(240f, 0.72f, 0.94f),
+            Color.hsv(300f, 0.72f, 0.94f),
+            Color.hsv(360f, 0.72f, 0.94f)
+        )
+    }
+    var trackWidthPx by remember { mutableFloatStateOf(1f) }
+    val density = LocalDensity.current
+    val thumbSize = 22.dp
+    val thumbPx = with(density) { thumbSize.toPx() }
+    val safeHue = hue.coerceIn(0f, 360f)
+    val thumbColor = Color.hsv(safeHue, 0.65f, 0.92f)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .onSizeChanged { trackWidthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .pointerInput(Unit) {
+                detectTapGestures { pos ->
+                    val ratio = (pos.x / trackWidthPx).coerceIn(0f, 1f)
+                    onHueChange(ratio * 360f)
+                }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, _ ->
+                    change.consume()
+                    val ratio = (change.position.x / trackWidthPx).coerceIn(0f, 1f)
+                    onHueChange(ratio * 360f)
+                }
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .clip(CircleShape)
+                .background(Brush.horizontalGradient(spectrumColors))
+        )
+        val maxOffset = (trackWidthPx - thumbPx).coerceAtLeast(0f)
+        val thumbOffsetX = ((safeHue / 360f) * maxOffset).roundToInt()
+        Surface(
+            shape = CircleShape,
+            color = thumbColor,
+            border = BorderStroke(2.5.dp, Color.White),
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .offset { IntOffset(thumbOffsetX, 0) }
+                .size(thumbSize)
+        ) {}
     }
 }
