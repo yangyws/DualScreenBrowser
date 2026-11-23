@@ -164,6 +164,10 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getBoolean("bottom_touchpad", true)
         set(value) = prefs.edit().putBoolean("bottom_touchpad", value).apply()
 
+    var hideTopBar: Boolean
+        get() = prefs.getBoolean("hide_top_bar", true)
+        set(value) = prefs.edit().putBoolean("hide_top_bar", value).apply()
+
     var tutorialDone: Boolean
         get() = prefs.getBoolean("tutorial_done", false)
         set(value) = prefs.edit().putBoolean("tutorial_done", value).apply()

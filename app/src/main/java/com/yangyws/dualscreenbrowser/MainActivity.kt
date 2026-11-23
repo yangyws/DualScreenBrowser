@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -70,6 +71,7 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -306,6 +308,7 @@ private fun DualScreenBrowserApp(
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var bottomTouchpad by remember { mutableStateOf(prefs.bottomTouchpad) }
+    var hideTopBar by remember { mutableStateOf(prefs.hideTopBar) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     val spanEngine = remember { SpanEngine() }
@@ -756,15 +759,16 @@ private fun DualScreenBrowserApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top Address & Quick Actions Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
+        // Top Address & Quick Actions Bar (hidden in pure fullscreen mode)
+        if (!hideTopBar) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
             TactileIconButton(
                 onClick = {
                     if (spanMode && spanEngine.isRunning()) {
@@ -947,6 +951,7 @@ private fun DualScreenBrowserApp(
                         style = TextStyle(fontFeatureSettings = "tnum")
                     )
                 }
+            }
             }
         }
 
@@ -1144,6 +1149,189 @@ private fun DualScreenBrowserApp(
 
             // Draggable floating menu button with isolated recompose scope
             FloatingMenuButton { dismissMenu ->
+                var menuUrlInput by remember(activeTab.url) { mutableStateOf(activeTab.url) }
+                Column(
+                    modifier = Modifier
+                        .widthIn(min = 270.dp, max = 330.dp)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TactileIconButton(
+                            onClick = {
+                                dismissMenu()
+                                if (spanMode && spanEngine.isRunning()) {
+                                    spanEngine.goBack()
+                                } else {
+                                    webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
+                                }
+                            },
+                            enabled = canGoBack,
+                            size = 34.dp
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(18.dp))
+                        }
+                        TactileIconButton(
+                            onClick = {
+                                dismissMenu()
+                                if (spanMode && spanEngine.isRunning()) {
+                                    spanEngine.goForward()
+                                } else {
+                                    webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() }
+                                }
+                            },
+                            enabled = canGoForward,
+                            size = 34.dp
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = stringResource(R.string.action_forward), modifier = Modifier.size(18.dp))
+                        }
+                        TactileIconButton(
+                            onClick = {
+                                dismissMenu()
+                                if (spanMode && spanEngine.isRunning()) {
+                                    spanEngine.reload()
+                                } else {
+                                    val wv = webViews[activeTabId]
+                                    if (loadProgress in 0.01f..0.99f) wv?.stopLoading() else wv?.reload()
+                                }
+                            },
+                            size = 34.dp
+                        ) {
+                            Icon(
+                                imageVector = if (loadProgress in 0.01f..0.99f) Icons.Rounded.Close else Icons.Rounded.Refresh,
+                                contentDescription = stringResource(R.string.action_refresh),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        if (dualScreenActive && !spanMode) {
+                            TactileIconButton(
+                                onClick = {
+                                    dismissMenu()
+                                    secondaryUrl = activeTab.url
+                                    presentation?.loadUrl(activeTab.url)
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_sent_to_bottom),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                size = 34.dp
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_download_bottom),
+                                    contentDescription = stringResource(R.string.action_send_to_secondary),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        Surface(
+                            onClick = {
+                                dismissMenu()
+                                activePanel = BrowserPanel.TABS
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.action_tabs_count, tabs.size),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = TextStyle(fontFeatureSettings = "tnum")
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BasicTextField(
+                            value = menuUrlInput,
+                            onValueChange = { menuUrlInput = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onGo = {
+                                    dismissMenu()
+                                    navigateActiveTab(menuUrlInput)
+                                }
+                            ),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { inner ->
+                                if (menuUrlInput.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.url_placeholder),
+                                        color = Color(0xFF8A92A6),
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                        if (menuUrlInput.isNotEmpty()) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = Color(0xFF8A92A6),
+                                modifier = Modifier
+                                    .size(15.dp)
+                                    .clickable { menuUrlInput = "" }
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.action_go),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    dismissMenu()
+                                    navigateActiveTab(menuUrlInput)
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_hide_top_bar)) },
+                    leadingIcon = { Icon(Icons.Rounded.Fullscreen, contentDescription = null) },
+                    trailingIcon = {
+                        if (hideTopBar) {
+                            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        hideTopBar = !hideTopBar
+                        prefs.hideTopBar = hideTopBar
+                    }
+                )
+                HorizontalDivider()
                 DropdownMenuItem(
                     text = {
                         Text(
