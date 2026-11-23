@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -60,6 +61,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -271,10 +273,17 @@ fun FloatingMenuButton(
                         )
                     }
                 }
+                val openAbove = (offsetY + btnSizePx / 2f) > (parentHeight / 2f)
+                val maxMenuHeight = with(density) {
+                    val available = if (openAbove) offsetY - marginPx else parentHeight - (offsetY + btnSizePx) - marginPx
+                    available.coerceAtLeast(btnSizePx * 3f).toDp()
+                }
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
-                    containerColor = Color(0xFF1E222B)
+                    offset = if (openAbove) DpOffset(0.dp, (-54).dp) else DpOffset(0.dp, 8.dp),
+                    containerColor = Color(0xFF1E222B),
+                    modifier = Modifier.heightIn(max = maxMenuHeight)
                 ) {
                     menuContent { expanded = false }
                 }
