@@ -6,8 +6,8 @@
     <group
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="0.70"
-        android:scaleY="0.70">
+        android:scaleX="1.05"
+        android:scaleY="1.05">
         <!-- Shoulder triggers (L1/L2 & R1/R2) -->
         <path
             android:fillColor="#4A5568"
