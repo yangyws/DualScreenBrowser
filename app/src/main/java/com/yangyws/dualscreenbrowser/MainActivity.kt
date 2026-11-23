@@ -1108,8 +1108,7 @@ private fun DualScreenBrowserApp(
                         R.string.gamepad_key_x to R.string.gamepad_desc_x,
                         R.string.gamepad_key_y to R.string.gamepad_desc_y,
                         R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                        R.string.gamepad_key_start to R.string.gamepad_desc_start,
-                        R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                        R.string.gamepad_key_start to R.string.gamepad_desc_start
                     )
                     val rainbowChipColors = listOf(
                         Color(ThorTheme.RAINBOW_RED),
@@ -2047,8 +2046,7 @@ private fun DualScreenBrowserApp(
                     R.string.gamepad_key_x to R.string.gamepad_desc_x,
                     R.string.gamepad_key_y to R.string.gamepad_desc_y,
                     R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                    R.string.gamepad_key_start to R.string.gamepad_desc_start,
-                    R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                    R.string.gamepad_key_start to R.string.gamepad_desc_start
                 )
                 val rainbowChipColors = listOf(
                     Color(ThorTheme.RAINBOW_RED),

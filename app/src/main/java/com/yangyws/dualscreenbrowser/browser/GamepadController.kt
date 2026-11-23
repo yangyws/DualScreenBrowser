@@ -38,36 +38,17 @@ object GamepadController {
     ): Boolean {
         if (!enabled) return false
 
-        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> {
-                    if (event.repeatCount == 0) {
-                        isStartHeld = true
-                        startChordUsed = false
-                    }
-                    return true
-                }
-                KeyEvent.ACTION_UP -> {
-                    val shouldToggle = isStartHeld && !startChordUsed
-                    isStartHeld = false
-                    startChordUsed = false
-                    if (shouldToggle) {
-                        actions.toggleSpanMode()
-                    }
-                    return true
-                }
-            }
-        }
-
         if (event.action != KeyEvent.ACTION_DOWN) return false
 
         return when (event.keyCode) {
+            KeyEvent.KEYCODE_BUTTON_START -> {
+                if (event.repeatCount == 0) {
+                    actions.toggleSpanMode()
+                }
+                true
+            }
             KeyEvent.KEYCODE_DPAD_UP -> {
-                if (isStartHeld) {
-                    startChordUsed = true
-                    actions.setSpanSource(SpanSource.TOP)
-                    true
-                } else if (isEditingText) {
+                if (isEditingText) {
                     false
                 } else {
                     actions.scrollActive(-SCROLL_STEP_PX)
@@ -75,11 +56,7 @@ object GamepadController {
                 }
             }
             KeyEvent.KEYCODE_DPAD_DOWN -> {
-                if (isStartHeld) {
-                    startChordUsed = true
-                    actions.setSpanSource(SpanSource.BOTTOM)
-                    true
-                } else if (isEditingText) {
+                if (isEditingText) {
                     false
                 } else {
                     actions.scrollActive(SCROLL_STEP_PX)

@@ -100,7 +100,7 @@
     <string name="tutorial_step2_title">Floating Multi-Touch Trackpad</string>
     <string name="tutorial_step2_desc">In Span Mode: 1-finger moves cursor or taps, 2-finger scrolls, pinches, or taps Back, 3-finger reloads. Drag bottom-left to resize and bottom-right to move.</string>
     <string name="tutorial_step3_title">AYN Thor Gamepad Controls</string>
-    <string name="tutorial_step3_desc">D-Pad/Sticks scroll, L1/R1 switch tabs, L2/R2 go Back/Forward, Y reloads, Start toggles Span vs Independent mode, and Start + D-Pad Up/Down picks the span source.</string>
+    <string name="tutorial_step3_desc">D-Pad/Sticks scroll, L1/R1 switch tabs, L2/R2 go Back/Forward, Y reloads, and Start toggles Span vs Independent mode.</string>
     <string name="tutorial_step4_title">Fullscreen &amp; Floating Menus</string>
     <string name="tutorial_step4_desc">Browse in status-bar-free fullscreen. Tap the draggable floating button to enter URLs, pick Thor shell themes, take screenshots, or switch screens.</string>
     <string name="gamepad_guide_title">Gamepad Controls</string>
