@@ -63,6 +63,9 @@ class SecondaryBrowserPresentation(
     private val isBookmarkedProvider: (String) -> Boolean,
     private val onToggleBookmark: (url: String, title: String) -> Unit,
     private val onReopenTop: () -> Unit,
+    private val onToggleSpanMode: () -> Unit,
+    private val onForwardKeyEvent: (KeyEvent) -> Boolean,
+    private val onForwardMotionEvent: (MotionEvent) -> Boolean,
     private val onUrlChanged: (String, String) -> Unit,
     private val onRequestClose: () -> Unit
 ) : Presentation(outerContext, display) {
@@ -940,6 +943,7 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
+        addMenuItem(context.getString(R.string.action_span_mode)) { onToggleSpanMode() }
         addMenuItem(context.getString(R.string.action_reopen_top)) { onReopenTop() }
 
         popup = PopupWindow(panel, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
@@ -1083,6 +1087,20 @@ class SecondaryBrowserPresentation(
             wv.reload()
         }
         return desktopMode
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (bottomMenuPopup?.isShowing != true && urlInput?.hasFocus() != true && onForwardKeyEvent(event)) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (bottomMenuPopup?.isShowing != true && onForwardMotionEvent(event)) {
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onDetachedFromWindow() {

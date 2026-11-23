@@ -218,7 +218,9 @@ class MainActivity : ComponentActivity() {
                         gamepadActions = actions
                         gamepadEnabledFlag = enabled
                         isEditingTextFlag = editing
-                    }
+                    },
+                    onForwardKeyEvent = { ev -> dispatchKeyEvent(ev) },
+                    onForwardMotionEvent = { ev -> onGenericMotionEvent(ev) }
                 )
             }
         }
@@ -287,7 +289,9 @@ private fun DualScreenBrowserApp(
     onThemeSelected: (ThorTheme) -> Unit,
     onCustomHueChanged: (Float) -> Unit,
     onConsumeExternalUrl: () -> Unit,
-    onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit
+    onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit,
+    onForwardKeyEvent: (KeyEvent) -> Boolean,
+    onForwardMotionEvent: (MotionEvent) -> Boolean
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -467,6 +471,14 @@ private fun DualScreenBrowserApp(
                     }
                     context.startActivity(reopenIntent)
                 },
+                onToggleSpanMode = {
+                    spanMode = !spanMode
+                    presentation?.updatePresentationMode(spanMode && dualScreenActive && topScreenActive)
+                    val msgRes = if (spanMode) R.string.toast_span_on else R.string.toast_span_off
+                    Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                },
+                onForwardKeyEvent = onForwardKeyEvent,
+                onForwardMotionEvent = onForwardMotionEvent,
                 onUrlChanged = { url, title ->
                     secondaryUrl = url
                     val entry = HistoryItem(title = title.ifBlank { url }, url = url)
