@@ -459,16 +459,18 @@ class SecondaryBrowserPresentation(
             }
         )
 
+        contentStack.addView(
+            createTouchpadArea(contentStack),
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(116)).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                setMargins(dp(14), dp(8), dp(14), dp(10))
+            }
+        )
+
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
         root.addView(contentStack, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        root.addView(
-            createTouchpadArea(root),
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(112)).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-        )
         setContentView(root)
         window?.let { win ->
             win.setDecorFitsSystemWindows(false)
@@ -483,7 +485,7 @@ class SecondaryBrowserPresentation(
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun createTouchpadArea(rootView: ViewGroup): LinearLayout {
+    private fun createTouchpadArea(parentStack: FrameLayout): LinearLayout {
         var lastAvgX = 0f
         var lastAvgY = 0f
         var lastSpanDist = 0f
@@ -510,36 +512,73 @@ class SecondaryBrowserPresentation(
             return hypot(event.getX(1) - event.getX(0), event.getY(1) - event.getY(0))
         }
 
+        val padBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(14).toFloat()
+            setColor(Color.argb(228, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)))
+            setStroke(dp(1), Color.parseColor("#38FFFFFF"))
+        }
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#14171E"))
+            background = padBg
+            elevation = dp(8).toFloat()
+            clipToOutline = true
             visibility = if (touchpadVisibleProvider()) View.VISIBLE else View.GONE
         }
         touchpadContainer = container
 
-        val topDivider = View(context).apply {
-            setBackgroundColor(Color.parseColor("#24FFFFFF"))
-        }
         val padArea = FrameLayout(context)
         val hintLabel = TextView(context).apply {
             text = context.getString(R.string.touchpad_hint)
-            setTextColor(Color.parseColor("#6E7687"))
+            setTextColor(Color.parseColor("#8A92A6"))
             textSize = 11f
             gravity = Gravity.CENTER
             setPadding(dp(36), 0, dp(36), 0)
         }
         padArea.addView(hintLabel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        fun makeCornerResizeHandle(isLeft: Boolean): ImageView {
+        fun makeMoveHandle(): ImageView {
+            var downRawX = 0f
+            var downRawY = 0f
+            var startX = 0f
+            var startY = 0f
+            return ImageView(context).apply {
+                setImageResource(R.drawable.ic_move_handle)
+                setPadding(dp(6), dp(6), dp(6), dp(6))
+                alpha = 0.88f
+                setOnTouchListener { _, ev ->
+                    when (ev.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downRawX = ev.rawX
+                            downRawY = ev.rawY
+                            startX = container.x
+                            startY = container.y
+                            true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val margin = dp(6).toFloat()
+                            val maxX = (parentStack.width - container.width - margin).coerceAtLeast(margin)
+                            val maxY = (parentStack.height - container.height - margin).coerceAtLeast(margin)
+                            container.x = (startX + (ev.rawX - downRawX)).coerceIn(margin, maxX)
+                            container.y = (startY + (ev.rawY - downRawY)).coerceIn(margin, maxY)
+                            true
+                        }
+                        else -> true
+                    }
+                }
+            }
+        }
+
+        fun makeResizeHandle(): ImageView {
             var downRawX = 0f
             var downRawY = 0f
             var startW = 0
             var startH = 0
             return ImageView(context).apply {
                 setImageResource(R.drawable.ic_drag_corner)
-                scaleX = if (isLeft) 1f else -1f
+                scaleX = -1f
                 setPadding(dp(6), dp(6), dp(6), dp(6))
-                alpha = 0.85f
+                alpha = 0.88f
                 setOnTouchListener { _, ev ->
                     when (ev.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
@@ -552,16 +591,19 @@ class SecondaryBrowserPresentation(
                         MotionEvent.ACTION_MOVE -> {
                             val dx = ev.rawX - downRawX
                             val dy = ev.rawY - downRawY
-                            val maxH = (rootView.height - dp(120)).coerceAtLeast(dp(160))
-                            val maxW = rootView.width.coerceAtLeast(dp(260))
+                            val maxH = (parentStack.height - dp(16)).coerceAtLeast(dp(160))
+                            val maxW = (parentStack.width - dp(16)).coerceAtLeast(dp(240))
                             val newH = (startH - dy.toInt()).coerceIn(dp(72), maxH)
-                            val widthDelta = if (isLeft) -dx.toInt() * 2 else dx.toInt() * 2
-                            val newW = (startW + widthDelta).coerceIn(dp(180), maxW)
-                            val lp = container.layoutParams as LinearLayout.LayoutParams
+                            val newW = (startW + dx.toInt()).coerceIn(dp(180), maxW)
+                            val lp = container.layoutParams as FrameLayout.LayoutParams
                             lp.height = newH
-                            lp.width = if (newW >= maxW - dp(8)) ViewGroup.LayoutParams.MATCH_PARENT else newW
-                            lp.gravity = Gravity.CENTER_HORIZONTAL
+                            lp.width = newW
                             container.layoutParams = lp
+                            val margin = dp(6).toFloat()
+                            val maxX = (parentStack.width - newW - margin).coerceAtLeast(margin)
+                            val maxY = (parentStack.height - newH - margin).coerceAtLeast(margin)
+                            container.x = container.x.coerceIn(margin, maxX)
+                            container.y = container.y.coerceIn(margin, maxY)
                             container.requestLayout()
                             true
                         }
@@ -573,22 +615,21 @@ class SecondaryBrowserPresentation(
 
         val handleSize = dp(30)
         padArea.addView(
-            makeCornerResizeHandle(isLeft = true),
+            makeMoveHandle(),
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
                 gravity = Gravity.TOP or Gravity.START
-                setMargins(dp(2), dp(2), 0, 0)
+                setMargins(dp(4), dp(4), 0, 0)
             }
         )
         padArea.addView(
-            makeCornerResizeHandle(isLeft = false),
+            makeResizeHandle(),
             FrameLayout.LayoutParams(handleSize, handleSize).apply {
                 gravity = Gravity.TOP or Gravity.END
-                setMargins(0, dp(2), dp(2), 0)
+                setMargins(0, dp(4), dp(4), 0)
             }
         )
 
-        container.addView(topDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
-        container.addView(padArea, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        container.addView(padArea, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         padArea.setOnTouchListener { _, event ->
             when (event.actionMasked) {
@@ -700,7 +741,9 @@ class SecondaryBrowserPresentation(
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
-            touchpadContainer?.setBackgroundColor(theme.surfaceColor)
+            (touchpadContainer?.background as? GradientDrawable)?.setColor(
+                Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor))
+            )
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
             lockIcon?.setColorFilter(theme.primaryColor)
             progressBar?.progressTintList = ColorStateList.valueOf(theme.primaryColor)

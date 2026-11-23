@@ -514,13 +514,12 @@ private fun DualScreenBrowserApp(
             val secMetrics = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             secDisplay.getRealMetrics(secMetrics)
-            val padPx = if (bottomTouchpad) (112 * secMetrics.density).toInt() else 0
             val secAspect = if (secMetrics.widthPixels > 0 && secMetrics.heightPixels > 0) {
                 val minDim = minOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
                 val maxDim = maxOf(secMetrics.widthPixels, secMetrics.heightPixels).toFloat()
                 val rawH = if (topW >= topH) minDim else maxDim
                 val rawW = if (topW >= topH) maxDim else minDim
-                ((rawH - padPx).coerceAtLeast(100f)) / rawW
+                rawH / rawW
             } else {
                 7f / 8f
             }
