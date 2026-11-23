@@ -54,7 +54,6 @@ class SecondaryBrowserPresentation(
     private val adBlockEnabledProvider: () -> Boolean,
     private val userScriptsProvider: () -> Triple<Boolean, Boolean, List<UserScript>>,
     private val spanModeProvider: () -> Boolean,
-    private val hideBarProvider: () -> Boolean,
     private val touchpadVisibleProvider: () -> Boolean,
     private val themeProvider: () -> ThorTheme,
     private val bottomColorProvider: () -> Pair<Int, Int>,
@@ -110,7 +109,7 @@ class SecondaryBrowserPresentation(
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(initialTheme.surfaceColor)
             setPadding(dp(8), dp(6), dp(8), dp(6))
-            visibility = if (!spanModeProvider() && !hideBarProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            visibility = View.GONE
         }
         topBarView = topBar
 
@@ -302,7 +301,7 @@ class SecondaryBrowserPresentation(
 
         val divider = android.view.View(context).apply {
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
-            visibility = if (!spanModeProvider() && !hideBarProvider()) android.view.View.VISIBLE else android.view.View.GONE
+            visibility = View.GONE
         }
         dividerView = divider
 
@@ -976,7 +975,6 @@ class SecondaryBrowserPresentation(
 
     fun updatePresentationMode(spanActive: Boolean) {
         val floatVis = if (!spanActive) View.VISIBLE else View.GONE
-        val barVis = if (!spanActive && !hideBarProvider()) View.VISIBLE else View.GONE
         val spanVis = if (spanActive) View.VISIBLE else View.GONE
         val webVis = if (spanActive) View.GONE else View.VISIBLE
         topBarView?.post {
@@ -984,8 +982,8 @@ class SecondaryBrowserPresentation(
                 bottomMenuPopup?.dismiss()
                 bottomMenuPopup = null
             }
-            topBarView?.visibility = barVis
-            dividerView?.visibility = barVis
+            topBarView?.visibility = View.GONE
+            dividerView?.visibility = View.GONE
             floatingMenuBtn?.visibility = floatVis
             spanViewport?.visibility = spanVis
             webView?.visibility = webVis

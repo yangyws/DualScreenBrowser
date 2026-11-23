@@ -308,7 +308,6 @@ private fun DualScreenBrowserApp(
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
     var bottomTouchpad by remember { mutableStateOf(prefs.bottomTouchpad) }
-    var hideTopBar by remember { mutableStateOf(prefs.hideTopBar) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     val spanEngine = remember { SpanEngine() }
@@ -414,7 +413,6 @@ private fun DualScreenBrowserApp(
                 adBlockEnabledProvider = { adBlockEnabled },
                 userScriptsProvider = { Triple(forceDarkWeb, enableCopyScript, userScripts) },
                 spanModeProvider = { spanMode },
-                hideBarProvider = { hideTopBar },
                 touchpadVisibleProvider = { spanMode && bottomTouchpad },
                 themeProvider = { currentTheme },
                 bottomColorProvider = { bottomBrightness to bottomWarmth },
@@ -472,7 +470,7 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, dualScreenActive, hideTopBar, presentation, activeTabId) {
+    LaunchedEffect(spanMode, dualScreenActive, presentation, activeTabId) {
         val spanActive = spanMode && dualScreenActive
         presentation?.updatePresentationMode(spanActive)
         webViews[activeTabId]?.let { wv ->
@@ -759,202 +757,6 @@ private fun DualScreenBrowserApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top Address & Quick Actions Bar (hidden in pure fullscreen mode)
-        if (!hideTopBar) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-            TactileIconButton(
-                onClick = {
-                    if (spanMode && spanEngine.isRunning()) {
-                        spanEngine.goBack()
-                    } else {
-                        webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
-                    }
-                },
-                enabled = canGoBack
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(20.dp))
-            }
-            TactileIconButton(
-                onClick = {
-                    if (spanMode && spanEngine.isRunning()) {
-                        spanEngine.goForward()
-                    } else {
-                        webViews[activeTabId]?.let { if (it.canGoForward()) it.goForward() }
-                    }
-                },
-                enabled = canGoForward
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = stringResource(R.string.action_forward), modifier = Modifier.size(20.dp))
-            }
-            TactileIconButton(
-                onClick = {
-                    if (spanMode && spanEngine.isRunning()) {
-                        spanEngine.reload()
-                    } else {
-                        val wv = webViews[activeTabId]
-                        if (loadProgress in 0.01f..0.99f) wv?.stopLoading() else wv?.reload()
-                    }
-                }
-            ) {
-                Icon(
-                    imageVector = if (loadProgress in 0.01f..0.99f) Icons.Rounded.Close else Icons.Rounded.Refresh,
-                    contentDescription = stringResource(R.string.action_refresh),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Address input box
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 4.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        if (activeTab.isIncognito) Color(0xFF2B2139) else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (isEditingText) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
-                        } else {
-                            Color.White.copy(alpha = 0.08f)
-                        },
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (activeTab.isIncognito) {
-                        Icon(
-                            Icons.Rounded.VisibilityOff,
-                            contentDescription = stringResource(R.string.action_incognito),
-                            tint = Color(0xFFCE93D8),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                    } else if (!isEditingText && UrlResolver.isHttps(addressText)) {
-                        Icon(
-                            Icons.Rounded.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(Modifier.width(5.dp))
-                    }
-
-                    if (!isEditingText && addressText.isNotBlank()) {
-                        Text(
-                            text = UrlResolver.displayHost(addressText),
-                            color = Color.White,
-                            fontSize = 13.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    isEditingText = true
-                                    addressFocusRequester.requestFocus()
-                                }
-                        )
-                    } else {
-                        BasicTextField(
-                            value = addressText,
-                            onValueChange = { addressText = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = Color.White, fontSize = 13.5.sp),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Uri,
-                                imeAction = ImeAction.Go
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onGo = { navigateActiveTab(addressText) }
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .focusRequester(addressFocusRequester)
-                                .onFocusChanged { isEditingText = it.isFocused },
-                            decorationBox = { inner ->
-                                if (addressText.isEmpty()) {
-                                    Text(
-                                        text = stringResource(R.string.url_placeholder),
-                                        color = Color(0xFF8A92A6),
-                                        fontSize = 13.5.sp
-                                    )
-                                }
-                                inner()
-                            }
-                        )
-                        if (isEditingText && addressText.isNotEmpty()) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.action_close),
-                                tint = Color(0xFF8A92A6),
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable { addressText = "" }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (dualScreenActive && !spanMode) {
-                TactileIconButton(
-                    onClick = {
-                        secondaryUrl = activeTab.url
-                        presentation?.loadUrl(activeTab.url)
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_sent_to_bottom),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_download_bottom),
-                        contentDescription = stringResource(R.string.action_send_to_secondary),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Tabs count pill
-            Surface(
-                onClick = { activePanel = BrowserPanel.TABS },
-                shape = RoundedCornerShape(9.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Rounded.Tab, contentDescription = stringResource(R.string.action_tabs), modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.action_tabs_count, tabs.size),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        style = TextStyle(fontFeatureSettings = "tnum")
-                    )
-                }
-            }
-            }
-        }
-
         AnimatedVisibility(
             visible = findBarVisible,
             enter = expandVertically(tween(180, easing = StrongEaseOut)) + fadeIn(tween(140)),
@@ -1317,20 +1119,6 @@ private fun DualScreenBrowserApp(
                         )
                     }
                 }
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_hide_top_bar)) },
-                    leadingIcon = { Icon(Icons.Rounded.Fullscreen, contentDescription = null) },
-                    trailingIcon = {
-                        if (hideTopBar) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    onClick = {
-                        hideTopBar = !hideTopBar
-                        prefs.hideTopBar = hideTopBar
-                    }
-                )
                 HorizontalDivider()
                 DropdownMenuItem(
                     text = {
