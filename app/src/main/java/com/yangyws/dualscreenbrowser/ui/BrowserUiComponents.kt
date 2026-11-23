@@ -123,7 +123,7 @@ fun TactileIconButton(
         interactionSource = interactionSource,
         shape = RoundedCornerShape(10.dp),
         color = containerColor,
-        contentColor = Color.White,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = border,
         modifier = modifier
             .size(size)
