@@ -407,10 +407,11 @@ class SecondaryBrowserPresentation(
 
         val floatSize = dp(46)
         val floatMargin = dp(14)
+        val initialAccent = activeTheme.effectivePrimary(activeCustomPrimary)
         val floatBg = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(Color.parseColor("#D9161B24"))
-            setStroke(dp(1), Color.parseColor("#38FFFFFF"))
+            setColor(Color.argb(224, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)))
+            setStroke(dp(1), Color.argb(160, Color.red(initialAccent), Color.green(initialAccent), Color.blue(initialAccent)))
         }
         lateinit var btnFloatMenu: ImageButton
         btnFloatMenu = ImageButton(context).apply {
@@ -759,15 +760,11 @@ class SecondaryBrowserPresentation(
         activeCustomPrimary = customPrimaryColor
         val accent = theme.effectivePrimary(customPrimaryColor)
         val fgColor = if (theme.isLight) Color.parseColor("#111827") else Color.WHITE
-        val borderColor = if (theme.isLight) Color.parseColor("#28000000") else Color.parseColor("#38FFFFFF")
         val padBorderColor = Color.argb(195, Color.red(accent), Color.green(accent), Color.blue(accent))
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
-            (floatingMenuBtn?.background as? GradientDrawable)?.apply {
-                setColor(Color.argb(224, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
-                setStroke(dp(1), borderColor)
-            }
+            applyFloatingButtonStyle(expanded = bottomMenuPopup?.isShowing == true)
             floatingMenuBtn?.setColorFilter(fgColor)
             (touchpadContainer?.background as? GradientDrawable)?.apply {
                 setColor(Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
@@ -828,7 +825,26 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
+    private fun applyFloatingButtonStyle(expanded: Boolean) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fillColor = if (expanded) {
+            Color.argb(72, Color.red(accent), Color.green(accent), Color.blue(accent))
+        } else {
+            Color.argb(224, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor))
+        }
+        val strokeColor = if (expanded) {
+            accent
+        } else {
+            Color.argb(165, Color.red(accent), Color.green(accent), Color.blue(accent))
+        }
+        (floatingMenuBtn?.background as? GradientDrawable)?.apply {
+            setColor(fillColor)
+            setStroke(if (expanded) dp(2) else dp(1), strokeColor)
+        }
+    }
+
     private fun showBottomFloatingMenu(anchor: View) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
         val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
         val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
         val borderColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#24FFFFFF")
@@ -836,7 +852,7 @@ class SecondaryBrowserPresentation(
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(12).toFloat()
             setColor(activeTheme.surfaceColor)
-            setStroke(dp(1), borderColor)
+            setStroke(dp(2), Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent)))
         }
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -912,7 +928,7 @@ class SecondaryBrowserPresentation(
         }
         val goBtn = TextView(context).apply {
             text = context.getString(R.string.action_go)
-            setTextColor(activeTheme.primaryColor)
+            setTextColor(accent)
             textSize = 12.5f
             setPadding(dp(8), dp(2), dp(4), dp(2))
             setOnClickListener {
@@ -972,7 +988,9 @@ class SecondaryBrowserPresentation(
         popup = PopupWindow(panel, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = dp(10).toFloat()
+            setOnDismissListener { applyFloatingButtonStyle(expanded = false) }
         }
+        applyFloatingButtonStyle(expanded = true)
         bottomMenuPopup?.dismiss()
         bottomMenuPopup = popup
         panel.measure(
