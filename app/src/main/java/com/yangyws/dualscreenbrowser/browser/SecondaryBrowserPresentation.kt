@@ -10,6 +10,10 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.RectF
+import android.graphics.SweepGradient
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
@@ -522,13 +526,13 @@ class SecondaryBrowserPresentation(
         }
 
         val padAccent = activeTheme.effectivePrimary(activeCustomPrimary)
-        val padBorderColor = Color.argb(195, Color.red(padAccent), Color.green(padAccent), Color.blue(padAccent))
-        val padBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(14).toFloat()
-            setColor(Color.argb(228, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)))
-            setStroke(dp(2), padBorderColor)
-        }
+        val padBg = createThemedCardDrawable(
+            fillColor = Color.argb(228, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)),
+            cornerRadiusPx = dp(14).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(195, Color.red(padAccent), Color.green(padAccent), Color.blue(padAccent))
+        )
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = padBg
@@ -761,15 +765,19 @@ class SecondaryBrowserPresentation(
         val accent = theme.effectivePrimary(customPrimaryColor)
         val fgColor = if (theme.isLight) Color.parseColor("#111827") else Color.WHITE
         val padBorderColor = Color.argb(195, Color.red(accent), Color.green(accent), Color.blue(accent))
+        val padBg = createThemedCardDrawable(
+            fillColor = Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)),
+            cornerRadiusPx = dp(14).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = theme,
+            accentColor = padBorderColor
+        )
         rootLayout?.post {
             rootLayout?.setBackgroundColor(theme.backgroundColor)
             topBarView?.setBackgroundColor(theme.surfaceColor)
             applyFloatingButtonStyle(expanded = bottomMenuPopup?.isShowing == true)
             floatingMenuBtn?.setColorFilter(fgColor)
-            (touchpadContainer?.background as? GradientDrawable)?.apply {
-                setColor(Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)))
-                setStroke(dp(2), padBorderColor)
-            }
+            touchpadContainer?.background = padBg
             touchpadMoveHandle?.setColorFilter(accent)
             touchpadResizeHandle?.setColorFilter(accent)
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
@@ -825,6 +833,74 @@ class SecondaryBrowserPresentation(
         webView?.scrollBy(0, dy)
     }
 
+    private fun createThemedCardDrawable(
+        fillColor: Int,
+        cornerRadiusPx: Float,
+        strokeWidthPx: Float,
+        theme: ThorTheme,
+        accentColor: Int
+    ): Drawable {
+        if (theme != ThorTheme.RAINBOW) {
+            return GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = cornerRadiusPx
+                setColor(fillColor)
+                setStroke(strokeWidthPx.toInt().coerceAtLeast(1), accentColor)
+            }
+        }
+        return object : Drawable() {
+            private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = fillColor
+            }
+            private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = strokeWidthPx
+            }
+            private val rect = RectF()
+            private var lastW = -1
+            private var lastH = -1
+
+            override fun draw(canvas: Canvas) {
+                val b = bounds
+                if (b.width() <= 0 || b.height() <= 0) return
+                val halfStroke = strokeWidthPx / 2f
+                rect.set(b.left + halfStroke, b.top + halfStroke, b.right - halfStroke, b.bottom - halfStroke)
+                canvas.drawRoundRect(rect, cornerRadiusPx, cornerRadiusPx, fillPaint)
+                if (lastW != b.width() || lastH != b.height()) {
+                    lastW = b.width()
+                    lastH = b.height()
+                    strokePaint.shader = SweepGradient(
+                        b.exactCenterX(),
+                        b.exactCenterY(),
+                        intArrayOf(
+                            Color.parseColor("#FFEAB308"), // Right: Yellow
+                            Color.parseColor("#FF22C55E"), // Bottom: Green
+                            Color.parseColor("#FF3B82F6"), // Left: Blue
+                            Color.parseColor("#FFEF4444"), // Top: Red
+                            Color.parseColor("#FFEAB308")
+                        ),
+                        floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+                    )
+                }
+                canvas.drawRoundRect(rect, cornerRadiusPx, cornerRadiusPx, strokePaint)
+            }
+
+            override fun setAlpha(alpha: Int) {
+                fillPaint.alpha = alpha
+                strokePaint.alpha = alpha
+            }
+
+            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+                fillPaint.colorFilter = colorFilter
+                strokePaint.colorFilter = colorFilter
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+        }
+    }
+
     private fun applyFloatingButtonStyle(expanded: Boolean) {
         val accent = activeTheme.effectivePrimary(activeCustomPrimary)
         val fillColor = if (expanded) {
@@ -837,10 +913,13 @@ class SecondaryBrowserPresentation(
         } else {
             Color.argb(165, Color.red(accent), Color.green(accent), Color.blue(accent))
         }
-        (floatingMenuBtn?.background as? GradientDrawable)?.apply {
-            setColor(fillColor)
-            setStroke(if (expanded) dp(2) else dp(1), strokeColor)
-        }
+        floatingMenuBtn?.background = createThemedCardDrawable(
+            fillColor = fillColor,
+            cornerRadiusPx = dp(23).toFloat(),
+            strokeWidthPx = if (expanded || activeTheme == ThorTheme.RAINBOW) dp(2).toFloat() else dp(1).toFloat(),
+            theme = activeTheme,
+            accentColor = strokeColor
+        )
     }
 
     private fun showBottomFloatingMenu(anchor: View) {
@@ -848,12 +927,13 @@ class SecondaryBrowserPresentation(
         val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
         val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
         val borderColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#24FFFFFF")
-        val panelBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(12).toFloat()
-            setColor(activeTheme.surfaceColor)
-            setStroke(dp(2), Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent)))
-        }
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = panelBg
