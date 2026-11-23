@@ -191,7 +191,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = remember { BrowserPrefs(this) }
             var currentTheme by remember { mutableStateOf(prefs.thorTheme) }
-            LaunchedEffect(Unit) { syncLauncherIcon(currentTheme) }
             var customHue by remember { mutableFloatStateOf(prefs.customThemeHue) }
             val customPrimaryInt = android.graphics.Color.HSVToColor(floatArrayOf(customHue, 0.65f, 0.92f))
             val effectivePrimary = Color(currentTheme.effectivePrimary(customPrimaryInt))
@@ -239,7 +238,6 @@ class MainActivity : ComponentActivity() {
                     onThemeSelected = { selected ->
                         currentTheme = selected
                         prefs.thorTheme = selected
-                        syncLauncherIcon(selected)
                     },
                     onCustomHueChanged = { hue ->
                         customHue = hue
@@ -257,34 +255,6 @@ class MainActivity : ComponentActivity() {
             }
         }
         window.decorView.post { applyImmersiveFullscreen() }
-    }
-
-    private fun syncLauncherIcon(theme: ThorTheme) {
-        val pm = packageManager
-        val pkg = packageName
-        val aliasMap = mapOf(
-            ThorTheme.BLACK to "$pkg.MainActivityBlack",
-            ThorTheme.WHITE to "$pkg.MainActivityWhite",
-            ThorTheme.RAINBOW to "$pkg.MainActivityRainbow",
-            ThorTheme.CLEAR_PURPLE to "$pkg.MainActivityClearPurple",
-            ThorTheme.CUSTOM to "$pkg.MainActivityCustom"
-        )
-        val targetAlias = aliasMap[theme] ?: "$pkg.MainActivityBlack"
-        aliasMap.values.forEach { aliasClass ->
-            val component = android.content.ComponentName(pkg, aliasClass)
-            val desiredState = if (aliasClass == targetAlias) {
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            }
-            if (pm.getComponentEnabledSetting(component) != desiredState) {
-                pm.setComponentEnabledSetting(
-                    component,
-                    desiredState,
-                    android.content.pm.PackageManager.DONT_KILL_APP
-                )
-            }
-        }
     }
 
     override fun onStart() {
