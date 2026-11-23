@@ -284,19 +284,64 @@ internal fun ThorHandheldDiagram(
             size = Size(topScrW, topScrH),
             cornerRadius = screenCorner
         )
-        // Top browser chrome bar highlight (Step 3)
-        drawRoundRect(
-            color = if (highlightStep == 3) accent else accent.copy(alpha = 0.35f),
-            topLeft = Offset(topScrLeft, topScrTop),
-            size = Size(topScrW, topScrH * 0.16f),
-            cornerRadius = screenCorner
-        )
-        // Simulated page lines inside top screen
+        // Simulated fullscreen page lines inside top screen (no top chrome bar)
         val lineColor = if (highlightStep == 0) accent.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.28f)
         val lineW = (w * 0.012f).coerceIn(1f, 4f)
-        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.42f), Offset(topScrLeft + topScrW * 0.72f, topScrTop + topScrH * 0.42f), strokeWidth = lineW)
-        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.62f), Offset(topScrLeft + topScrW * 0.54f, topScrTop + topScrH * 0.62f), strokeWidth = lineW)
-        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.82f), Offset(topScrLeft + topScrW * 0.80f, topScrTop + topScrH * 0.82f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.24f), Offset(topScrLeft + topScrW * 0.68f, topScrTop + topScrH * 0.24f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.46f), Offset(topScrLeft + topScrW * 0.52f, topScrTop + topScrH * 0.46f), strokeWidth = lineW)
+        drawLine(lineColor, Offset(topScrLeft + w * 0.04f, topScrTop + topScrH * 0.68f), Offset(topScrLeft + topScrW * 0.74f, topScrTop + topScrH * 0.68f), strokeWidth = lineW)
+
+        // Top screen floating menu button + expanded floating menu popup (Step 3)
+        val topBtnR = w * 0.032f
+        val topBtnCenter = Offset(topScrLeft + topScrW - topBtnR * 1.9f, topScrTop + topScrH - topBtnR * 1.9f)
+        drawCircle(
+            color = if (highlightStep == 3) accent else accent.copy(alpha = 0.35f),
+            radius = topBtnR,
+            center = topBtnCenter
+        )
+        drawCircle(
+            color = Color.White.copy(alpha = if (highlightStep == 3) 0.95f else 0.45f),
+            radius = topBtnR * 0.36f,
+            center = topBtnCenter
+        )
+        if (highlightStep == 3) {
+            val menuW = topScrW * 0.36f
+            val menuH = topScrH * 0.54f
+            val menuLeft = topBtnCenter.x + topBtnR - menuW
+            val menuTop = topBtnCenter.y - topBtnR - menuH - h * 0.012f
+            drawRoundRect(
+                color = Color(0xFF1E2430),
+                topLeft = Offset(menuLeft, menuTop),
+                size = Size(menuW, menuH),
+                cornerRadius = CornerRadius(w * 0.02f, w * 0.02f)
+            )
+            drawRoundRect(
+                color = accent,
+                topLeft = Offset(menuLeft, menuTop),
+                size = Size(menuW, menuH),
+                cornerRadius = CornerRadius(w * 0.02f, w * 0.02f),
+                style = Stroke(width = strokeW * 0.9f)
+            )
+            // Mini toolbar row + URL pill + menu rows inside floating popup
+            drawRoundRect(
+                color = accent.copy(alpha = 0.25f),
+                topLeft = Offset(menuLeft + menuW * 0.1f, menuTop + menuH * 0.14f),
+                size = Size(menuW * 0.8f, menuH * 0.18f),
+                cornerRadius = CornerRadius(3f, 3f)
+            )
+            drawLine(
+                Color.White.copy(alpha = 0.65f),
+                Offset(menuLeft + menuW * 0.12f, menuTop + menuH * 0.52f),
+                Offset(menuLeft + menuW * 0.72f, menuTop + menuH * 0.52f),
+                strokeWidth = lineW * 0.85f
+            )
+            drawLine(
+                Color.White.copy(alpha = 0.45f),
+                Offset(menuLeft + menuW * 0.12f, menuTop + menuH * 0.74f),
+                Offset(menuLeft + menuW * 0.62f, menuTop + menuH * 0.74f),
+                strokeWidth = lineW * 0.85f
+            )
+        }
 
         // Clamshell Hinge barrel
         val hingeTop = h * 0.478f
@@ -381,6 +426,19 @@ internal fun ThorHandheldDiagram(
                 style = Stroke(width = strokeW)
             )
         }
+        // Bottom screen floating menu button (Step 3)
+        val botBtnR = w * 0.028f
+        val botBtnCenter = Offset(botScrLeft + botScrW - botBtnR * 1.9f, botScrTop + botScrH - botBtnR * 1.9f)
+        drawCircle(
+            color = if (highlightStep == 3) accent else accent.copy(alpha = 0.35f),
+            radius = botBtnR,
+            center = botBtnCenter
+        )
+        drawCircle(
+            color = Color.White.copy(alpha = if (highlightStep == 3) 0.95f else 0.45f),
+            radius = botBtnR * 0.36f,
+            center = botBtnCenter
+        )
 
         // Left Controls: Analog Stick + D-Pad + Select
         val padHighlight = if (highlightStep == 2) accent else dimControl
