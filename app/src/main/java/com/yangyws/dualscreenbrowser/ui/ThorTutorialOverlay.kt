@@ -313,6 +313,22 @@ internal fun ThorHandheldDiagram(
         val deckTop = h * 0.515f
         val deckW = w * 0.90f
         val deckH = h * 0.455f
+        if (theme == ThorTheme.CLEAR_PURPLE) {
+            // Subtle internal PCB / battery silhouette visible through translucent Clear Purple shell
+            val innerTint = Color(0x55120A24)
+            drawRoundRect(
+                color = innerTint,
+                topLeft = Offset(deckLeft + w * 0.05f, deckTop + h * 0.06f),
+                size = Size(deckW * 0.22f, deckH * 0.72f),
+                cornerRadius = screenCorner
+            )
+            drawRoundRect(
+                color = innerTint,
+                topLeft = Offset(deckLeft + deckW * 0.73f, deckTop + h * 0.06f),
+                size = Size(deckW * 0.22f, deckH * 0.72f),
+                cornerRadius = screenCorner
+            )
+        }
         drawRoundRect(
             color = shellFill,
             topLeft = Offset(deckLeft, deckTop),

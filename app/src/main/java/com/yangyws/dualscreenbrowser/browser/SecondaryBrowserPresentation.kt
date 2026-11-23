@@ -527,8 +527,9 @@ class SecondaryBrowserPresentation(
         }
 
         val padAccent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val padAlpha = if (activeTheme == ThorTheme.CLEAR_PURPLE) 188 else 228
         val padBg = createThemedCardDrawable(
-            fillColor = Color.argb(228, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)),
+            fillColor = Color.argb(padAlpha, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)),
             cornerRadiusPx = dp(14).toFloat(),
             strokeWidthPx = dp(2).toFloat(),
             theme = activeTheme,
@@ -766,8 +767,9 @@ class SecondaryBrowserPresentation(
         val accent = theme.effectivePrimary(customPrimaryColor)
         val fgColor = if (theme.isLight) Color.parseColor("#111827") else Color.WHITE
         val padBorderColor = Color.argb(195, Color.red(accent), Color.green(accent), Color.blue(accent))
+        val padAlpha = if (theme == ThorTheme.CLEAR_PURPLE) 188 else 228
         val padBg = createThemedCardDrawable(
-            fillColor = Color.argb(228, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)),
+            fillColor = Color.argb(padAlpha, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)),
             cornerRadiusPx = dp(14).toFloat(),
             strokeWidthPx = dp(2).toFloat(),
             theme = theme,
