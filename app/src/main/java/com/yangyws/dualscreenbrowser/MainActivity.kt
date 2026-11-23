@@ -1415,25 +1415,25 @@ private fun DualScreenBrowserApp(
                             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                         }
                     )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (spanSource == SpanSource.TOP) {
-                                        R.string.action_span_source_top
-                                    } else {
-                                        R.string.action_span_source_bottom
-                                    }
-                                )
-                            )
-                        },
-                        leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
-                        onClick = {
-                            val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
-                            gamepadActions.setSpanSource(next)
-                        }
-                    )
                     if (spanMode) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (spanSource == SpanSource.TOP) {
+                                            R.string.action_span_source_top
+                                        } else {
+                                            R.string.action_span_source_bottom
+                                        }
+                                    )
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
+                            onClick = {
+                                val next = if (spanSource == SpanSource.TOP) SpanSource.BOTTOM else SpanSource.TOP
+                                gamepadActions.setSpanSource(next)
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_bottom_touchpad)) },
                             leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
