@@ -156,6 +156,7 @@ import com.yangyws.dualscreenbrowser.browser.UserScript
 import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
+import com.yangyws.dualscreenbrowser.ui.CompactMenuItem
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
 import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
 import com.yangyws.dualscreenbrowser.ui.HueColorSlider
@@ -1325,7 +1326,7 @@ private fun DualScreenBrowserApp(
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = {
                         Text(
                             stringResource(
@@ -1363,7 +1364,7 @@ private fun DualScreenBrowserApp(
                         }
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_bookmarks)) },
                     leadingIcon = {
                         Icon(
@@ -1377,7 +1378,7 @@ private fun DualScreenBrowserApp(
                         activePanel = BrowserPanel.BOOKMARKS
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_history)) },
                     leadingIcon = {
                         Icon(
@@ -1391,7 +1392,7 @@ private fun DualScreenBrowserApp(
                         activePanel = BrowserPanel.HISTORY
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_find_in_page)) },
                     leadingIcon = {
                         Icon(
@@ -1412,7 +1413,7 @@ private fun DualScreenBrowserApp(
                     }
                 )
                 if (spanMode && dualScreenActive) {
-                    DropdownMenuItem(
+                    CompactMenuItem(
                         text = { Text(stringResource(R.string.action_screenshot)) },
                         leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
                         onClick = {
@@ -1426,7 +1427,7 @@ private fun DualScreenBrowserApp(
                         }
                     )
                 } else {
-                    DropdownMenuItem(
+                    CompactMenuItem(
                         text = { Text(stringResource(R.string.action_screenshot_top)) },
                         leadingIcon = { Icon(Icons.Rounded.CameraAlt, contentDescription = null) },
                         onClick = {
@@ -1447,7 +1448,7 @@ private fun DualScreenBrowserApp(
                         }
                     )
                 }
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_long_screenshot)) },
                     leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
                     onClick = {
@@ -1478,7 +1479,7 @@ private fun DualScreenBrowserApp(
                         Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_desktop_mode)) },
                     leadingIcon = {
                         Icon(
@@ -1513,7 +1514,7 @@ private fun DualScreenBrowserApp(
                 )
                 if (dualScreenActive && secondaryDisplay != null) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    DropdownMenuItem(
+                    CompactMenuItem(
                         text = { Text(stringResource(R.string.action_span_mode)) },
                         leadingIcon = { Icon(Icons.Rounded.ViewStream, contentDescription = null) },
                         trailingIcon = {
@@ -1530,7 +1531,7 @@ private fun DualScreenBrowserApp(
                         }
                     )
                     if (spanMode) {
-                        DropdownMenuItem(
+                        CompactMenuItem(
                             text = {
                                 Text(
                                     stringResource(
@@ -1548,7 +1549,7 @@ private fun DualScreenBrowserApp(
                                 gamepadActions.setSpanSource(next)
                             }
                         )
-                        DropdownMenuItem(
+                        CompactMenuItem(
                             text = { Text(stringResource(R.string.action_bottom_touchpad)) },
                             leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
                             trailingIcon = {
@@ -1564,7 +1565,7 @@ private fun DualScreenBrowserApp(
                         )
                     }
                     if (!spanMode) {
-                        DropdownMenuItem(
+                        CompactMenuItem(
                             text = { Text(stringResource(R.string.action_swap_screens)) },
                             leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = null) },
                             onClick = {
@@ -1576,7 +1577,7 @@ private fun DualScreenBrowserApp(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 if (secondaryDisplay == null || !dualScreenActive) {
-                    DropdownMenuItem(
+                    CompactMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_top)) },
                         leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
                         onClick = {
@@ -1591,7 +1592,7 @@ private fun DualScreenBrowserApp(
                     )
                 }
                 if (secondaryDisplay != null) {
-                    DropdownMenuItem(
+                    CompactMenuItem(
                         text = { Text(stringResource(R.string.action_reopen_bottom)) },
                         leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
                         onClick = {
@@ -1602,7 +1603,7 @@ private fun DualScreenBrowserApp(
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_gamepad_guide)) },
                     leadingIcon = { Icon(Icons.Rounded.SportsEsports, contentDescription = null) },
                     onClick = {
@@ -1610,7 +1611,7 @@ private fun DualScreenBrowserApp(
                         showGamepadGuidePopup = true
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_tutorial)) },
                     leadingIcon = { Icon(Icons.Rounded.Devices, contentDescription = null) },
                     onClick = {
@@ -1618,7 +1619,7 @@ private fun DualScreenBrowserApp(
                         showTutorial = true
                     }
                 )
-                DropdownMenuItem(
+                CompactMenuItem(
                     text = { Text(stringResource(R.string.action_settings)) },
                     leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     onClick = {

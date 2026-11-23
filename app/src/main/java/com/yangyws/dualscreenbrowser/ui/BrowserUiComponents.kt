@@ -191,6 +191,24 @@ fun EmptyStateView(
     }
 }
 
+@Composable
+fun CompactMenuItem(
+    text: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    androidx.compose.material3.DropdownMenuItem(
+        text = text,
+        onClick = onClick,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        modifier = modifier.height(34.dp)
+    )
+}
+
 /** Isolates overflow menu open/close state into its own recompose scope so opening ⋮ is instant. */
 @Composable
 fun OverflowMenuButton(

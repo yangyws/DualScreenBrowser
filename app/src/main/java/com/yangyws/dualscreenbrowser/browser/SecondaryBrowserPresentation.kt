@@ -1171,7 +1171,7 @@ class SecondaryBrowserPresentation(
         navRow.addView(tabsPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)))
 
         panel.addView(navRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addDivider(verticalMarginDp = 7)
+        addDivider(verticalMarginDp = 4)
 
         val urlBoxBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -1239,7 +1239,7 @@ class SecondaryBrowserPresentation(
         urlRow.addView(clearBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         urlRow.addView(goBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         panel.addView(urlRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addDivider(verticalMarginDp = 7)
+        addDivider(verticalMarginDp = 4)
 
         val itemsContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -1248,7 +1248,7 @@ class SecondaryBrowserPresentation(
         fun addMenuDivider() {
             val line = View(context).apply { setBackgroundColor(dividerColor) }
             itemsContainer.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
-                setMargins(0, dp(5), 0, dp(5))
+                setMargins(0, dp(3), 0, dp(3))
             })
         }
 
@@ -1263,7 +1263,7 @@ class SecondaryBrowserPresentation(
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setPadding(dp(8), dp(5), dp(8), dp(5))
                 val outValue = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
                 setBackgroundResource(outValue.resourceId)
