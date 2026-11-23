@@ -204,7 +204,7 @@ fun ThorTutorialOverlay(
  * right ABXY/stick, Select/Start, and L1/L2/R1/R2 shoulder triggers.
  */
 @Composable
-private fun ThorHandheldDiagram(
+internal fun ThorHandheldDiagram(
     highlightStep: Int,
     theme: ThorTheme,
     accent: Color,
@@ -352,29 +352,32 @@ private fun ThorHandheldDiagram(
         // D-Pad cross
         val dpCx = w * 0.16f
         val dpCy = h * 0.78f
-        drawRect(padHighlight, topLeft = Offset(dpCx - 5f, dpCy - 14f), size = Size(10f, 28f))
-        drawRect(padHighlight, topLeft = Offset(dpCx - 14f, dpCy - 5f), size = Size(28f, 10f))
+        val dpArm = w * 0.030f
+        val dpThick = w * 0.022f
+        drawRect(padHighlight, topLeft = Offset(dpCx - dpThick / 2f, dpCy - dpArm), size = Size(dpThick, dpArm * 2f))
+        drawRect(padHighlight, topLeft = Offset(dpCx - dpArm, dpCy - dpThick / 2f), size = Size(dpArm * 2f, dpThick))
         // Select pill
-        drawRoundRect(padHighlight, topLeft = Offset(w * 0.19f, h * 0.89f), size = Size(16f, 6f), cornerRadius = CornerRadius(3f, 3f))
+        drawRoundRect(padHighlight, topLeft = Offset(w * 0.19f, h * 0.89f), size = Size(w * 0.036f, h * 0.015f), cornerRadius = CornerRadius(3f, 3f))
 
         // Right Controls: ABXY + Right Stick + Start
         val abxyCx = w * 0.84f
         val abxyCy = h * 0.63f
         val btnR = w * 0.024f
+        val abxyOffset = w * 0.028f
         if (theme == ThorTheme.RAINBOW) {
-            drawCircle(Color(0xFF3B82F6), radius = btnR, center = Offset(abxyCx, abxyCy - 12f)) // X Blue
-            drawCircle(Color(0xFFEAB308), radius = btnR, center = Offset(abxyCx, abxyCy + 12f)) // B Yellow
-            drawCircle(Color(0xFF22C55E), radius = btnR, center = Offset(abxyCx - 12f, abxyCy)) // Y Green
-            drawCircle(Color(0xFFEF4444), radius = btnR, center = Offset(abxyCx + 12f, abxyCy)) // A Red
+            drawCircle(Color(0xFF3B82F6), radius = btnR, center = Offset(abxyCx, abxyCy - abxyOffset)) // X Blue
+            drawCircle(Color(0xFFEAB308), radius = btnR, center = Offset(abxyCx, abxyCy + abxyOffset)) // B Yellow
+            drawCircle(Color(0xFF22C55E), radius = btnR, center = Offset(abxyCx - abxyOffset, abxyCy)) // Y Green
+            drawCircle(Color(0xFFEF4444), radius = btnR, center = Offset(abxyCx + abxyOffset, abxyCy)) // A Red
         } else {
-            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy - 12f)) // X
-            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy + 12f)) // B
-            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx - 12f, abxyCy)) // Y
-            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx + 12f, abxyCy)) // A
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy - abxyOffset)) // X
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx, abxyCy + abxyOffset)) // B
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx - abxyOffset, abxyCy)) // Y
+            drawCircle(padHighlight, radius = btnR, center = Offset(abxyCx + abxyOffset, abxyCy)) // A
         }
         // Right Analog Stick
         drawCircle(padHighlight, radius = w * 0.055f, center = Offset(w * 0.84f, h * 0.79f))
         // Start pill
-        drawRoundRect(padHighlight, topLeft = Offset(w * 0.73f, h * 0.89f), size = Size(16f, 6f), cornerRadius = CornerRadius(3f, 3f))
+        drawRoundRect(padHighlight, topLeft = Offset(w * 0.73f, h * 0.89f), size = Size(w * 0.036f, h * 0.015f), cornerRadius = CornerRadius(3f, 3f))
     }
 }

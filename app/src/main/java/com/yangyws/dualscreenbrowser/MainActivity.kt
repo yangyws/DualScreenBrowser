@@ -157,12 +157,12 @@ import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
 import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
-import com.yangyws.dualscreenbrowser.ui.MiniThorThemeIcon
 import com.yangyws.dualscreenbrowser.ui.SidePanelSheet
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import com.yangyws.dualscreenbrowser.ui.StatusChip
 import com.yangyws.dualscreenbrowser.ui.StrongEaseOut
 import com.yangyws.dualscreenbrowser.ui.TactileIconButton
+import com.yangyws.dualscreenbrowser.ui.ThorHandheldDiagram
 import com.yangyws.dualscreenbrowser.ui.ThorTutorialOverlay
 
 private enum class BrowserPanel {
@@ -2151,13 +2151,6 @@ private fun DualScreenBrowserApp(
                         ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
                         ThorTheme.CUSTOM to R.string.theme_custom
                     )
-                    val shellColors = mapOf(
-                        ThorTheme.BLACK to Color(0xFF1F242E),
-                        ThorTheme.WHITE to Color(0xFFE7ECF3),
-                        ThorTheme.RAINBOW to Color(0xFFD6DAE4),
-                        ThorTheme.CLEAR_PURPLE to Color(0xFF563B8C),
-                        ThorTheme.CUSTOM to Color(customPrimaryInt).copy(alpha = 0.72f)
-                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -2165,7 +2158,6 @@ private fun DualScreenBrowserApp(
                         ThorTheme.entries.forEach { t ->
                             val selected = t == currentTheme
                             val chipPrimary = Color(t.effectivePrimary(customPrimaryInt))
-                            val shellColor = shellColors[t] ?: Color(0xFF1F242E)
                             Surface(
                                 onClick = { onThemeSelected(t) },
                                 color = if (selected) chipPrimary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant,
@@ -2181,10 +2173,11 @@ private fun DualScreenBrowserApp(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
-                                    MiniThorThemeIcon(
-                                        shellColor = shellColor,
-                                        accentColor = chipPrimary,
-                                        modifier = Modifier.size(width = 34.dp, height = 38.dp)
+                                    ThorHandheldDiagram(
+                                        highlightStep = if (selected) 0 else -1,
+                                        theme = t,
+                                        accent = chipPrimary,
+                                        modifier = Modifier.size(width = 48.dp, height = 44.dp)
                                     )
                                     Text(
                                         text = stringResource(themeLabels[t] ?: R.string.theme_black),
