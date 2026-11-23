@@ -88,14 +88,6 @@ class SecondaryBrowserPresentation(
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window?.let { win ->
-            win.setDecorFitsSystemWindows(false)
-            win.insetsController?.let { controller ->
-                controller.hide(android.view.WindowInsets.Type.systemBars())
-                controller.systemBarsBehavior =
-                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        }
 
         val initialTheme = themeProvider()
         activeTheme = initialTheme
@@ -409,6 +401,16 @@ class SecondaryBrowserPresentation(
         root.addView(contentStack, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         root.addView(createTouchpadArea(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(112)))
         setContentView(root)
+        window?.let { win ->
+            win.setDecorFitsSystemWindows(false)
+            win.decorView.post {
+                win.insetsController?.let { controller ->
+                    controller.hide(android.view.WindowInsets.Type.systemBars())
+                    controller.systemBarsBehavior =
+                        android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")

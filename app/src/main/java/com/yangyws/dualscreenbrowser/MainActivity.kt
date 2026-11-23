@@ -181,7 +181,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyImmersiveFullscreen()
         launchUrlState = intent?.dataString
         setContent {
             val prefs = remember { BrowserPrefs(this) }
@@ -219,6 +218,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        window.decorView.post { applyImmersiveFullscreen() }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
