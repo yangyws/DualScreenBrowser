@@ -41,10 +41,12 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.PopupWindow
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.yangyws.dualscreenbrowser.R
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -77,6 +79,10 @@ class SecondaryBrowserPresentation(
 ) : Presentation(outerContext, display) {
 
     private var webView: WebView? = null
+    private val bottomTabs = mutableListOf<BrowserTab>()
+    private val tabWebViews = mutableMapOf<String, WebView>()
+    private var activeBottomTabId: String = ""
+    private var webContainer: FrameLayout? = null
     private var spanViewport: SpanViewportView? = null
     private var rootLayout: LinearLayout? = null
     private var touchpadContainer: LinearLayout? = null
@@ -84,6 +90,7 @@ class SecondaryBrowserPresentation(
     private var touchpadResizeHandle: ImageView? = null
     private var floatingMenuBtn: ImageButton? = null
     private var bottomMenuPopup: PopupWindow? = null
+    private var bottomTabsPopup: PopupWindow? = null
     private var topBarView: LinearLayout? = null
     private var dividerView: View? = null
     private var urlInput: EditText? = null
@@ -324,78 +331,20 @@ class SecondaryBrowserPresentation(
         }
         progressBar = progress
 
-        val wv = WebView(context).apply {
-            settings.javaScriptEnabled = jsEnabled
-            settings.domStorageEnabled = true
-            settings.databaseEnabled = true
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
-            settings.builtInZoomControls = true
-            settings.displayZoomControls = false
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(
-                    view: WebView?,
-                    request: WebResourceRequest?
-                ): WebResourceResponse? {
-                    val reqUrl = request?.url?.toString()
-                    if (adBlockEnabledProvider() && AdBlocker.shouldBlockUrl(reqUrl)) {
-                        AdBlocker.recordBlocked()
-                        onAdBlocked()
-                        return AdBlocker.emptyResponse()
-                    }
-                    return super.shouldInterceptRequest(view, request)
-                }
-
-                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                    val uri = request?.url ?: return false
-                    return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
-                }
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    updateNavButtons(view)
-                    if (!url.isNullOrBlank()) {
-                        currentUrl = url
-                        if (urlInput?.hasFocus() != true) {
-                            lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
-                            urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
-                        }
-                    }
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    updateNavButtons(view)
-                    if (!url.isNullOrBlank()) {
-                        currentUrl = url
-                        if (urlInput?.hasFocus() != true) {
-                            lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
-                            urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
-                        }
-                        val (forceDark, enableCopy, customScripts) = userScriptsProvider()
-                        UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
-                        onUrlChanged(url, view?.title.orEmpty())
-                    }
-                }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    updateNavButtons(view)
-                    progressBar?.let { bar ->
-                        bar.progress = newProgress
-                        bar.visibility = if (newProgress in 1..99) android.view.View.VISIBLE else android.view.View.GONE
-                    }
-                }
-            }
-            if (!spanModeProvider()) {
-                hasLoadedInitialUrl = true
-                loadUrl(initialUrl)
-            } else {
-                onPause()
-            }
-        }
+        val initialTab = BrowserTab(
+            id = UUID.randomUUID().toString(),
+            url = initialUrl
+        )
+        bottomTabs.clear()
+        bottomTabs.add(initialTab)
+        activeBottomTabId = initialTab.id
+        val wv = createTabWebView(initialTab, loadImmediately = !spanModeProvider())
+        tabWebViews[initialTab.id] = wv
         webView = wv
+
+        val tabsHost = FrameLayout(context)
+        webContainer = tabsHost
+        tabsHost.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val contentStack = FrameLayout(context)
         val (b, w) = bottomColorProvider()
@@ -407,7 +356,7 @@ class SecondaryBrowserPresentation(
         spanViewport = spanView
         wv.visibility = if (spanModeProvider()) View.GONE else View.VISIBLE
 
-        contentStack.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        contentStack.addView(tabsHost, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val floatSize = dp(46)
@@ -817,8 +766,178 @@ class SecondaryBrowserPresentation(
             setOnClickListener { onClick() }
         }
 
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun createTabWebView(tab: BrowserTab, loadImmediately: Boolean): WebView {
+        return WebView(context).apply {
+            settings.javaScriptEnabled = jsEnabled
+            settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            if (tab.desktopMode) {
+                val defaultUa = WebSettings.getDefaultUserAgent(context)
+                settings.userAgentString = defaultUa.replace("Mobile", "").replace("Android", "X11; Linux x86_64")
+            }
+            webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val reqUrl = request?.url?.toString()
+                    if (adBlockEnabledProvider() && AdBlocker.shouldBlockUrl(reqUrl)) {
+                        AdBlocker.recordBlocked()
+                        onAdBlocked()
+                        return AdBlocker.emptyResponse()
+                    }
+                    return super.shouldInterceptRequest(view, request)
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val uri = request?.url ?: return false
+                    return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
+                }
+
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    if (!url.isNullOrBlank()) {
+                        updateTabMetadata(tab.id, url = url)
+                    }
+                    if (tab.id == activeBottomTabId) {
+                        updateNavButtons(view)
+                        if (!url.isNullOrBlank()) {
+                            currentUrl = url
+                            if (urlInput?.hasFocus() != true) {
+                                lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
+                                urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
+                            }
+                        }
+                    }
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    val title = view?.title.orEmpty()
+                    if (!url.isNullOrBlank()) {
+                        updateTabMetadata(tab.id, url = url, title = title)
+                        val (forceDark, enableCopy, customScripts) = userScriptsProvider()
+                        UserScriptManager.injectScripts(view, url, forceDark, enableCopy, customScripts)
+                    }
+                    if (tab.id == activeBottomTabId) {
+                        updateNavButtons(view)
+                        if (!url.isNullOrBlank()) {
+                            currentUrl = url
+                            if (urlInput?.hasFocus() != true) {
+                                lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
+                                urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
+                            }
+                            onUrlChanged(url, title)
+                        }
+                    }
+                }
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    if (tab.id != activeBottomTabId) return
+                    updateNavButtons(view)
+                    progressBar?.let { bar ->
+                        bar.progress = newProgress
+                        bar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
+                    }
+                }
+
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    if (!title.isNullOrBlank()) {
+                        updateTabMetadata(tab.id, title = title)
+                    }
+                }
+            }
+            if (loadImmediately) {
+                hasLoadedInitialUrl = true
+                loadUrl(tab.url)
+            } else {
+                onPause()
+            }
+        }
+    }
+
+    private fun updateTabMetadata(tabId: String, url: String? = null, title: String? = null, desktop: Boolean? = null) {
+        val idx = bottomTabs.indexOfFirst { it.id == tabId }
+        if (idx < 0) return
+        val old = bottomTabs[idx]
+        bottomTabs[idx] = old.copy(
+            url = url ?: old.url,
+            title = title ?: old.title,
+            desktopMode = desktop ?: old.desktopMode
+        )
+    }
+
+    private fun switchBottomTab(tabId: String) {
+        val targetTab = bottomTabs.firstOrNull { it.id == tabId } ?: return
+        val targetWv = tabWebViews[tabId] ?: return
+        if (tabId != activeBottomTabId) {
+            tabWebViews[activeBottomTabId]?.let { oldWv ->
+                oldWv.visibility = View.GONE
+                oldWv.onPause()
+            }
+        }
+        activeBottomTabId = tabId
+        webView = targetWv
+        desktopMode = targetTab.desktopMode
+        currentUrl = targetWv.url?.takeIf { it.isNotBlank() } ?: targetTab.url
+        val spanActive = spanModeProvider()
+        targetWv.visibility = if (spanActive) View.GONE else View.VISIBLE
+        if (!spanActive) {
+            targetWv.onResume()
+        }
+        if (urlInput?.hasFocus() != true) {
+            lockIcon?.visibility = if (UrlResolver.isHttps(currentUrl)) View.VISIBLE else View.GONE
+            urlInput?.setText(UrlResolver.displayHost(currentUrl).ifBlank { currentUrl })
+        }
+        updateNavButtons(targetWv)
+        onUrlChanged(currentUrl, targetTab.title)
+    }
+
+    private fun openBottomTab(url: String = BrowserTab.DEFAULT_HOME_URL) {
+        val tab = BrowserTab(
+            id = UUID.randomUUID().toString(),
+            url = url
+        )
+        bottomTabs.add(tab)
+        val wv = createTabWebView(tab, loadImmediately = !spanModeProvider())
+        val (b, w) = bottomColorProvider()
+        applyColorFilterToWebView(wv, b, w)
+        wv.visibility = View.GONE
+        tabWebViews[tab.id] = wv
+        webContainer?.addView(wv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        switchBottomTab(tab.id)
+    }
+
+    private fun closeBottomTab(tabId: String) {
+        if (bottomTabs.size <= 1) {
+            val single = bottomTabs.firstOrNull() ?: return
+            updateTabMetadata(single.id, url = BrowserTab.DEFAULT_HOME_URL, title = "")
+            loadUrl(BrowserTab.DEFAULT_HOME_URL)
+            return
+        }
+        val idx = bottomTabs.indexOfFirst { it.id == tabId }
+        if (idx < 0) return
+        bottomTabs.removeAt(idx)
+        tabWebViews.remove(tabId)?.let { removedWv ->
+            webContainer?.removeView(removedWv)
+            removedWv.destroy()
+        }
+        if (tabId == activeBottomTabId) {
+            val nextIdx = idx.coerceAtMost(bottomTabs.lastIndex)
+            switchBottomTab(bottomTabs[nextIdx].id)
+        }
+    }
+
     fun loadUrl(url: String) {
         currentUrl = url
+        updateTabMetadata(activeBottomTabId, url = url)
         if (urlInput?.hasFocus() != true) {
             lockIcon?.visibility = if (UrlResolver.isHttps(url)) View.VISIBLE else View.GONE
             urlInput?.setText(UrlResolver.displayHost(url).ifBlank { url })
@@ -828,8 +947,9 @@ class SecondaryBrowserPresentation(
 
     fun currentUrl(): String = webView?.url?.takeIf { it.isNotBlank() } ?: currentUrl
 
+    @SuppressLint("SetJavaScriptEnabled")
     fun updateJsEnabled(enabled: Boolean) {
-        webView?.settings?.javaScriptEnabled = enabled
+        tabWebViews.values.forEach { it.settings.javaScriptEnabled = enabled }
     }
 
     fun scrollByY(dy: Int) {
@@ -930,6 +1050,7 @@ class SecondaryBrowserPresentation(
         val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
         val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
         val borderColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#24FFFFFF")
+        val dividerColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#2EFFFFFF")
         val panelBg = createThemedCardDrawable(
             fillColor = activeTheme.surfaceColor,
             cornerRadiusPx = dp(12).toFloat(),
@@ -940,49 +1061,99 @@ class SecondaryBrowserPresentation(
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = panelBg
-            setPadding(dp(10), dp(10), dp(10), dp(8))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             elevation = dp(8).toFloat()
         }
 
         lateinit var popup: PopupWindow
 
+        fun addDivider(verticalMarginDp: Int = 8) {
+            val line = View(context).apply {
+                setBackgroundColor(dividerColor)
+            }
+            panel.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+                setMargins(0, dp(verticalMarginDp), 0, dp(verticalMarginDp))
+            })
+        }
+
         val navRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        val btnSize = dp(34)
+        val btnSize = dp(32)
+        val spacer = { View(context).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) } }
         navRow.addView(navButton(R.drawable.ic_arrow_back, context.getString(R.string.action_back)) {
             popup.dismiss()
             goBackIfPossible()
-        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        }.apply { setColorFilter(fgColor) }, LinearLayout.LayoutParams(btnSize, btnSize))
         navRow.addView(navButton(R.drawable.ic_arrow_forward, context.getString(R.string.action_forward)) {
             popup.dismiss()
             goForwardIfPossible()
-        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        }.apply { setColorFilter(fgColor) }, LinearLayout.LayoutParams(btnSize, btnSize))
         navRow.addView(navButton(R.drawable.ic_refresh, context.getString(R.string.action_refresh)) {
             popup.dismiss()
             reloadPage()
-        }, LinearLayout.LayoutParams(btnSize, btnSize))
-        navRow.addView(navButton(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
-            popup.dismiss()
-            onSwapScreens(currentUrl())
-        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        }.apply { setColorFilter(fgColor) }, LinearLayout.LayoutParams(btnSize, btnSize))
         navRow.addView(navButton(R.drawable.ic_upload_top, context.getString(R.string.action_send_to_primary)) {
             popup.dismiss()
             onSendUrlToPrimary(currentUrl())
-        }, LinearLayout.LayoutParams(btnSize, btnSize))
+        }.apply { setColorFilter(fgColor) }, LinearLayout.LayoutParams(btnSize, btnSize))
+
+        val palettePillBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(8).toFloat()
+            setColor(Color.argb(38, Color.red(accent), Color.green(accent), Color.blue(accent)))
+        }
         val btnPalette = navButton(R.drawable.ic_palette, context.getString(R.string.settings_theme)) {
             popup.dismiss()
             onOpenThemePicker()
         }.apply {
+            background = palettePillBg
             setColorFilter(accent)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
         }
-        navRow.addView(btnPalette, LinearLayout.LayoutParams(btnSize, btnSize))
+        navRow.addView(btnPalette, LinearLayout.LayoutParams(btnSize, btnSize).apply {
+            marginStart = dp(4)
+        })
+        navRow.addView(spacer())
+
+        val tabsPillBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(8).toFloat()
+            setColor(activeTheme.surfaceVariantColor)
+            setStroke(dp(1), borderColor)
+        }
+        val tabsPill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = tabsPillBg
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            contentDescription = context.getString(R.string.action_tabs)
+            setOnClickListener {
+                popup.dismiss()
+                showBottomTabsPopup(anchor)
+            }
+        }
+        val tabIcon = ImageView(context).apply {
+            setImageResource(R.drawable.ic_tab)
+            setColorFilter(fgColor)
+        }
+        val tabCountLabel = TextView(context).apply {
+            text = "${bottomTabs.size.coerceAtLeast(1)}"
+            setTextColor(fgColor)
+            textSize = 12f
+            setPadding(dp(4), 0, 0, 0)
+        }
+        tabsPill.addView(tabIcon, LinearLayout.LayoutParams(dp(15), dp(15)))
+        tabsPill.addView(tabCountLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        navRow.addView(tabsPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)))
+
         panel.addView(navRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addDivider(verticalMarginDp = 7)
 
         val urlBoxBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(8).toFloat()
+            cornerRadius = dp(9).toFloat()
             setColor(activeTheme.surfaceVariantColor)
             setStroke(dp(1), borderColor)
         }
@@ -990,7 +1161,13 @@ class SecondaryBrowserPresentation(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = urlBoxBg
-            setPadding(dp(8), dp(6), dp(8), dp(6))
+            setPadding(dp(10), dp(6), dp(8), dp(6))
+        }
+        val clearBtn = TextView(context).apply {
+            text = "×"
+            setTextColor(mutedFg)
+            textSize = 16f
+            setPadding(dp(4), 0, dp(4), 0)
         }
         val urlEdit = EditText(context).apply {
             hint = context.getString(R.string.url_placeholder)
@@ -1003,6 +1180,13 @@ class SecondaryBrowserPresentation(
             isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    clearBtn.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                }
+                override fun afterTextChanged(s: Editable?) = Unit
+            })
             setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_GO ||
                     (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
@@ -1016,11 +1200,13 @@ class SecondaryBrowserPresentation(
                 }
             }
         }
+        clearBtn.visibility = if (urlEdit.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        clearBtn.setOnClickListener { urlEdit.setText("") }
         val goBtn = TextView(context).apply {
             text = context.getString(R.string.action_go)
             setTextColor(accent)
             textSize = 12.5f
-            setPadding(dp(8), dp(2), dp(4), dp(2))
+            setPadding(dp(6), dp(2), dp(2), dp(2))
             setOnClickListener {
                 val target = UrlResolver.resolveInput(urlEdit.text.toString(), searchEngineProvider())
                 loadUrl(target)
@@ -1028,17 +1214,16 @@ class SecondaryBrowserPresentation(
             }
         }
         urlRow.addView(urlEdit, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        urlRow.addView(clearBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         urlRow.addView(goBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        panel.addView(urlRow, LinearLayout.LayoutParams(dp(248), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            setMargins(0, dp(6), 0, dp(6))
-        })
+        panel.addView(urlRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addDivider(verticalMarginDp = 7)
 
-        fun addMenuItem(label: String, onClick: () -> Unit) {
-            val tv = TextView(context).apply {
-                text = label
-                setTextColor(fgColor)
-                textSize = 13.5f
-                setPadding(dp(8), dp(9), dp(8), dp(9))
+        fun addMenuItem(iconRes: Int, label: String, highlighted: Boolean = false, onClick: () -> Unit) {
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), dp(8), dp(8), dp(8))
                 val outValue = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
                 setBackgroundResource(outValue.resourceId)
@@ -1047,16 +1232,32 @@ class SecondaryBrowserPresentation(
                     onClick()
                 }
             }
-            panel.addView(tv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            val icon = ImageView(context).apply {
+                setImageResource(iconRes)
+                setColorFilter(if (highlighted) accent else fgColor)
+            }
+            val tv = TextView(context).apply {
+                text = label
+                setTextColor(if (highlighted) accent else fgColor)
+                textSize = 13.5f
+                setPadding(dp(10), 0, 0, 0)
+            }
+            row.addView(icon, LinearLayout.LayoutParams(dp(18), dp(18)))
+            row.addView(tv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            panel.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
         val bookmarked = isBookmarkedProvider(currentUrl())
-        addMenuItem(context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark)) {
+        addMenuItem(
+            if (bookmarked) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off,
+            context.getString(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark),
+            highlighted = bookmarked
+        ) {
             onToggleBookmark(currentUrl(), webView?.title.orEmpty())
         }
         val desktopLabel = if (desktopMode) "✓ ${context.getString(R.string.action_desktop_mode)}" else context.getString(R.string.action_desktop_mode)
-        addMenuItem(desktopLabel) { toggleDesktopMode() }
-        addMenuItem(context.getString(R.string.action_screenshot_bottom)) {
+        addMenuItem(android.R.drawable.ic_menu_view, desktopLabel, highlighted = desktopMode) { toggleDesktopMode() }
+        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_screenshot_bottom)) {
             val bmp = captureViewportBitmap()
             val saved = bmp?.let { b ->
                 ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1064,7 +1265,7 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
-        addMenuItem(context.getString(R.string.action_long_screenshot)) {
+        addMenuItem(R.drawable.ic_screenshot, context.getString(R.string.action_long_screenshot)) {
             val bmp = captureFullPageBitmap()
             val saved = bmp?.let { b ->
                 ScreenCaptureHelper.saveBitmapToGallery(context, b).also { b.recycle() }
@@ -1072,22 +1273,27 @@ class SecondaryBrowserPresentation(
             val msgRes = if (saved) R.string.toast_screenshot_saved else R.string.toast_screenshot_failed
             Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
         }
-        addMenuItem(context.getString(R.string.action_span_mode)) { onToggleSpanMode() }
-        addMenuItem(context.getString(R.string.action_reopen_top)) { onReopenTop() }
+        addMenuItem(R.drawable.ic_swap_vert, context.getString(R.string.action_swap_screens)) {
+            onSwapScreens(currentUrl())
+        }
+        addMenuItem(android.R.drawable.ic_menu_crop, context.getString(R.string.action_span_mode)) { onToggleSpanMode() }
+        addMenuItem(android.R.drawable.ic_menu_revert, context.getString(R.string.action_reopen_top)) { onReopenTop() }
 
-        popup = PopupWindow(panel, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+        val menuWidthPx = dp(304)
+        popup = PopupWindow(panel, menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = dp(10).toFloat()
             setOnDismissListener { applyFloatingButtonStyle(expanded = false) }
         }
         applyFloatingButtonStyle(expanded = true)
         bottomMenuPopup?.dismiss()
+        bottomTabsPopup?.dismiss()
         bottomMenuPopup = popup
         panel.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(menuWidthPx, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
-        val menuW = panel.measuredWidth.coerceAtLeast(dp(260))
+        val menuW = menuWidthPx
         val menuH = panel.measuredHeight.coerceAtLeast(dp(240))
         val loc = IntArray(2)
         anchor.getLocationInWindow(loc)
@@ -1108,6 +1314,155 @@ class SecondaryBrowserPresentation(
         popup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
     }
 
+    private fun showBottomTabsPopup(anchor: View) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val dividerColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#2EFFFFFF")
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelBg
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            elevation = dp(8).toFloat()
+        }
+
+        lateinit var tabsPopup: PopupWindow
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = "${context.getString(R.string.action_tabs)} (${bottomTabs.size.coerceAtLeast(1)})"
+            setTextColor(fgColor)
+            textSize = 14f
+        }
+        val newTabBtn = TextView(context).apply {
+            text = "+ ${context.getString(R.string.action_new_tab)}"
+            setTextColor(accent)
+            textSize = 13f
+            setPadding(dp(10), dp(4), dp(4), dp(4))
+            setOnClickListener {
+                tabsPopup.dismiss()
+                openBottomTab()
+            }
+        }
+        headerRow.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        headerRow.addView(newTabBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        panel.addView(headerRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val divider = View(context).apply { setBackgroundColor(dividerColor) }
+        panel.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            setMargins(0, dp(7), 0, dp(7))
+        })
+
+        val listContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        bottomTabs.forEachIndexed { index, tab ->
+            val isActive = tab.id == activeBottomTabId
+            val rowBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(9).toFloat()
+                if (isActive) {
+                    setColor(Color.argb(38, Color.red(accent), Color.green(accent), Color.blue(accent)))
+                    setStroke(dp(1), accent)
+                } else {
+                    setColor(activeTheme.surfaceVariantColor)
+                }
+            }
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = rowBg
+                setPadding(dp(10), dp(8), dp(8), dp(8))
+                setOnClickListener {
+                    tabsPopup.dismiss()
+                    switchBottomTab(tab.id)
+                }
+            }
+            val textCol = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            val tabTitle = tab.title.ifBlank {
+                UrlResolver.displayHost(tab.url).ifBlank { "${context.getString(R.string.action_tabs)} ${index + 1}" }
+            }
+            val tvTitle = TextView(context).apply {
+                text = tabTitle
+                setTextColor(if (isActive) accent else fgColor)
+                textSize = 13f
+                maxLines = 1
+            }
+            val tvHost = TextView(context).apply {
+                text = UrlResolver.displayHost(tab.url).ifBlank { tab.url }
+                setTextColor(mutedFg)
+                textSize = 11f
+                maxLines = 1
+            }
+            textCol.addView(tvTitle)
+            textCol.addView(tvHost)
+            val closeBtn = TextView(context).apply {
+                text = "×"
+                setTextColor(mutedFg)
+                textSize = 17f
+                contentDescription = context.getString(R.string.action_close)
+                setPadding(dp(10), dp(2), dp(4), dp(2))
+                setOnClickListener {
+                    tabsPopup.dismiss()
+                    closeBottomTab(tab.id)
+                }
+            }
+            row.addView(textCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(closeBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            listContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                if (index > 0) topMargin = dp(6)
+            })
+        }
+
+        val scroll = ScrollView(context).apply {
+            addView(listContainer)
+        }
+        panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val tabsWidthPx = dp(292)
+        tabsPopup = PopupWindow(panel, tabsWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+        }
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = tabsPopup
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(tabsWidthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(dp(320), View.MeasureSpec.AT_MOST)
+        )
+        val menuH = panel.measuredHeight.coerceIn(dp(140), dp(320))
+        tabsPopup.height = menuH
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(tabsWidthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - tabsWidthPx).coerceIn(margin, (rootW - tabsWidthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - tabsWidthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        tabsPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+    }
+
     fun updatePresentationMode(spanActive: Boolean) {
         val floatVis = if (!spanActive) View.VISIBLE else View.GONE
         val spanVis = if (spanActive) View.VISIBLE else View.GONE
@@ -1116,11 +1471,14 @@ class SecondaryBrowserPresentation(
             if (spanActive) {
                 bottomMenuPopup?.dismiss()
                 bottomMenuPopup = null
+                bottomTabsPopup?.dismiss()
+                bottomTabsPopup = null
             }
             topBarView?.visibility = View.GONE
             dividerView?.visibility = View.GONE
             floatingMenuBtn?.visibility = floatVis
             spanViewport?.visibility = spanVis
+            webContainer?.visibility = webVis
             webView?.visibility = webVis
             if (spanActive) {
                 progressBar?.visibility = View.GONE
@@ -1140,8 +1498,8 @@ class SecondaryBrowserPresentation(
         spanViewport?.post {
             spanViewport?.setColorCalibration(brightness, warmth)
         }
-        webView?.post {
-            webView?.let { wv -> applyColorFilterToWebView(wv, brightness, warmth) }
+        webContainer?.post {
+            tabWebViews.values.forEach { wv -> applyColorFilterToWebView(wv, brightness, warmth) }
         }
     }
 
@@ -1208,6 +1566,7 @@ class SecondaryBrowserPresentation(
 
     fun toggleDesktopMode(): Boolean {
         desktopMode = !desktopMode
+        updateTabMetadata(activeBottomTabId, desktop = desktopMode)
         webView?.let { wv ->
             val defaultUa = WebSettings.getDefaultUserAgent(context)
             wv.settings.userAgentString = if (desktopMode) {
@@ -1221,14 +1580,14 @@ class SecondaryBrowserPresentation(
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (bottomMenuPopup?.isShowing != true && urlInput?.hasFocus() != true && onForwardKeyEvent(event)) {
+        if (bottomMenuPopup?.isShowing != true && bottomTabsPopup?.isShowing != true && urlInput?.hasFocus() != true && onForwardKeyEvent(event)) {
             return true
         }
         return super.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (bottomMenuPopup?.isShowing != true && onForwardMotionEvent(event)) {
+        if (bottomMenuPopup?.isShowing != true && bottomTabsPopup?.isShowing != true && onForwardMotionEvent(event)) {
             return true
         }
         return super.dispatchGenericMotionEvent(event)
@@ -1236,7 +1595,13 @@ class SecondaryBrowserPresentation(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        webView?.destroy()
+        bottomMenuPopup?.dismiss()
+        bottomMenuPopup = null
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = null
+        tabWebViews.values.forEach { it.destroy() }
+        tabWebViews.clear()
+        bottomTabs.clear()
         webView = null
     }
 }
