@@ -392,8 +392,20 @@ private fun DualScreenBrowserApp(
     val latestTabs by rememberUpdatedState(tabs)
     val latestActiveTabId by rememberUpdatedState(activeTabId)
     val latestBookmarks by rememberUpdatedState(bookmarks)
+    val latestHistory by rememberUpdatedState(history)
     val latestSecondaryUrl by rememberUpdatedState(secondaryUrl)
     val latestPresentation by rememberUpdatedState(presentation)
+    val latestTheme by rememberUpdatedState(currentTheme)
+    val latestCustomHue by rememberUpdatedState(customHue)
+    val latestSearchEngine by rememberUpdatedState(searchEngine)
+    val latestHingeGapDp by rememberUpdatedState(hingeGapDp)
+    val latestBottomBrightness by rememberUpdatedState(bottomBrightness)
+    val latestBottomWarmth by rememberUpdatedState(bottomWarmth)
+    val latestJsEnabled by rememberUpdatedState(jsEnabled)
+    val latestAdBlockEnabled by rememberUpdatedState(adBlockEnabled)
+    val latestGamepadEnabled by rememberUpdatedState(gamepadEnabled)
+    val latestForceDarkWeb by rememberUpdatedState(forceDarkWeb)
+    val latestEnableCopyScript by rememberUpdatedState(enableCopyScript)
 
     fun performSwapScreens(urlFromBottomOverride: String? = null) {
         val currentPres = latestPresentation ?: return
@@ -510,60 +522,61 @@ private fun DualScreenBrowserApp(
                     Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
                 },
                 bookmarksProvider = { latestBookmarks },
-                historyProvider = { history },
+                historyProvider = { latestHistory },
                 onOpenGamepadGuide = { activePanel = BrowserPanel.GAMEPAD_GUIDE },
                 settingsBridge = object : BottomSettingsBridge {
-                    override fun currentTheme(): ThorTheme = currentTheme
-                    override fun customHue(): Float = customHue
+                    override fun currentTheme(): ThorTheme = latestTheme
+                    override fun customHue(): Float = latestCustomHue
                     override fun onSelectTheme(theme: ThorTheme) = onThemeSelected(theme)
                     override fun onCustomHueChanged(hue: Float) = onCustomHueChanged(hue)
-                    override fun currentSearchEngine(): SearchEngine = searchEngine
+                    override fun currentSearchEngine(): SearchEngine = latestSearchEngine
                     override fun onCycleSearchEngine(): SearchEngine {
                         val engines = SearchEngine.entries
-                        val next = engines[(engines.indexOf(searchEngine) + 1) % engines.size]
+                        val cur = latestSearchEngine
+                        val next = engines[(engines.indexOf(cur) + 1) % engines.size]
                         searchEngine = next
                         prefs.searchEngine = next
                         return next
                     }
-                    override fun currentHingeGapDp(): Int = hingeGapDp
+                    override fun currentHingeGapDp(): Int = latestHingeGapDp
                     override fun onHingeGapChanged(dp: Int) {
                         hingeGapDp = dp
                         prefs.hingeGapDp = dp
                     }
-                    override fun currentBottomBrightness(): Int = bottomBrightness
+                    override fun currentBottomBrightness(): Int = latestBottomBrightness
                     override fun onBottomBrightnessChanged(value: Int) {
                         bottomBrightness = value
                         prefs.bottomBrightness = value
                     }
-                    override fun currentBottomWarmth(): Int = bottomWarmth
+                    override fun currentBottomWarmth(): Int = latestBottomWarmth
                     override fun onBottomWarmthChanged(value: Int) {
                         bottomWarmth = value
                         prefs.bottomWarmth = value
                     }
-                    override fun isJsEnabled(): Boolean = jsEnabled
+                    override fun isJsEnabled(): Boolean = latestJsEnabled
                     override fun onJsEnabledChanged(enabled: Boolean) {
                         jsEnabled = enabled
                         prefs.jsEnabled = enabled
                         presentation?.updateJsEnabled(enabled)
                     }
-                    override fun isAdBlockEnabled(): Boolean = adBlockEnabled
+                    override fun isAdBlockEnabled(): Boolean = latestAdBlockEnabled
                     override fun onAdBlockEnabledChanged(enabled: Boolean) {
                         adBlockEnabled = enabled
                         prefs.adBlockEnabled = enabled
                     }
-                    override fun isGamepadEnabled(): Boolean = gamepadEnabled
+                    override fun isGamepadEnabled(): Boolean = latestGamepadEnabled
                     override fun onGamepadEnabledChanged(enabled: Boolean) {
                         gamepadEnabled = enabled
                         prefs.gamepadEnabled = enabled
                     }
-                    override fun isForceDarkWeb(): Boolean = forceDarkWeb
+                    override fun isForceDarkWeb(): Boolean = latestForceDarkWeb
                     override fun onForceDarkWebChanged(enabled: Boolean) {
                         forceDarkWeb = enabled
                         prefs.forceDarkWeb = enabled
-                        if (spanMode && spanEngine.isRunning()) spanEngine.reload() else webViews[activeTabId]?.reload()
+                        if (spanMode && spanEngine.isRunning()) spanEngine.reload() else webViews[latestActiveTabId]?.reload()
                         presentation?.reloadPage()
                     }
-                    override fun isEnableCopyScript(): Boolean = enableCopyScript
+                    override fun isEnableCopyScript(): Boolean = latestEnableCopyScript
                     override fun onEnableCopyScriptChanged(enabled: Boolean) {
                         enableCopyScript = enabled
                         prefs.enableCopyScript = enabled
