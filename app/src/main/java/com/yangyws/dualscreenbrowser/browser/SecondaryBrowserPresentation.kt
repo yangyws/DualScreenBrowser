@@ -42,13 +42,43 @@ import android.widget.PopupMenu
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.ScrollView
+import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.yangyws.dualscreenbrowser.BuildConfig
 import com.yangyws.dualscreenbrowser.R
+import com.yangyws.dualscreenbrowser.system.AppLanguage
+import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.hypot
+
+interface BottomSettingsBridge {
+    fun currentTheme(): ThorTheme
+    fun customHue(): Float
+    fun onSelectTheme(theme: ThorTheme)
+    fun onCustomHueChanged(hue: Float)
+    fun currentSearchEngine(): SearchEngine
+    fun onCycleSearchEngine(): SearchEngine
+    fun currentHingeGapDp(): Int
+    fun onHingeGapChanged(dp: Int)
+    fun currentBottomBrightness(): Int
+    fun onBottomBrightnessChanged(value: Int)
+    fun currentBottomWarmth(): Int
+    fun onBottomWarmthChanged(value: Int)
+    fun isJsEnabled(): Boolean
+    fun onJsEnabledChanged(enabled: Boolean)
+    fun isAdBlockEnabled(): Boolean
+    fun onAdBlockEnabledChanged(enabled: Boolean)
+    fun isGamepadEnabled(): Boolean
+    fun onGamepadEnabledChanged(enabled: Boolean)
+    fun isForceDarkWeb(): Boolean
+    fun onForceDarkWebChanged(enabled: Boolean)
+    fun isEnableCopyScript(): Boolean
+    fun onEnableCopyScriptChanged(enabled: Boolean)
+}
 
 class SecondaryBrowserPresentation(
     outerContext: Context,
@@ -74,7 +104,7 @@ class SecondaryBrowserPresentation(
     private val bookmarksProvider: () -> List<BookmarkItem>,
     private val historyProvider: () -> List<HistoryItem>,
     private val onOpenGamepadGuide: () -> Unit,
-    private val onOpenSettings: () -> Unit,
+    private val settingsBridge: BottomSettingsBridge,
     private val onForwardKeyEvent: (KeyEvent) -> Boolean,
     private val onForwardMotionEvent: (MotionEvent) -> Boolean,
     private val onUrlChanged: (String, String) -> Unit,
@@ -1343,7 +1373,7 @@ class SecondaryBrowserPresentation(
         addMenuItem(R.drawable.ic_refresh, context.getString(R.string.action_reopen_top), rainbowSlot = 0) { onReopenTop() }
         addMenuDivider()
         addMenuItem(R.drawable.ic_gamepad, context.getString(R.string.action_gamepad_guide), rainbowSlot = 1) { showBottomGamepadGuidePopup(anchor) }
-        addMenuItem(R.drawable.ic_settings, context.getString(R.string.action_settings), rainbowSlot = 0) { onOpenSettings() }
+        addMenuItem(R.drawable.ic_settings, context.getString(R.string.action_settings), rainbowSlot = 0) { showBottomSettingsPopup(anchor) }
 
         val scrollItems = ScrollView(context).apply {
             addView(itemsContainer)
@@ -1941,6 +1971,326 @@ class SecondaryBrowserPresentation(
             (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
         }
         guidePopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
+    }
+
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    private fun showBottomSettingsPopup(anchor: View) {
+        val accent = activeTheme.effectivePrimary(activeCustomPrimary)
+        val fgColor = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val mutedFg = if (activeTheme.isLight) Color.parseColor("#64748B") else Color.parseColor("#8A92A6")
+        val dividerColor = if (activeTheme.isLight) Color.parseColor("#24000000") else Color.parseColor("#2EFFFFFF")
+        val panelBg = createThemedCardDrawable(
+            fillColor = activeTheme.surfaceColor,
+            cornerRadiusPx = dp(12).toFloat(),
+            strokeWidthPx = dp(2).toFloat(),
+            theme = activeTheme,
+            accentColor = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelBg
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+
+        lateinit var settingsPopup: PopupWindow
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = context.getString(R.string.settings_title)
+            setTextColor(fgColor)
+            textSize = 14f
+        }
+        val closeBtn = TextView(context).apply {
+            text = "×"
+            setTextColor(mutedFg)
+            textSize = 18f
+            setPadding(dp(10), 0, dp(4), 0)
+            setOnClickListener { settingsPopup.dismiss() }
+        }
+        headerRow.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        headerRow.addView(closeBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        panel.addView(headerRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val headerDivider = View(context).apply { setBackgroundColor(dividerColor) }
+        panel.addView(headerDivider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            setMargins(0, dp(6), 0, dp(6))
+        })
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        fun addSectionDivider() {
+            val line = View(context).apply { setBackgroundColor(dividerColor) }
+            container.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+                setMargins(0, dp(8), 0, dp(8))
+            })
+        }
+
+        // Theme selector
+        val themeLabel = TextView(context).apply {
+            text = context.getString(R.string.settings_theme)
+            setTextColor(fgColor)
+            textSize = 13f
+        }
+        container.addView(themeLabel)
+
+        val themeLabels = mapOf(
+            ThorTheme.BLACK to R.string.theme_black,
+            ThorTheme.WHITE to R.string.theme_white,
+            ThorTheme.RAINBOW to R.string.theme_rainbow,
+            ThorTheme.CLEAR_PURPLE to R.string.theme_clear_purple,
+            ThorTheme.CUSTOM to R.string.theme_custom
+        )
+        val themeRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val curTheme = settingsBridge.currentTheme()
+        ThorTheme.entries.forEachIndexed { idx, t ->
+            val selected = t == curTheme
+            val chipPrimary = t.effectivePrimary(activeCustomPrimary)
+            val chipBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(8).toFloat()
+                if (selected) {
+                    setColor(Color.argb(45, Color.red(chipPrimary), Color.green(chipPrimary), Color.blue(chipPrimary)))
+                    setStroke(dp(1), chipPrimary)
+                } else {
+                    setColor(activeTheme.surfaceVariantColor)
+                }
+            }
+            val chip = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                background = chipBg
+                setPadding(dp(4), dp(6), dp(4), dp(6))
+                setOnClickListener {
+                    settingsBridge.onSelectTheme(t)
+                    settingsPopup.dismiss()
+                    anchor.post { showBottomSettingsPopup(anchor) }
+                }
+            }
+            val dotBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(4).toFloat()
+                setColor(chipPrimary)
+            }
+            val dot = View(context).apply { background = dotBg }
+            val tv = TextView(context).apply {
+                text = context.getString(themeLabels[t] ?: R.string.theme_black)
+                setTextColor(if (selected) fgColor else mutedFg)
+                textSize = 9.5f
+                maxLines = 1
+                gravity = Gravity.CENTER
+                setPadding(0, dp(3), 0, 0)
+            }
+            chip.addView(dot, LinearLayout.LayoutParams(dp(12), dp(12)))
+            chip.addView(tv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            themeRow.addView(chip, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                if (idx > 0) marginStart = dp(4)
+            })
+        }
+        container.addView(themeRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(6)
+        })
+
+        if (curTheme == ThorTheme.CUSTOM) {
+            val hueLabel = TextView(context).apply {
+                text = context.getString(R.string.settings_custom_hue)
+                setTextColor(mutedFg)
+                textSize = 11.5f
+                setPadding(0, dp(6), 0, dp(2))
+            }
+            val hueBar = SeekBar(context).apply {
+                max = 360
+                progress = settingsBridge.customHue().toInt().coerceIn(0, 360)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser) settingsBridge.onCustomHueChanged(progress.toFloat())
+                    }
+                    override fun onStartTrackingTouch(sb: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(sb: SeekBar?) = Unit
+                })
+            }
+            container.addView(hueLabel)
+            container.addView(hueBar)
+        }
+
+        addSectionDivider()
+
+        // Language & Search engine clickable rows
+        fun addValueRow(title: String, value: String, valueColor: Int, onClick: (TextView) -> Unit) {
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            val labelTv = TextView(context).apply {
+                text = title
+                setTextColor(fgColor)
+                textSize = 13f
+            }
+            val valueTv = TextView(context).apply {
+                text = value
+                setTextColor(valueColor)
+                textSize = 12.5f
+            }
+            row.setOnClickListener { onClick(valueTv) }
+            row.addView(labelTv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(valueTv)
+            container.addView(row)
+        }
+
+        val currentLang = LocaleHelper.currentLanguage(context)
+        val langs = AppLanguage.entries
+        addValueRow(
+            context.getString(R.string.settings_language),
+            context.getString(currentLang.labelRes),
+            rainbowSlotColor(3, accent)
+        ) {
+            val next = langs[(langs.indexOf(currentLang) + 1) % langs.size]
+            settingsPopup.dismiss()
+            LocaleHelper.applyLanguage(context, next)
+        }
+
+        addSectionDivider()
+
+        addValueRow(
+            context.getString(R.string.settings_search_engine),
+            settingsBridge.currentSearchEngine().label,
+            rainbowSlotColor(1, accent)
+        ) { valueTv ->
+            val next = settingsBridge.onCycleSearchEngine()
+            valueTv.text = next.label
+        }
+
+        addSectionDivider()
+
+        fun addSliderRow(titleRes: Int, descRes: Int, minVal: Int, maxVal: Int, initialVal: Int, onChange: (Int) -> Unit) {
+            val titleTv = TextView(context).apply {
+                text = context.getString(titleRes)
+                setTextColor(fgColor)
+                textSize = 13f
+            }
+            val descTv = TextView(context).apply {
+                text = context.getString(descRes, initialVal)
+                setTextColor(mutedFg)
+                textSize = 11.5f
+            }
+            val seekBar = SeekBar(context).apply {
+                max = maxVal - minVal
+                progress = (initialVal - minVal).coerceIn(0, maxVal - minVal)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                        val value = minVal + progress
+                        descTv.text = context.getString(descRes, value)
+                        if (fromUser) onChange(value)
+                    }
+                    override fun onStartTrackingTouch(sb: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(sb: SeekBar?) = Unit
+                })
+            }
+            container.addView(titleTv)
+            container.addView(descTv)
+            container.addView(seekBar)
+        }
+
+        addSliderRow(
+            R.string.settings_hinge_gap,
+            R.string.settings_hinge_gap_desc,
+            0, 48, settingsBridge.currentHingeGapDp()
+        ) { settingsBridge.onHingeGapChanged(it) }
+
+        addSectionDivider()
+
+        addSliderRow(
+            R.string.settings_bottom_brightness,
+            R.string.settings_bottom_brightness_desc,
+            -30, 30, settingsBridge.currentBottomBrightness()
+        ) { settingsBridge.onBottomBrightnessChanged(it) }
+
+        addSliderRow(
+            R.string.settings_bottom_warmth,
+            R.string.settings_bottom_warmth_desc,
+            -30, 30, settingsBridge.currentBottomWarmth()
+        ) { settingsBridge.onBottomWarmthChanged(it) }
+
+        addSectionDivider()
+
+        fun addSwitchRow(titleRes: Int, initialChecked: Boolean, onChecked: (Boolean) -> Unit) {
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(3), 0, dp(3))
+            }
+            val labelTv = TextView(context).apply {
+                text = context.getString(titleRes)
+                setTextColor(fgColor)
+                textSize = 13f
+            }
+            val sw = Switch(context).apply {
+                isChecked = initialChecked
+                setOnCheckedChangeListener { _, checked -> onChecked(checked) }
+            }
+            row.addView(labelTv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(sw)
+            container.addView(row)
+        }
+
+        addSwitchRow(R.string.settings_javascript, settingsBridge.isJsEnabled()) { settingsBridge.onJsEnabledChanged(it) }
+        addSwitchRow(R.string.settings_adblock, settingsBridge.isAdBlockEnabled()) { settingsBridge.onAdBlockEnabledChanged(it) }
+        addSwitchRow(R.string.settings_gamepad, settingsBridge.isGamepadEnabled()) { settingsBridge.onGamepadEnabledChanged(it) }
+        addSwitchRow(R.string.settings_force_dark_web, settingsBridge.isForceDarkWeb()) { settingsBridge.onForceDarkWebChanged(it) }
+        addSwitchRow(R.string.settings_enable_copy, settingsBridge.isEnableCopyScript()) { settingsBridge.onEnableCopyScriptChanged(it) }
+
+        addSectionDivider()
+
+        val verTv = TextView(context).apply {
+            text = context.getString(R.string.settings_version, BuildConfig.VERSION_NAME)
+            setTextColor(mutedFg)
+            textSize = 11.5f
+        }
+        container.addView(verTv)
+
+        val scroll = ScrollView(context).apply { addView(container) }
+        panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val availableW = rootLayout?.width ?: context.resources.displayMetrics.widthPixels
+        val widthPx = (availableW - dp(16)).coerceIn(dp(320), dp(420))
+        settingsPopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = 0f
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+        }
+        bottomTabsPopup?.dismiss()
+        bottomTabsPopup = settingsPopup
+        val maxH = ((rootLayout?.height ?: context.resources.displayMetrics.heightPixels) - dp(24)).coerceIn(dp(220), dp(420))
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(maxH, View.MeasureSpec.AT_MOST)
+        )
+        val menuH = panel.measuredHeight.coerceIn(dp(220), maxH)
+        settingsPopup.height = menuH
+        val loc = IntArray(2)
+        anchor.getLocationInWindow(loc)
+        val rootW = (rootLayout?.width ?: context.resources.displayMetrics.widthPixels).coerceAtLeast(widthPx + dp(16))
+        val rootH = (rootLayout?.height ?: context.resources.displayMetrics.heightPixels).coerceAtLeast(menuH + dp(16))
+        val margin = dp(8)
+        val gap = dp(8)
+        val targetX = if (loc[0] + anchor.width / 2 > rootW / 2) {
+            (loc[0] + anchor.width - widthPx).coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        } else {
+            loc[0].coerceIn(margin, (rootW - widthPx - margin).coerceAtLeast(margin))
+        }
+        val targetY = if (loc[1] - menuH - gap >= margin) {
+            loc[1] - menuH - gap
+        } else {
+            (loc[1] + anchor.height + gap).coerceIn(margin, (rootH - menuH - margin).coerceAtLeast(margin))
+        }
+        settingsPopup.showAtLocation(anchor, Gravity.NO_GRAVITY, targetX, targetY)
     }
 
     fun updatePresentationMode(spanActive: Boolean) {

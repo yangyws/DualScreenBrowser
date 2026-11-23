@@ -147,6 +147,7 @@ import com.yangyws.dualscreenbrowser.browser.GamepadTargetScreen
 import com.yangyws.dualscreenbrowser.browser.HistoryItem
 import com.yangyws.dualscreenbrowser.browser.ScreenCaptureHelper
 import com.yangyws.dualscreenbrowser.browser.SearchEngine
+import com.yangyws.dualscreenbrowser.browser.BottomSettingsBridge
 import com.yangyws.dualscreenbrowser.browser.SecondaryBrowserPresentation
 import com.yangyws.dualscreenbrowser.browser.SpanEngine
 import com.yangyws.dualscreenbrowser.browser.SpanSource
@@ -511,7 +512,63 @@ private fun DualScreenBrowserApp(
                 bookmarksProvider = { latestBookmarks },
                 historyProvider = { history },
                 onOpenGamepadGuide = { activePanel = BrowserPanel.GAMEPAD_GUIDE },
-                onOpenSettings = { activePanel = BrowserPanel.SETTINGS },
+                settingsBridge = object : BottomSettingsBridge {
+                    override fun currentTheme(): ThorTheme = currentTheme
+                    override fun customHue(): Float = customHue
+                    override fun onSelectTheme(theme: ThorTheme) = onThemeSelected(theme)
+                    override fun onCustomHueChanged(hue: Float) = onCustomHueChanged(hue)
+                    override fun currentSearchEngine(): SearchEngine = searchEngine
+                    override fun onCycleSearchEngine(): SearchEngine {
+                        val engines = SearchEngine.entries
+                        val next = engines[(engines.indexOf(searchEngine) + 1) % engines.size]
+                        searchEngine = next
+                        prefs.searchEngine = next
+                        return next
+                    }
+                    override fun currentHingeGapDp(): Int = hingeGapDp
+                    override fun onHingeGapChanged(dp: Int) {
+                        hingeGapDp = dp
+                        prefs.hingeGapDp = dp
+                    }
+                    override fun currentBottomBrightness(): Int = bottomBrightness
+                    override fun onBottomBrightnessChanged(value: Int) {
+                        bottomBrightness = value
+                        prefs.bottomBrightness = value
+                    }
+                    override fun currentBottomWarmth(): Int = bottomWarmth
+                    override fun onBottomWarmthChanged(value: Int) {
+                        bottomWarmth = value
+                        prefs.bottomWarmth = value
+                    }
+                    override fun isJsEnabled(): Boolean = jsEnabled
+                    override fun onJsEnabledChanged(enabled: Boolean) {
+                        jsEnabled = enabled
+                        prefs.jsEnabled = enabled
+                        presentation?.updateJsEnabled(enabled)
+                    }
+                    override fun isAdBlockEnabled(): Boolean = adBlockEnabled
+                    override fun onAdBlockEnabledChanged(enabled: Boolean) {
+                        adBlockEnabled = enabled
+                        prefs.adBlockEnabled = enabled
+                    }
+                    override fun isGamepadEnabled(): Boolean = gamepadEnabled
+                    override fun onGamepadEnabledChanged(enabled: Boolean) {
+                        gamepadEnabled = enabled
+                        prefs.gamepadEnabled = enabled
+                    }
+                    override fun isForceDarkWeb(): Boolean = forceDarkWeb
+                    override fun onForceDarkWebChanged(enabled: Boolean) {
+                        forceDarkWeb = enabled
+                        prefs.forceDarkWeb = enabled
+                        if (spanMode && spanEngine.isRunning()) spanEngine.reload() else webViews[activeTabId]?.reload()
+                        presentation?.reloadPage()
+                    }
+                    override fun isEnableCopyScript(): Boolean = enableCopyScript
+                    override fun onEnableCopyScriptChanged(enabled: Boolean) {
+                        enableCopyScript = enabled
+                        prefs.enableCopyScript = enabled
+                    }
+                },
                 onForwardKeyEvent = onForwardKeyEvent,
                 onForwardMotionEvent = onForwardMotionEvent,
                 onUrlChanged = { url, title ->
