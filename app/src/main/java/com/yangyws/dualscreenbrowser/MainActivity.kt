@@ -468,8 +468,12 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    LaunchedEffect(spanMode, dualScreenActive, presentation) {
-        presentation?.updatePresentationMode(spanMode && dualScreenActive)
+    LaunchedEffect(spanMode, dualScreenActive, presentation, activeTabId) {
+        val spanActive = spanMode && dualScreenActive
+        presentation?.updatePresentationMode(spanActive)
+        webViews[activeTabId]?.let { wv ->
+            if (spanActive) wv.onPause() else wv.onResume()
+        }
     }
 
     LaunchedEffect(bottomBrightness, bottomWarmth, presentation) {

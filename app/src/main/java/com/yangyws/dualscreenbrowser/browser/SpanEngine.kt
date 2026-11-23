@@ -13,6 +13,7 @@ import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Process
 import android.os.SystemClock
 import android.view.Display
 import android.view.MotionEvent
@@ -37,7 +38,7 @@ class SpanEngine {
     private var presentation: VirtualWebPresentation? = null
     private var virtualWebView: WebView? = null
 
-    private val backBuffers = arrayOfNulls<Bitmap>(2)
+    private val backBuffers = arrayOfNulls<Bitmap>(3)
     private var bufferIndex = 0
     private val bufferLock = Any()
 
@@ -141,9 +142,9 @@ class SpanEngine {
         stop()
         stopping = false
 
-        // Scale down oversized resolutions to keep VirtualDisplay + ImageReader fast and lightweight
+        // Scale down oversized resolutions to keep VirtualDisplay + ImageReader fast and smooth
         val rawW = widthPx.coerceAtLeast(320)
-        val scale = if (rawW > 960) 960f / rawW.toFloat() else 1f
+        val scale = if (rawW > 760) 760f / rawW.toFloat() else 1f
 
         val safeW = (rawW * scale).toInt().coerceAtLeast(320)
         val safeTopH = (topHeightPx * scale).toInt().coerceAtLeast(200)
@@ -159,7 +160,7 @@ class SpanEngine {
         bottomViewportHeight = safeBottomH
         totalHeight = safeTotalH
 
-        val thread = HandlerThread("SpanFrameThread").apply { start() }
+        val thread = HandlerThread("SpanFrameThread", Process.THREAD_PRIORITY_DISPLAY).apply { start() }
         frameThread = thread
         val handler = Handler(thread.looper)
 
@@ -184,7 +185,7 @@ class SpanEngine {
                 val bmp = synchronized(bufferLock) {
                     if (stopping) return@setOnImageAvailableListener
                     val idx = bufferIndex
-                    bufferIndex = 1 - bufferIndex
+                    bufferIndex = (bufferIndex + 1) % backBuffers.size
                     backBuffers[idx]?.takeIf {
                         !it.isRecycled && it.width == bufferWidth && it.height == safeTotalH
                     } ?: Bitmap.createBitmap(bufferWidth, safeTotalH, Bitmap.Config.ARGB_8888).also {

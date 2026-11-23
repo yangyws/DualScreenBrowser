@@ -80,6 +80,7 @@ class SecondaryBrowserPresentation(
     private var forwardButton: ImageButton? = null
     private var progressBar: ProgressBar? = null
     private var currentUrl: String = initialUrl
+    private var hasLoadedInitialUrl: Boolean = false
     private var desktopMode: Boolean = false
     private var activeTheme: ThorTheme = themeProvider()
     private val colorPaint = Paint()
@@ -380,7 +381,12 @@ class SecondaryBrowserPresentation(
                     }
                 }
             }
-            loadUrl(initialUrl)
+            if (!spanModeProvider()) {
+                hasLoadedInitialUrl = true
+                loadUrl(initialUrl)
+            } else {
+                onPause()
+            }
         }
         webView = wv
 
@@ -631,6 +637,13 @@ class SecondaryBrowserPresentation(
             webView?.visibility = webVis
             if (spanActive) {
                 progressBar?.visibility = View.GONE
+                webView?.onPause()
+            } else {
+                webView?.onResume()
+                if (!hasLoadedInitialUrl) {
+                    hasLoadedInitialUrl = true
+                    webView?.loadUrl(currentUrl)
+                }
             }
             topBarView?.parent?.requestLayout()
         }
