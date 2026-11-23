@@ -216,9 +216,20 @@ internal fun ThorHandheldDiagram(
     } else {
         Color(theme.shellColor)
     }
-    val shellStroke = if (isLightShell) Color(0xFF9BA4B8) else Color(0xFF4A5368)
+    val shellStroke = when (theme) {
+        ThorTheme.WHITE -> Color(0xFFB0B8C8)
+        ThorTheme.RAINBOW -> Color(0xFF9E9B92)
+        ThorTheme.CLEAR_PURPLE -> Color(0xFF9F7AEA)
+        else -> Color(0xFF4A5368)
+    }
     val screenBg = Color(0xFF12151C)
-    val dimControl = if (isLightShell) Color(0xFF7D869B) else Color(0xFF5D667B)
+    val dimControl = when (theme) {
+        ThorTheme.WHITE -> Color(0xFFCBD5E1)
+        ThorTheme.RAINBOW -> Color(0xFF7B7E8A)
+        ThorTheme.CLEAR_PURPLE -> Color(0xFF2D2540)
+        ThorTheme.BLACK -> Color(0xFF2E3440)
+        ThorTheme.CUSTOM -> Color(0xFF5D667B)
+    }
 
     Canvas(modifier = modifier) {
         val w = size.width
