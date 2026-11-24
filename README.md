@@ -8,20 +8,32 @@
 
 ---
 
+## 實機畫面預覽
+
+| 上螢幕獨立模式（`1920×1080`） | 下螢幕獨立模式（`1240×1080`） |
+| :---: | :---: |
+| <img src="docs/screenshots/top_browser.png" alt="上螢幕瀏覽" width="440" /> | <img src="docs/screenshots/bottom_browser.png" alt="下螢幕瀏覽" width="320" /> |
+
+| 上螢幕浮動選單與九宮格 | 跨螢幕拼接模式：下螢幕多指觸控板 |
+| :---: | :---: |
+| <img src="docs/screenshots/top_menu.png" alt="上螢幕浮動選單" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="320" /> |
+
+---
+
 ## 主要功能
 
 ### 1. 雙螢幕模式
 - **獨立模式（Independent Mode）**：上下螢幕各自擁有獨立的 `WebView` 與多分頁管理，支援**網址傳送至另一螢幕**與**上下螢幕內容互換**。
-- **跨螢幕拼接模式（Span Mode）**：透過 `SpanEngine`（`VirtualDisplay` + `ImageReader`）將單一網頁從上螢幕連續延伸至下螢幕；下螢幕依實際物理寬度比例置中 1:1 裁切顯示，並支援**轉軸縫隙補償（Hinge Gap `0–48dp`）**與**下螢幕亮度／色溫微調**。
+- **跨螢幕拼接模式（Span Mode）**：透過 `SpanEngine`（`VirtualDisplay` + `ImageReader`）以原生 1080p（`1920px` 寬度、`369 dpi`）將單一網頁從上螢幕連續延伸至下螢幕；下螢幕依實際物理寬度比例置中 1:1 裁切顯示（支援獨立水平平移與置中重置），並支援**轉軸縫隙補償（Hinge Gap `0–48dp`）**與**下螢幕亮度／色溫微調**。
 
 ### 2. 全螢幕與統一浮動選單
-- 隱藏狀態列與導覽列的純淨全螢幕瀏覽。
+- 隱藏狀態列與導覽列的純淨全螢幕瀏覽，透過 `LaunchTrampolineActivity` 確保於主顯示器（上螢幕）正確啟動。
 - 上下螢幕皆配有可自由拖曳的圓形浮動按鈕，展開後可操作：
   - 上／下一頁、重新整理、傳送網址至另一螢幕、分頁管理
   - 網址列（支援手把十字鍵經過，需按 `A` 或點擊才開啟輸入法編輯）
   - 書籤、瀏覽紀錄、頁內尋找（支援上／下筆切換）
   - 單螢幕截圖、拼接截圖與長截圖
-  - 電腦版網頁切換、手把操作說明、設定
+  - 電腦版網頁切換、手把操作說明、設定、退出應用
 
 ### 3. AYN Thor 主機配色主題
 內建 5 款對應 AYN Thor 實機外觀的配色主題（預設為 `Rainbow`），皆支援雙螢幕即時同步：
@@ -33,13 +45,18 @@
 
 ### 4. 手把與下螢幕觸控板
 - **手把快捷操作**（可於設定開啟／關閉）：
-  - `十字鍵 / 搖桿`：捲動網頁或瀏覽選單
+  - `Select`：切換「跨螢幕拼接模式／雙螢幕獨立模式」
+  - `Select + 上 / 下`：設定拼接來源螢幕（上螢幕／下螢幕）
+  - `Start`：開啟／關閉目前目標螢幕選單（拼接模式下為上螢幕選單）
+  - `Start + 上 / 下`：切換手把控制目標螢幕（上螢幕／下螢幕）
+  - `十字鍵`：網頁元素空間導航（藍色焦點框）與選單導覽
+  - `左搖桿`：控制虛擬滑鼠游標移動（按 `A` 點擊）
+  - `右搖桿`：2D 平滑捲動網頁
+  - `A / B`：確認／返回上一頁（若已為第一頁則於目標螢幕顯示提示）
   - `L1 / R1`：切換上／下一個分頁
   - `L2 / R2`：上一頁／下一頁
   - `X`：切換上下螢幕內容
   - `Y`：重新整理目前網頁
-  - `Select`：切換手把目標螢幕（上螢幕／下螢幕）
-  - `Start`：切換「拼接模式／獨立模式」
 - **浮動多指觸控板**（拼接模式下可啟用）：
   - 單指移動鼠標／點擊、雙指捲動／縮放／回上一頁、三指重整
   - 拖曳左下角調整大小、拖曳右下角自由移動位置
@@ -47,8 +64,8 @@
 ### 5. 隱私與網頁增強
 - 內建廣告網域阻擋（`AdBlocker`）與攔截計數
 - 無痕分頁（Incognito）
-- 強制深色網頁、解除網頁複製限制、自訂 UserScript 腳本管理
-- 支援繁體中文、English 與跟隨系統語言切換（Android 13+ `LocaleManager` / `locales_config.xml`）
+- 強制深色網頁、解除網頁複製限制、自訂 UserScript 腳本管理，以及 Android WebView `dvh/vh` 視窗高度相容修正
+- 支援**繁體中文**、**English**、**日本語**與跟隨系統語言切換（Android 13+ `LocaleManager` / `locales_config.xml`）
 
 ---
 
@@ -71,7 +88,7 @@
 
 ```bash
 adb install -r -d app/build/outputs/apk/release/app-release.apk
-adb shell am start -n com.yangyws.dualscreenbrowser/.MainActivity
+adb shell am start -n com.yangyws.dualscreenbrowser/.LaunchTrampolineActivity
 ```
 
 ---
