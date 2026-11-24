@@ -28,7 +28,7 @@
   - 單螢幕截圖、拼接截圖與長截圖
   - 電腦版網頁切換、手把操作說明、設定、退出應用
 
-| 統一浮動選單與下螢幕觸控板 | 新手教學導覽 |
+| 統一浮動選單 | 新手教學導覽 |
 | :---: | :---: |
 | <img src="docs/screenshots/thor_menu_touchpad.png" alt="AYN Thor 統一浮動選單" width="420" /> | <img src="docs/screenshots/thor_tutorial.png" alt="AYN Thor 新手教學導覽" width="420" /> |
 
@@ -54,9 +54,9 @@
   - 單指移動鼠標／點擊、雙指捲動／縮放／回上一頁、三指重整
   - 拖曳左下角調整大小、拖曳右下角自由移動位置
 
-<p align="center">
-  <img src="docs/screenshots/thor_gamepad_guide.png" alt="AYN Thor 手把快捷操作說明與下螢幕觸控板" width="440" />
-</p>
+| 手把快捷操作說明（無觸控板） | 拼接模式＋下螢幕多指觸控板 |
+| :---: | :---: |
+| <img src="docs/screenshots/thor_gamepad_guide.png" alt="AYN Thor 手把快捷操作說明" width="420" /> | <img src="docs/screenshots/thor_touchpad.png" alt="AYN Thor 下螢幕多指觸控板" width="420" /> |
 
 ### 5. 隱私與網頁增強
 - 內建廣告網域阻擋（`AdBlocker`）與攔截計數
