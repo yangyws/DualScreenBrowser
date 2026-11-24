@@ -2523,7 +2523,7 @@ class SecondaryBrowserPresentation(
         panel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val availableW = rootLayout?.width ?: context.resources.displayMetrics.widthPixels
-        val widthPx = (availableW - dp(16)).coerceIn(dp(340), dp(440))
+        val widthPx = (availableW - dp(16)).coerceIn(dp(380), dp(510))
         guidePopup = PopupWindow(panel, widthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = 0f

@@ -1395,10 +1395,10 @@ private fun DualScreenBrowserApp(
                         )
                     Column(
                         modifier = Modifier
-                            .widthIn(min = 320.dp, max = 420.dp)
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .widthIn(min = 460.dp, max = 560.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1407,7 +1407,7 @@ private fun DualScreenBrowserApp(
                         ) {
                             Text(
                                 text = stringResource(R.string.action_gamepad_guide),
-                                fontSize = 14.sp,
+                                fontSize = 13.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -1416,34 +1416,39 @@ private fun DualScreenBrowserApp(
                                 contentDescription = stringResource(R.string.action_close),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
-                                    .size(18.dp)
+                                    .size(16.dp)
                                     .clickable { showGamepadGuidePopup = false }
                             )
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
                         guideGroups.forEachIndexed { groupIdx, (groupTitleRes, groupColor, items) ->
                             if (groupIdx > 0) {
                                 HorizontalDivider(
                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-                                    modifier = Modifier.padding(vertical = 2.dp)
+                                    modifier = Modifier.padding(vertical = 3.dp)
                                 )
                             }
                             Text(
                                 text = stringResource(groupTitleRes),
-                                fontSize = 11.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = groupColor
                             )
                             items.forEach { (keyRes, descRes) ->
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 1.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     GamepadGuideKeyChips(keyRes = keyRes, groupColor = groupColor)
                                     Text(
                                         text = stringResource(descRes),
-                                        fontSize = 12.sp,
+                                        fontSize = 11.5.sp,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis

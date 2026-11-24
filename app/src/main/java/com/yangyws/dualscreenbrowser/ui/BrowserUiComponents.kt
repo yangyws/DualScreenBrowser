@@ -190,10 +190,14 @@ fun StatusChip(
             Text(
                 text = label,
                 fontSize = 10.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = accentColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                style = androidx.compose.ui.text.TextStyle(
+                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                )
             )
         }
     }
