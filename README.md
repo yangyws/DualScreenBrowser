@@ -16,7 +16,7 @@
 
 | 雙螢幕獨立模式（Google ＋ DuckDuckGo） | 跨螢幕拼接模式（原生 1080p 無縫延伸） |
 | :---: | :---: |
-| <img src="docs/screenshots/thor_independent.png?v=5" alt="AYN Thor 雙螢幕獨立模式" width="380" /> | <img src="docs/screenshots/thor_span.png?v=5" alt="AYN Thor 跨螢幕拼接模式" width="380" /> |
+| <img src="docs/screenshots/thor_independent.png?v=6" alt="AYN Thor 雙螢幕獨立模式" width="380" /> | <img src="docs/screenshots/thor_span.png?v=6" alt="AYN Thor 跨螢幕拼接模式" width="380" /> |
 
 ### 2. 全螢幕與統一浮動選單
 - 隱藏狀態列與導覽列的純淨全螢幕瀏覽，透過 `LaunchTrampolineActivity` 確保於主顯示器（上螢幕）正確啟動。
@@ -30,7 +30,7 @@
 
 | 統一浮動選單 | 新手教學導覽 |
 | :---: | :---: |
-| <img src="docs/screenshots/thor_menu_touchpad.png?v=5" alt="AYN Thor 統一浮動選單" width="380" /> | <img src="docs/screenshots/thor_tutorial.png?v=5" alt="AYN Thor 新手教學導覽" width="380" /> |
+| <img src="docs/screenshots/thor_menu_touchpad.png?v=6" alt="AYN Thor 統一浮動選單" width="380" /> | <img src="docs/screenshots/thor_tutorial.png?v=6" alt="AYN Thor 新手教學導覽" width="380" /> |
 
 ### 3. AYN Thor 主機配色主題
 內建 5 款對應 AYN Thor 實機外觀的配色主題（預設為 `Rainbow`），皆支援雙螢幕即時同步：
@@ -41,7 +41,7 @@
 - **Custom**（自訂色相滑桿）
 
 <p align="center">
-  <img src="docs/screenshots/thor_theme_settings.png?v=5" alt="AYN Thor 主機配色主題設定" width="380" />
+  <img src="docs/screenshots/thor_theme_settings.png?v=6" alt="AYN Thor 主機配色主題設定" width="380" />
 </p>
 
 ### 4. 手把與下螢幕觸控板
@@ -56,7 +56,7 @@
 
 | 手把快捷操作說明（無觸控板） | 拼接模式＋下螢幕多指觸控板 |
 | :---: | :---: |
-| <img src="docs/screenshots/thor_gamepad_guide.png?v=5" alt="AYN Thor 手把快捷操作說明" width="380" /> | <img src="docs/screenshots/thor_touchpad.png?v=5" alt="AYN Thor 下螢幕多指觸控板" width="380" /> |
+| <img src="docs/screenshots/thor_gamepad_guide.png?v=6" alt="AYN Thor 手把快捷操作說明" width="380" /> | <img src="docs/screenshots/thor_touchpad.png?v=6" alt="AYN Thor 下螢幕多指觸控板" width="380" /> |
 
 ### 5. 隱私與網頁增強
 - 內建廣告網域阻擋（`AdBlocker`）與攔截計數
