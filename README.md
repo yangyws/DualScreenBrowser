@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/app_icon.png" alt="DualScreenBrowser Icon" width="128" />
+</p>
+
 # DualScreenBrowser（AYN Thor 雙螢幕掌機瀏覽器）
 
 專為 **AYN Thor** 雙螢幕摺疊掌機（上方 6 吋 16:9 `1920×1080` 螢幕 ＋ 下方 3.92 吋 8:7 `1240×1080` 螢幕）打造的 Android 雙螢幕瀏覽器，支援**雙螢幕獨立瀏覽**與**跨螢幕無縫拼接（Span Mode）**，並內建實體手把快捷鍵與多指觸控板模式。
