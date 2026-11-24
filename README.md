@@ -14,13 +14,9 @@
 - **獨立模式（Independent Mode）**：上下螢幕各自擁有獨立的 `WebView` 與多分頁管理，支援**網址傳送至另一螢幕**與**上下螢幕內容互換**。
 - **跨螢幕拼接模式（Span Mode）**：透過 `SpanEngine`（`VirtualDisplay` + `ImageReader`）以原生 1080p（`1920px` 寬度、`369 dpi`）將單一網頁從上螢幕連續延伸至下螢幕；下螢幕依實際物理寬度比例置中 1:1 裁切顯示（支援獨立水平平移與置中重置），並支援**轉軸縫隙補償（Hinge Gap `0–48dp`，雙螢幕設定同步）**與**上下螢幕各自獨立的亮度／色溫微調**。
 
-| 上螢幕獨立模式（`1920×1080`） | 下螢幕獨立模式（`1240×1080`） |
+| 雙螢幕獨立模式（Google ＋ DuckDuckGo） | 跨螢幕拼接模式（原生 1080p 無縫延伸） |
 | :---: | :---: |
-| <img src="docs/screenshots/top_browser.png" alt="上螢幕獨立瀏覽" width="440" /> | <img src="docs/screenshots/bottom_browser.png" alt="下螢幕獨立瀏覽" width="284" /> |
-
-| 跨螢幕拼接模式：上螢幕視角（`1920×1080`） | 跨螢幕拼接模式：下螢幕延伸視角（`1240×1080`） |
-| :---: | :---: |
-| <img src="docs/screenshots/span_top.png" alt="跨螢幕拼接上螢幕" width="440" /> | <img src="docs/screenshots/span_bottom_clean.png" alt="跨螢幕拼接下螢幕" width="284" /> |
+| <img src="docs/screenshots/thor_independent.png" alt="AYN Thor 雙螢幕獨立模式" width="420" /> | <img src="docs/screenshots/thor_span.png" alt="AYN Thor 跨螢幕拼接模式" width="420" /> |
 
 ### 2. 全螢幕與統一浮動選單
 - 隱藏狀態列與導覽列的純淨全螢幕瀏覽，透過 `LaunchTrampolineActivity` 確保於主顯示器（上螢幕）正確啟動。
@@ -32,9 +28,9 @@
   - 單螢幕截圖、拼接截圖與長截圖
   - 電腦版網頁切換、手把操作說明、設定、退出應用
 
-| 統一浮動選單（`1920×1080`） | 新手教學導覽 |
+| 統一浮動選單與下螢幕觸控板 | 新手教學導覽 |
 | :---: | :---: |
-| <img src="docs/screenshots/top_menu.png" alt="上螢幕浮動選單" width="440" /> | <img src="docs/screenshots/tutorial.png" alt="新手教學導覽" width="440" /> |
+| <img src="docs/screenshots/thor_menu_touchpad.png" alt="AYN Thor 統一浮動選單" width="420" /> | <img src="docs/screenshots/thor_tutorial.png" alt="AYN Thor 新手教學導覽" width="420" /> |
 
 ### 3. AYN Thor 主機配色主題
 內建 5 款對應 AYN Thor 實機外觀的配色主題（預設為 `Rainbow`），皆支援雙螢幕即時同步：
@@ -45,7 +41,7 @@
 - **Custom**（自訂色相滑桿）
 
 <p align="center">
-  <img src="docs/screenshots/theme_settings.png" alt="AYN Thor 主機配色主題設定" width="440" />
+  <img src="docs/screenshots/thor_theme_settings.png" alt="AYN Thor 主機配色主題設定" width="440" />
 </p>
 
 ### 4. 手把與下螢幕觸控板
@@ -58,9 +54,9 @@
   - 單指移動鼠標／點擊、雙指捲動／縮放／回上一頁、三指重整
   - 拖曳左下角調整大小、拖曳右下角自由移動位置
 
-| 手把快捷操作說明 | 拼接模式：下螢幕多指觸控板（`1240×1080`） |
-| :---: | :---: |
-| <img src="docs/screenshots/gamepad_guide.png" alt="手把快捷操作說明" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="284" /> |
+<p align="center">
+  <img src="docs/screenshots/thor_gamepad_guide.png" alt="AYN Thor 手把快捷操作說明與下螢幕觸控板" width="440" />
+</p>
 
 ### 5. 隱私與網頁增強
 - 內建廣告網域阻擋（`AdBlocker`）與攔截計數

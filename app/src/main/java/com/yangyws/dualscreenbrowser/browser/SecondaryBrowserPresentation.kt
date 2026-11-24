@@ -2467,7 +2467,10 @@ class SecondaryBrowserPresentation(
                 fun iconForKey(resId: Int): Int? = when (resId) {
                     R.string.gamepad_key_dpad, R.string.gamepad_key_dpad_updown -> R.drawable.ic_btn_dpad
                     R.string.gamepad_key_lstick, R.string.gamepad_key_rstick -> R.drawable.ic_btn_stick
-                    R.string.gamepad_key_a, R.string.gamepad_key_b, R.string.gamepad_key_x, R.string.gamepad_key_y -> R.drawable.ic_btn_face
+                    R.string.gamepad_key_a -> R.drawable.ic_btn_a
+                    R.string.gamepad_key_b -> R.drawable.ic_btn_b
+                    R.string.gamepad_key_x -> R.drawable.ic_btn_x
+                    R.string.gamepad_key_y -> R.drawable.ic_btn_y
                     R.string.gamepad_key_l1r1 -> R.drawable.ic_btn_bumper
                     R.string.gamepad_key_l2r2 -> R.drawable.ic_btn_trigger
                     R.string.gamepad_key_select, R.string.gamepad_key_start -> R.drawable.ic_btn_pill
