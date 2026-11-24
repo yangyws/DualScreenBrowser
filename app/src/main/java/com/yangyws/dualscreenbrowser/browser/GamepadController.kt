@@ -4,6 +4,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import kotlin.math.abs
+import kotlin.math.hypot
 
 enum class GamepadTargetScreen {
     TOP,
@@ -21,14 +22,15 @@ interface GamepadActions {
     fun toggleTargetScreen()
     fun toggleSpanMode()
     fun setSpanSource(source: SpanSource)
+    fun moveCursor(dx: Float, dy: Float) {}
+    fun clickAtCursor(): Boolean = false
 }
 
 object GamepadController {
     private const val SCROLL_STEP_PX = 180
-    private const val STICK_DEADZONE = 0.25f
+    private const val STICK_DEADZONE = 0.22f
     private const val STICK_SCROLL_MULTIPLIER = 42f
-    private var isStartHeld = false
-    private var startChordUsed = false
+    private const val CURSOR_SPEED_PX = 28f
 
     fun handleKeyEvent(
         event: KeyEvent,
@@ -91,6 +93,9 @@ object GamepadController {
                 actions.toggleTargetScreen()
                 true
             }
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (!isEditingText) actions.clickAtCursor() else false
+            }
             else -> false
         }
     }
@@ -105,16 +110,22 @@ object GamepadController {
             (event.source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
         if (!isJoystick || event.action != MotionEvent.ACTION_MOVE) return false
 
+        val leftX = event.getAxisValue(MotionEvent.AXIS_X)
         val leftY = event.getAxisValue(MotionEvent.AXIS_Y)
-        val rightY = event.getAxisValue(MotionEvent.AXIS_RZ)
-        val dominantY = if (abs(rightY) > abs(leftY)) rightY else leftY
-        if (abs(dominantY) <= STICK_DEADZONE) return false
-
-        val dy = (dominantY * STICK_SCROLL_MULTIPLIER).toInt()
-        if (dy != 0) {
-            actions.scrollActive(dy)
-            return true
+        var handled = false
+        if (hypot(leftX, leftY) > STICK_DEADZONE) {
+            actions.moveCursor(leftX * CURSOR_SPEED_PX, leftY * CURSOR_SPEED_PX)
+            handled = true
         }
-        return false
+
+        val rightY = event.getAxisValue(MotionEvent.AXIS_RZ)
+        if (abs(rightY) > STICK_DEADZONE) {
+            val dy = (rightY * STICK_SCROLL_MULTIPLIER).toInt()
+            if (dy != 0) {
+                actions.scrollActive(dy)
+                handled = true
+            }
+        }
+        return handled
     }
 }

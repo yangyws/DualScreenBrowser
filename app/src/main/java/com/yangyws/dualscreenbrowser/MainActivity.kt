@@ -169,6 +169,7 @@ import com.yangyws.dualscreenbrowser.browser.UserScriptManager
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
 import com.yangyws.dualscreenbrowser.ui.CompactMenuItem
+import com.yangyws.dualscreenbrowser.ui.CursorOverlayView
 import com.yangyws.dualscreenbrowser.ui.EmptyStateView
 import com.yangyws.dualscreenbrowser.ui.FloatingMenuButton
 import com.yangyws.dualscreenbrowser.ui.HueColorSlider
@@ -381,6 +382,9 @@ private fun DualScreenBrowserApp(
     var showTutorial by remember { mutableStateOf(!prefs.tutorialDone) }
     var showGamepadGuidePopup by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf(BrowserPanel.NONE) }
+    var topCursorX by remember { mutableFloatStateOf(0f) }
+    var topCursorY by remember { mutableFloatStateOf(0f) }
+    var topCursorVisible by remember { mutableStateOf(false) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
 
@@ -891,6 +895,46 @@ private fun DualScreenBrowserApp(
                     }
                 }
             }
+
+            override fun moveCursor(dx: Float, dy: Float) {
+                if (spanMode && spanEngine.isRunning()) {
+                    spanEngine.moveCursorBy(dx, dy)
+                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.moveCursorBy(dx, dy)
+                } else {
+                    val w = topViewportSize.width.toFloat()
+                    val h = topViewportSize.height.toFloat()
+                    if (w <= 0f || h <= 0f) return
+                    if (!topCursorVisible) {
+                        topCursorX = w * 0.5f
+                        topCursorY = h * 0.5f
+                        topCursorVisible = true
+                    }
+                    topCursorX = (topCursorX + dx).coerceIn(0f, w - 1f)
+                    topCursorY = (topCursorY + dy).coerceIn(0f, h - 1f)
+                }
+            }
+
+            override fun clickAtCursor(): Boolean {
+                if (spanMode && spanEngine.isRunning()) {
+                    if (!spanEngine.cursorVisible) return false
+                    spanEngine.tapAtCursor()
+                    return true
+                }
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    return presentation?.tapAtCursor() == true
+                }
+                if (!topCursorVisible) return false
+                val wv = webViews[latestActiveTabId] ?: return false
+                val now = android.os.SystemClock.uptimeMillis()
+                val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, topCursorX, topCursorY, 0)
+                val up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, topCursorX, topCursorY, 0)
+                wv.dispatchTouchEvent(down)
+                wv.dispatchTouchEvent(up)
+                down.recycle()
+                up.recycle()
+                return true
+            }
         }
     }
 
@@ -999,6 +1043,20 @@ private fun DualScreenBrowserApp(
             if (spanMode && dualScreenActive) {
                 AndroidView(
                     factory = { ctx -> SpanViewportView(ctx, spanEngine, isBottomViewport = false) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (topCursorVisible) {
+                val cursorAccentInt = android.graphics.Color.rgb(
+                    (MaterialTheme.colorScheme.primary.red * 255).toInt(),
+                    (MaterialTheme.colorScheme.primary.green * 255).toInt(),
+                    (MaterialTheme.colorScheme.primary.blue * 255).toInt()
+                )
+                AndroidView(
+                    factory = { ctx -> CursorOverlayView(ctx) },
+                    update = { overlay ->
+                        overlay.accentColor = cursorAccentInt
+                        overlay.updateCursor(topCursorX, topCursorY, topCursorVisible)
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -1810,6 +1868,28 @@ private fun DualScreenBrowserApp(
                         activePanel = BrowserPanel.SETTINGS
                     }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val isRainbow = currentTheme == ThorTheme.RAINBOW
+                    StatusChip(
+                        label = "A ${stringResource(R.string.menu_hint_confirm)}",
+                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_GREEN) else MaterialTheme.colorScheme.primary
+                    )
+                    StatusChip(
+                        label = "B ${stringResource(R.string.menu_hint_back)}",
+                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.primary
+                    )
+                    StatusChip(
+                        label = "Start ${stringResource(R.string.menu_hint_span)}",
+                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_BLUE) else MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

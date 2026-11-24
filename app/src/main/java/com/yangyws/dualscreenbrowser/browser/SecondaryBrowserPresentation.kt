@@ -50,6 +50,7 @@ import com.yangyws.dualscreenbrowser.BuildConfig
 import com.yangyws.dualscreenbrowser.R
 import com.yangyws.dualscreenbrowser.system.AppLanguage
 import com.yangyws.dualscreenbrowser.system.LocaleHelper
+import com.yangyws.dualscreenbrowser.ui.CursorOverlayView
 import com.yangyws.dualscreenbrowser.ui.SpanViewportView
 import java.util.UUID
 import kotlin.math.abs
@@ -122,6 +123,10 @@ class SecondaryBrowserPresentation(
     private var touchpadMoveHandle: ImageView? = null
     private var touchpadResizeHandle: ImageView? = null
     private var floatingMenuBtn: ImageButton? = null
+    private var cursorOverlay: CursorOverlayView? = null
+    private var cursorX: Float = 0f
+    private var cursorY: Float = 0f
+    private var cursorVisible: Boolean = false
     private var recenterSpanBtn: TextView? = null
     private var panListener: ((Float) -> Unit)? = null
     private var bottomMenuPopup: PopupWindow? = null
@@ -408,6 +413,11 @@ class SecondaryBrowserPresentation(
 
         contentStack.addView(tabsHost, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         contentStack.addView(spanView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val cOverlay = CursorOverlayView(context).apply {
+            accentColor = activeTheme.effectivePrimary(activeCustomPrimary)
+        }
+        cursorOverlay = cOverlay
+        contentStack.addView(cOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val floatSize = dp(46)
         val floatMargin = dp(14)
@@ -826,6 +836,8 @@ class SecondaryBrowserPresentation(
             touchpadResizeHandle?.setColorFilter(rainbowSlotColor(3, accent))
             (addressBox?.background as? GradientDrawable)?.setColor(theme.surfaceVariantColor)
             lockIcon?.setColorFilter(accent)
+            cursorOverlay?.accentColor = accent
+            cursorOverlay?.invalidate()
             progressBar?.progressTintList = ColorStateList.valueOf(accent)
         }
     }
@@ -1058,6 +1070,33 @@ class SecondaryBrowserPresentation(
 
     fun scrollByY(dy: Int) {
         webView?.scrollBy(0, dy)
+    }
+
+    fun moveCursorBy(dx: Float, dy: Float) {
+        val w = (webContainer?.width ?: 0).toFloat()
+        val h = (webContainer?.height ?: 0).toFloat()
+        if (w <= 0f || h <= 0f) return
+        if (!cursorVisible) {
+            cursorX = w * 0.5f
+            cursorY = h * 0.5f
+            cursorVisible = true
+        }
+        cursorX = (cursorX + dx).coerceIn(0f, w - 1f)
+        cursorY = (cursorY + dy).coerceIn(0f, h - 1f)
+        cursorOverlay?.post { cursorOverlay?.updateCursor(cursorX, cursorY, true) }
+    }
+
+    fun tapAtCursor(): Boolean {
+        val wv = webView ?: return false
+        if (!cursorVisible) return false
+        val now = android.os.SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, cursorX, cursorY, 0)
+        val up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, cursorX, cursorY, 0)
+        wv.dispatchTouchEvent(down)
+        wv.dispatchTouchEvent(up)
+        down.recycle()
+        up.recycle()
+        return true
     }
 
     private fun createThemedCardDrawable(
@@ -1487,6 +1526,40 @@ class SecondaryBrowserPresentation(
             addView(itemsContainer)
         }
         panel.addView(scrollItems, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        addDivider(verticalMarginDp = 4)
+        val hintRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(2), dp(4), 0)
+        }
+        fun addKeyHint(keyText: String, descText: String, badgeColor: Int) {
+            val badgeBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(5).toFloat()
+                setColor(Color.argb(42, Color.red(badgeColor), Color.green(badgeColor), Color.blue(badgeColor)))
+                setStroke(dp(1), Color.argb(145, Color.red(badgeColor), Color.green(badgeColor), Color.blue(badgeColor)))
+            }
+            val keyTv = TextView(context).apply {
+                text = keyText
+                setTextColor(badgeColor)
+                textSize = 10.5f
+                background = badgeBg
+                setPadding(dp(6), dp(2), dp(6), dp(2))
+            }
+            val descTv = TextView(context).apply {
+                text = descText
+                setTextColor(mutedFg)
+                textSize = 11f
+                setPadding(dp(5), 0, dp(10), 0)
+            }
+            hintRow.addView(keyTv)
+            hintRow.addView(descTv)
+        }
+        addKeyHint("A", context.getString(R.string.menu_hint_confirm), rainbowSlotColor(3, accent))
+        addKeyHint("B", context.getString(R.string.menu_hint_back), rainbowSlotColor(2, accent))
+        addKeyHint("Start", context.getString(R.string.menu_hint_span), rainbowSlotColor(1, accent))
+        panel.addView(hintRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val menuWidthPx = dp(304)
         popup = PopupWindow(panel, menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {

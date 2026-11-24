@@ -106,7 +106,10 @@
     <string name="tutorial_step4_desc">無狀態列純淨全螢幕瀏覽；點開可拖曳的浮動按鈕即可輸入網址、切換 Thor 主機配色、截圖／長截圖，上下獨立時下螢幕也有專屬浮動按鈕。</string>
     <string name="gamepad_guide_title">手把快捷操作說明</string>
     <string name="gamepad_key_dpad">十字鍵 ／ 左右搖桿</string>
-    <string name="gamepad_desc_dpad">上下捲動目前網頁（拼接模式可捲動整頁）</string>
+    <string name="gamepad_desc_dpad">十字鍵捲動、左搖桿游標、A 點擊、右搖桿捲動</string>
+    <string name="menu_hint_confirm">確認</string>
+    <string name="menu_hint_back">返回</string>
+    <string name="menu_hint_span">拼接</string>
     <string name="gamepad_key_l1r1">L1 / R1</string>
     <string name="gamepad_desc_l1r1">切換上一個 ／ 下一個分頁</string>
     <string name="gamepad_key_l2r2">L2 / R2</string>

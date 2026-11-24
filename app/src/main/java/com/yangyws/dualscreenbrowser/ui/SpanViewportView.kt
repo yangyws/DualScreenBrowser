@@ -120,10 +120,8 @@ class SpanViewportView(
             if (cx >= srcLeft && cx <= srcRight && cy >= top && cy <= bottom) {
                 val drawX = ((cx - srcLeft) / (srcRight - srcLeft).toFloat()) * width.toFloat()
                 val drawY = ((cy - top) / (bottom - top).toFloat()) * height.toFloat()
-                val radius = (width.coerceAtMost(height) * 0.018f).coerceIn(10f, 18f)
-                canvas.drawCircle(drawX, drawY, radius, cursorOuterPaint)
-                canvas.drawCircle(drawX, drawY, radius, cursorFillPaint)
-                canvas.drawCircle(drawX, drawY, radius, cursorStrokePaint)
+                val pointerSize = (resources.displayMetrics.density * 22f).coerceIn(36f, 64f)
+                drawArrowCursor(canvas, drawX, drawY, pointerSize)
             }
         }
     }

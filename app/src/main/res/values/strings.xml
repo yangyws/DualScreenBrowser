@@ -106,7 +106,10 @@
     <string name="tutorial_step4_desc">Browse in status-bar-free fullscreen. Tap the draggable floating button to enter URLs, pick Thor shell themes, take screenshots, or switch screens.</string>
     <string name="gamepad_guide_title">Gamepad Controls</string>
     <string name="gamepad_key_dpad">D-Pad / Analog Stick</string>
-    <string name="gamepad_desc_dpad">Scroll page up and down</string>
+    <string name="gamepad_desc_dpad">D-Pad scroll, Left Stick cursor, A click, Right Stick scroll</string>
+    <string name="menu_hint_confirm">Select</string>
+    <string name="menu_hint_back">Back</string>
+    <string name="menu_hint_span">Span</string>
     <string name="gamepad_key_l1r1">L1 / R1</string>
     <string name="gamepad_desc_l1r1">Switch to previous / next tab</string>
     <string name="gamepad_key_l2r2">L2 / R2</string>
