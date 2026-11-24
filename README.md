@@ -18,6 +18,10 @@
 | :---: | :---: |
 | <img src="docs/screenshots/top_menu.png" alt="上螢幕浮動選單" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="320" /> |
 
+| AYN Thor 主機配色主題 | 手把操作說明 |
+| :---: | :---: |
+| <img src="docs/screenshots/theme_settings.png" alt="主機配色主題" width="440" /> | <img src="docs/screenshots/gamepad_guide.png" alt="手把操作說明" width="440" /> |
+
 ---
 
 ## 主要功能

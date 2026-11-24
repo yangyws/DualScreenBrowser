@@ -545,7 +545,8 @@ fun FloatingMenuButton(
                                 }
                             }
                         }
-                    } else if (extraPopupExpanded && extraPopupContent != null) {
+                    }
+                    if (!expanded && extraPopupExpanded && extraPopupContent != null) {
                         Popup(
                             popupPositionProvider = positionProvider,
                             onDismissRequest = onDismissExtraPopup,
