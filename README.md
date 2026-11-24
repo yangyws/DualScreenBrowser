@@ -84,3 +84,14 @@ adb shell am start -n com.yangyws.dualscreenbrowser/.MainActivity
 - `app/src/main/java/com/yangyws/dualscreenbrowser/browser/GamepadController.kt`：AYN Thor 手把按鍵與搖桿事件處理
 - `app/src/main/java/com/yangyws/dualscreenbrowser/browser/BrowserModels.kt`：資料模型、`ThorTheme` 配色定義與 `BrowserPrefs` 偏好設定
 - `app/src/main/java/com/yangyws/dualscreenbrowser/ui/`：`BrowserUiComponents.kt`、`SpanViewportView.kt`、`ThorTutorialOverlay.kt`
+
+---
+
+## 授權條款（License）
+
+本專案採用 **GPLv3 + MIT 雙重授權（Dual License）**，使用者可依需求任選其一授權條款使用：
+
+- [GNU General Public License v3.0 (GPLv3)](LICENSE-GPLv3)
+- [MIT License](LICENSE-MIT)
+
+`SPDX-License-Identifier: GPL-3.0-or-later OR MIT`
