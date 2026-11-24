@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/app_icon.png" alt="DualScreenBrowser Icon" width="128" />
+  <img src="docs/app_icon.png?v=2" alt="DualScreenBrowser Icon" width="128" />
 </p>
 
 # DualScreenBrowser（AYN Thor 雙螢幕掌機瀏覽器）
