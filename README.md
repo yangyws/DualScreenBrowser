@@ -22,6 +22,10 @@
 | :---: | :---: |
 | <img src="docs/screenshots/theme_settings.png" alt="主機配色主題" width="440" /> | <img src="docs/screenshots/gamepad_guide.png" alt="手把操作說明" width="440" /> |
 
+| 新手教學導覽 | 跨螢幕拼接模式：上螢幕視角 |
+| :---: | :---: |
+| <img src="docs/screenshots/tutorial.png" alt="新手教學導覽" width="440" /> | <img src="docs/screenshots/span_top.png" alt="跨螢幕拼接上螢幕" width="440" /> |
+
 ---
 
 ## 主要功能
