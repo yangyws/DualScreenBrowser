@@ -89,9 +89,6 @@ adb shell am start -n com.yangyws.dualscreenbrowser/.MainActivity
 
 ## 授權條款（License）
 
-本專案採用 **GPLv3 + MIT 雙重授權（Dual License）**，使用者可依需求任選其一授權條款使用：
+本專案採用 **[GNU General Public License v3.0 (GPLv3)](LICENSE)** 授權條款釋出。
 
-- [GNU General Public License v3.0 (GPLv3)](LICENSE-GPLv3)
-- [MIT License](LICENSE-MIT)
-
-`SPDX-License-Identifier: GPL-3.0-or-later OR MIT`
+`SPDX-License-Identifier: GPL-3.0-or-later`
