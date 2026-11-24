@@ -41,7 +41,7 @@
 - **Custom**（自訂色相滑桿）
 
 <p align="center">
-  <img src="docs/screenshots/thor_theme_settings.png" alt="AYN Thor 主機配色主題設定" width="440" />
+  <img src="docs/screenshots/thor_theme_settings.png" alt="AYN Thor 主機配色主題設定" width="420" />
 </p>
 
 ### 4. 手把與下螢幕觸控板
