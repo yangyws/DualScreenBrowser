@@ -18,9 +18,9 @@
 | :---: | :---: |
 | <img src="docs/screenshots/top_browser.png" alt="上螢幕獨立瀏覽" width="440" /> | <img src="docs/screenshots/bottom_browser.png" alt="下螢幕獨立瀏覽" width="284" /> |
 
-| 跨螢幕拼接模式：上螢幕視角（`1920×1080`） | 跨螢幕拼接模式：下螢幕與多指觸控板（`1240×1080`） |
+| 跨螢幕拼接模式：上螢幕視角（`1920×1080`） | 跨螢幕拼接模式：下螢幕延伸視角（`1240×1080`） |
 | :---: | :---: |
-| <img src="docs/screenshots/span_top.png" alt="跨螢幕拼接上螢幕" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="跨螢幕拼接下螢幕與觸控板" width="284" /> |
+| <img src="docs/screenshots/span_top.png" alt="跨螢幕拼接上螢幕" width="440" /> | <img src="docs/screenshots/span_bottom_clean.png" alt="跨螢幕拼接下螢幕" width="284" /> |
 
 ### 2. 全螢幕與統一浮動選單
 - 隱藏狀態列與導覽列的純淨全螢幕瀏覽，透過 `LaunchTrampolineActivity` 確保於主顯示器（上螢幕）正確啟動。
@@ -58,9 +58,9 @@
   - 單指移動鼠標／點擊、雙指捲動／縮放／回上一頁、三指重整
   - 拖曳左下角調整大小、拖曳右下角自由移動位置
 
-<p align="center">
-  <img src="docs/screenshots/gamepad_guide.png" alt="手把快捷操作說明" width="440" />
-</p>
+| 手把快捷操作說明 | 拼接模式：下螢幕多指觸控板（`1240×1080`） |
+| :---: | :---: |
+| <img src="docs/screenshots/gamepad_guide.png" alt="手把快捷操作說明" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="284" /> |
 
 ### 5. 隱私與網頁增強
 - 內建廣告網域阻擋（`AdBlocker`）與攔截計數
