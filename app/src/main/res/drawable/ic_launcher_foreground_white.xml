@@ -9,65 +9,74 @@
         android:scaleX="0.78"
         android:scaleY="0.78"
         android:translateY="1.5">
-        <path
-            android:fillColor="#CBD5E1"
-            android:pathData="M29,20h11a1.5,1.5 0,0 1,1.5 1.5v1.5h-14v-1.5a1.5,1.5 0,0 1,1.5 -1.5z" />
-        <path
-            android:fillColor="#CBD5E1"
-            android:pathData="M68,20h11a1.5,1.5 0,0 1,1.5 1.5v1.5h-14v-1.5a1.5,1.5 0,0 1,1.5 -1.5z" />
+        <!-- Top lid (6.0-inch 16:9 ratio) -->
         <path
             android:fillColor="#FFFFFF"
             android:strokeColor="#64748B"
             android:strokeWidth="1.8"
-            android:pathData="M27,22.5h54a3,3 0,0 1,3 3v21.5a3,3 0,0 1,-3 3H27a3,3 0,0 1,-3 -3V25.5a3,3 0,0 1,3 -3z" />
+            android:pathData="M25.5,20h57a3,3 0,0 1,3 3v24.5a3,3 0,0 1,-3 3h-57a3,3 0,0 1,-3 -3V23a3,3 0,0 1,3 -3z" />
         <path
             android:fillColor="#1E293B"
-            android:pathData="M29,25h50a1.5,1.5 0,0 1,1.5 1.5v19a1.5,1.5 0,0 1,-1.5 1.5H29a1.5,1.5 0,0 1,-1.5 -1.5v-19a1.5,1.5 0,0 1,1.5 -1.5z" />
+            android:pathData="M27.5,22.5h53a1.5,1.5 0,0 1,1.5 1.5v22a1.5,1.5 0,0 1,-1.5 1.5h-53a1.5,1.5 0,0 1,-1.5 -1.5V24a1.5,1.5 0,0 1,1.5 -1.5z" />
         <path
             android:fillColor="#334155"
-            android:pathData="M29,25h50a1.5,1.5 0,0 1,1.5 1.5v2.4h-53v-2.4a1.5,1.5 0,0 1,1.5 -1.5z" />
+            android:pathData="M27.5,22.5h53a1.5,1.5 0,0 1,1.5 1.5v2.4h-56V24a1.5,1.5 0,0 1,1.5 -1.5z" />
         <path
             android:fillColor="#00000000"
             android:strokeColor="#F8FAFC"
             android:strokeWidth="1.8"
             android:strokeLineCap="round"
-            android:pathData="M32.5,35.5h24 M32.5,41h16" />
+            android:pathData="M31.5,34h26 M31.5,39.5h17" />
         <path
             android:fillColor="#64748B"
-            android:pathData="M71,38m-4.2,0a4.2,4.2 0,1 1,8.4 0a4.2,4.2 0,1 1,-8.4 0" />
+            android:pathData="M72.5,36.5m-4.4,0a4.4,4.4 0,1 1,8.8 0a4.4,4.4 0,1 1,-8.8 0" />
+
+        <!-- Full-width clamshell hinge -->
         <path
-            android:fillColor="#64748B"
-            android:pathData="M29,51h50a1.5,1.5 0,0 1,1.5 1.5v0.8a1.5,1.5 0,0 1,-1.5 1.5H29a1.5,1.5 0,0 1,-1.5 -1.5v-0.8a1.5,1.5 0,0 1,1.5 -1.5z" />
+            android:fillColor="#94A3B8"
+            android:pathData="M25.5,51.5h57a1.5,1.5 0,0 1,1.5 1.5v1.2a1.5,1.5 0,0 1,-1.5 1.5h-57a1.5,1.5 0,0 1,-1.5 -1.5V53a1.5,1.5 0,0 1,1.5 -1.5z" />
+
+        <!-- Bottom deck (shorter, matching 3.92-inch 8:7 ratio) -->
         <path
             android:fillColor="#FFFFFF"
             android:strokeColor="#64748B"
             android:strokeWidth="1.8"
-            android:pathData="M27,56h54a3,3 0,0 1,3 3v22.5a3,3 0,0 1,-3 3H27a3,3 0,0 1,-3 -3V59a3,3 0,0 1,3 -3z" />
+            android:pathData="M24,56.5h60a3.5,3.5 0,0 1,3.5 3.5v22a3.5,3.5 0,0 1,-3.5 3.5H24a3.5,3.5 0,0 1,-3.5 -3.5V60a3.5,3.5 0,0 1,3.5 -3.5z" />
+
+        <!-- Bottom 3.92-inch 8:7 screen -->
         <path
             android:fillColor="#1E293B"
-            android:strokeColor="#94A3B8"
-            android:strokeWidth="1.2"
-            android:pathData="M42.5,58.5h23a1.5,1.5 0,0 1,1.5 1.5v20a1.5,1.5 0,0 1,-1.5 1.5h-23a1.5,1.5 0,0 1,-1.5 -1.5V60a1.5,1.5 0,0 1,1.5 -1.5z" />
+            android:strokeColor="#64748B"
+            android:strokeWidth="1.1"
+            android:pathData="M41.5,58.5h25a1.5,1.5 0,0 1,1.5 1.5v19.5a1.5,1.5 0,0 1,-1.5 1.5h-25a1.5,1.5 0,0 1,-1.5 -1.5V60a1.5,1.5 0,0 1,1.5 -1.5z" />
         <path
             android:fillColor="#00000000"
             android:strokeColor="#E2E8F0"
             android:strokeWidth="1.8"
             android:strokeLineCap="round"
-            android:pathData="M45,65h18 M45,70.5h13" />
+            android:pathData="M44.5,64.5h19 M44.5,70h13" />
         <path
-            android:fillColor="#4894A3B8"
-            android:pathData="M42,76h24v3.5a1.5,1.5 0,0 1,-1.5 1.5h-21a1.5,1.5 0,0 1,-1.5 -1.5z" />
-        <path
-            android:fillColor="#94A3B8"
-            android:pathData="M33,64m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" />
-        <path
-            android:fillColor="#64748B"
-            android:pathData="M32,72h2v7h-2z M29.5,74.5h7v2h-7z" />
-        <path
-            android:fillColor="#64748B"
-            android:pathData="M75,61m-1.4,0a1.4,1.4 0,1 1,2.8 0a1.4,1.4 0,1 1,-2.8 0 M75,67m-1.4,0a1.4,1.4 0,1 1,2.8 0a1.4,1.4 0,1 1,-2.8 0 M72,64m-1.4,0a1.4,1.4 0,1 1,2.8 0a1.4,1.4 0,1 1,-2.8 0 M78,64m-1.4,0a1.4,1.4 0,1 1,2.8 0a1.4,1.4 0,1 1,-2.8 0" />
-        <path
-            android:fillColor="#94A3B8"
-            android:pathData="M75,75.5m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" />
+            android:fillColor="#4464748B"
+            android:pathData="M41,75.5h26v3.5a1.5,1.5 0,0 1,-1.5 1.5h-23a1.5,1.5 0,0 1,-1.5 -1.5z" />
+
+        <!-- Left: 360 recessed dish + stick on top, D-pad on bottom, speaker slots -->
+        <path android:fillColor="#CBD5E1" android:pathData="M30.5,63.5m-5.2,0a5.2,5.2 0,1 1,10.4 0a5.2,5.2 0,1 1,-10.4 0" />
+        <path android:fillColor="#475569" android:pathData="M30.5,63.5m-3.8,0a3.8,3.8 0,1 1,7.6 0a3.8,3.8 0,1 1,-7.6 0" />
+        <path android:fillColor="#64748B" android:pathData="M30.5,63.5m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+        <path android:fillColor="#475569" android:pathData="M29.4,71h2.2v6.5h-2.2z M27.2,73.2h6.6v2.2h-6.6z" />
+        <path android:fillColor="#64748B" android:pathData="M25,80.5h3v1.2h-3z M29.2,80.5h3v1.2h-3z" />
+
+        <!-- Right: ABXY on top, 360 recessed dish + stick on bottom, speaker slots -->
+        <path android:fillColor="#64748B" android:pathData="M77.5,60.3m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0" />
+        <path android:fillColor="#64748B" android:pathData="M77.5,66.7m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0" />
+        <path android:fillColor="#64748B" android:pathData="M74.3,63.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0" />
+        <path android:fillColor="#64748B" android:pathData="M80.7,63.5m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0" />
+        <path android:fillColor="#CBD5E1" android:pathData="M77.5,74.2m-5.2,0a5.2,5.2 0,1 1,10.4 0a5.2,5.2 0,1 1,-10.4 0" />
+        <path android:fillColor="#475569" android:pathData="M77.5,74.2m-3.8,0a3.8,3.8 0,1 1,7.6 0a3.8,3.8 0,1 1,-7.6 0" />
+        <path android:fillColor="#64748B" android:pathData="M77.5,74.2m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+        <path android:fillColor="#64748B" android:pathData="M75.8,80.5h3v1.2h-3z M80,80.5h3v1.2h-3z" />
+
+        <!-- Bottom center AYN chin button -->
+        <path android:fillColor="#334155" android:pathData="M51.5,82.6h5a0.8,0.8 0,0 1,0.8 0.8v0.6a0.8,0.8 0,0 1,-0.8 0.8h-5a0.8,0.8 0,0 1,-0.8 -0.8v-0.6a0.8,0.8 0,0 1,0.8 -0.8z" />
     </group>
 </vector>
