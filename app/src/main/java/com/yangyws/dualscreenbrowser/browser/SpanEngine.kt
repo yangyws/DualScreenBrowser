@@ -133,11 +133,25 @@ class SpanEngine {
             cursorX = virtualWidth * 0.5f
             cursorY = topViewportHeight * 0.5f
             cursorVisible = true
+            GamepadController.clearWebFocus(virtualWebView)
         }
         cursorX = (cursorX + dx).coerceIn(0f, (virtualWidth - 1).toFloat())
         cursorY = (cursorY + dy).coerceIn(0f, (totalHeight - 1).toFloat())
         cursorListeners.forEach { it() }
     }
+
+    fun hideCursor() {
+        if (!cursorVisible) return
+        cursorVisible = false
+        cursorListeners.forEach { it() }
+    }
+
+    fun moveWebFocus(keyCode: Int): Boolean {
+        hideCursor()
+        return GamepadController.moveWebFocus(virtualWebView, keyCode)
+    }
+
+    fun clickWebFocus(): Boolean = GamepadController.clickWebFocus(virtualWebView)
 
     fun tapAtCursor() {
         val wv = virtualWebView ?: return
@@ -186,9 +200,9 @@ class SpanEngine {
         stop()
         stopping = false
 
-        // Balance crisp rendering with safe VirtualDisplay + ImageReader memory bandwidth (1280px cap)
+        // Render at native display resolution (1080p) for crisp text and 1:1 pixel mapping
         val rawW = widthPx.coerceAtLeast(320)
-        val scale = if (rawW > 1280) 1280f / rawW.toFloat() else 1f
+        val scale = 1f
 
         val safeW = (rawW * scale).toInt().coerceAtLeast(320)
         val safeTopH = (topHeightPx * scale).toInt().coerceAtLeast(200)
@@ -289,8 +303,11 @@ class SpanEngine {
         virtualWebView?.loadUrl(url)
     }
 
-    fun goBack() {
-        virtualWebView?.let { if (it.canGoBack()) it.goBack() }
+    fun goBack(): Boolean {
+        val wv = virtualWebView ?: return false
+        if (!wv.canGoBack()) return false
+        wv.goBack()
+        return true
     }
 
     fun goForward() {
@@ -303,6 +320,10 @@ class SpanEngine {
 
     fun scrollByY(dy: Int) {
         virtualWebView?.scrollBy(0, dy)
+    }
+
+    fun scrollBy(dx: Int, dy: Int) {
+        virtualWebView?.scrollBy(dx, dy)
     }
 
     fun zoomBy(factor: Float) {
@@ -476,6 +497,7 @@ class SpanEngine {
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
                 settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                UrlResolver.enableWebCompat(this)
                 webViewClient = object : WebViewClient() {
                     override fun shouldInterceptRequest(
                         view: WebView?,
@@ -495,7 +517,7 @@ class SpanEngine {
                         request: WebResourceRequest?
                     ): Boolean {
                         val uri = request?.url ?: return false
-                        return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
+                        return UrlResolver.handleNonHttpUri(view, uri)
                     }
 
                     override fun onPageFinished(view: WebView?, url: String?) {

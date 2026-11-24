@@ -1,6 +1,10 @@
 package com.yangyws.dualscreenbrowser.browser
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.webkit.CookieManager
+import android.webkit.WebView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
@@ -112,6 +116,30 @@ object UrlResolver {
         if (url.isBlank()) return ""
         val host = runCatching { URI(url).host }.getOrNull()
         return if (!host.isNullOrBlank()) host.removePrefix("www.") else url
+    }
+
+    fun enableWebCompat(webView: WebView) {
+        webView.settings.javaScriptCanOpenWindowsAutomatically = true
+        val cm = CookieManager.getInstance()
+        cm.setAcceptCookie(true)
+        cm.setAcceptThirdPartyCookies(webView, true)
+    }
+
+    fun handleNonHttpUri(view: WebView?, uri: Uri): Boolean {
+        val scheme = uri.scheme?.lowercase() ?: return false
+        if (scheme == "http" || scheme == "https" || scheme == "about") return false
+        if (scheme == "intent" && view != null) {
+            runCatching {
+                val intent = Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+                val fallback = intent.getStringExtra("browser_fallback_url")
+                if (!fallback.isNullOrBlank()) {
+                    view.loadUrl(fallback)
+                } else {
+                    view.context.startActivity(intent)
+                }
+            }
+        }
+        return true
     }
 }
 

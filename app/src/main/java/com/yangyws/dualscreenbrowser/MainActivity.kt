@@ -118,6 +118,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onKeyEvent as onKeyEventCompat
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -197,9 +198,12 @@ class MainActivity : ComponentActivity() {
     private var gamepadActions: GamepadActions? = null
     private var gamepadEnabledFlag: Boolean = true
     private var isEditingTextFlag: Boolean = false
+    private var panelBackHandler: (() -> Boolean)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.colorMode = android.content.pm.ActivityInfo.COLOR_MODE_DEFAULT
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
         launchUrlState = intent?.dataString
         setContent {
             val prefs = remember { BrowserPrefs(this) }
@@ -262,8 +266,11 @@ class MainActivity : ComponentActivity() {
                         gamepadEnabledFlag = enabled
                         isEditingTextFlag = editing
                     },
+                    onRegisterPanelBack = { handler ->
+                        panelBackHandler = handler
+                    },
                     onForwardKeyEvent = { ev -> dispatchKeyEvent(ev) },
-                    onForwardMotionEvent = { ev -> onGenericMotionEvent(ev) }
+                    onForwardMotionEvent = { ev -> dispatchGenericMotionEvent(ev) }
                 )
             }
         }
@@ -301,7 +308,21 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if ((event.keyCode == KeyEvent.KEYCODE_BUTTON_B || event.keyCode == KeyEvent.KEYCODE_BACK) &&
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0 &&
+            panelBackHandler?.invoke() == true
+        ) {
+            return true
+        }
         val actions = gamepadActions
+        if (actions != null &&
+            event.keyCode != KeyEvent.KEYCODE_BUTTON_START &&
+            event.keyCode != KeyEvent.KEYCODE_BUTTON_SELECT &&
+            actions.dispatchToBottomPopup(event)
+        ) {
+            return true
+        }
         if (actions != null &&
             GamepadController.handleKeyEvent(event, gamepadEnabledFlag, isEditingTextFlag, actions)
         ) {
@@ -310,14 +331,14 @@ class MainActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         val actions = gamepadActions
         if (actions != null &&
             GamepadController.handleGenericMotionEvent(event, gamepadEnabledFlag, actions)
         ) {
             return true
         }
-        return super.onGenericMotionEvent(event)
+        return super.dispatchGenericMotionEvent(event)
     }
 }
 
@@ -333,6 +354,7 @@ private fun DualScreenBrowserApp(
     onCustomHueChanged: (Float) -> Unit,
     onConsumeExternalUrl: () -> Unit,
     onRegisterGamepad: (GamepadActions, Boolean, Boolean) -> Unit,
+    onRegisterPanelBack: ((() -> Boolean)) -> Unit,
     onForwardKeyEvent: (KeyEvent) -> Boolean,
     onForwardMotionEvent: (MotionEvent) -> Boolean
 ) {
@@ -385,6 +407,9 @@ private fun DualScreenBrowserApp(
     var topCursorX by remember { mutableFloatStateOf(0f) }
     var topCursorY by remember { mutableFloatStateOf(0f) }
     var topCursorVisible by remember { mutableStateOf(false) }
+    var topMenuOpenTrigger by remember { mutableIntStateOf(0) }
+    var topMenuToggleTrigger by remember { mutableIntStateOf(0) }
+    var topMenuFocusTrigger by remember { mutableIntStateOf(0) }
 
     val webViews = remember { mutableStateMapOf<String, WebView>() }
 
@@ -392,8 +417,11 @@ private fun DualScreenBrowserApp(
     val displayManager = remember {
         context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     }
+    val hostDisplayId = remember(context) {
+        context.display?.displayId ?: Display.DEFAULT_DISPLAY
+    }
     var secondaryDisplay by remember {
-        mutableStateOf(findSecondaryDisplay(displayManager))
+        mutableStateOf(findSecondaryDisplay(displayManager, hostDisplayId))
     }
     var dualScreenActive by remember {
         mutableStateOf(secondaryDisplay != null)
@@ -421,6 +449,7 @@ private fun DualScreenBrowserApp(
     val latestGamepadEnabled by rememberUpdatedState(gamepadEnabled)
     val latestForceDarkWeb by rememberUpdatedState(forceDarkWeb)
     val latestEnableCopyScript by rememberUpdatedState(enableCopyScript)
+    val latestGamepadTarget by rememberUpdatedState(gamepadTarget)
 
     fun performSwapScreens(urlFromBottomOverride: String? = null) {
         val currentPres = latestPresentation ?: return
@@ -457,14 +486,14 @@ private fun DualScreenBrowserApp(
     DisposableEffect(displayManager) {
         val listener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
-                secondaryDisplay = findSecondaryDisplay(displayManager)
+                secondaryDisplay = findSecondaryDisplay(displayManager, hostDisplayId)
                 if (secondaryDisplay != null) {
                     dualScreenActive = true
                 }
             }
 
             override fun onDisplayRemoved(displayId: Int) {
-                val found = findSecondaryDisplay(displayManager)
+                val found = findSecondaryDisplay(displayManager, hostDisplayId)
                 secondaryDisplay = found
                 if (found == null) dualScreenActive = false
             }
@@ -605,6 +634,12 @@ private fun DualScreenBrowserApp(
                     history = (listOf(entry) + history.filterNot { it.url == url }).take(100)
                     prefs.saveHistory(history)
                 },
+                gamepadTargetProvider = { latestGamepadTarget },
+                onExitApp = {
+                    presentation?.dismiss()
+                    spanEngine.stop()
+                    (context as? android.app.Activity)?.finishAndRemoveTask()
+                },
                 onRequestClose = {
                     dualScreenActive = false
                     spanMode = false
@@ -626,7 +661,12 @@ private fun DualScreenBrowserApp(
         val spanActive = spanMode && dualScreenActive && topScreenActive
         presentation?.updatePresentationMode(spanActive)
         webViews[activeTabId]?.let { wv ->
-            if (spanActive) wv.onPause() else wv.onResume()
+            if (spanActive) {
+                wv.onPause()
+            } else {
+                wv.onResume()
+                wv.resumeTimers()
+            }
         }
     }
 
@@ -740,12 +780,64 @@ private fun DualScreenBrowserApp(
         }
     }
 
-    BackHandler(enabled = activePanel != BrowserPanel.NONE || canGoBack) {
-        if (activePanel != BrowserPanel.NONE) {
-            activePanel = BrowserPanel.NONE
+    LaunchedEffect(Unit) {
+        onRegisterPanelBack {
+            if (activePanel != BrowserPanel.NONE) {
+                activePanel = BrowserPanel.NONE
+                topMenuOpenTrigger += 1
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    fun performGoBackActive() {
+        val wentBack = if (spanMode && spanEngine.isRunning()) {
+            spanEngine.goBack()
+        } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+            presentation?.goBackIfPossible() == true
         } else {
-            webViews[activeTabId]?.let { wv ->
-                if (wv.canGoBack()) wv.goBack()
+            val wv = webViews[activeTabId]
+            if (wv != null && wv.canGoBack()) {
+                wv.goBack()
+                true
+            } else {
+                false
+            }
+        }
+        if (!wentBack) {
+            if (!spanMode && gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                presentation?.showToast(R.string.toast_already_first_page)
+            } else {
+                Toast.makeText(context, context.getString(R.string.toast_already_first_page), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    BackHandler(enabled = true) {
+        when {
+            activePanel != BrowserPanel.NONE -> {
+                activePanel = BrowserPanel.NONE
+                topMenuOpenTrigger += 1
+            }
+            showGamepadGuidePopup -> {
+                showGamepadGuidePopup = false
+                topMenuOpenTrigger += 1
+            }
+            findBarVisible -> {
+                findBarVisible = false
+                findQuery = ""
+                findMatchActive = 0
+                findMatchTotal = 0
+                webViews[activeTabId]?.clearMatches()
+                topMenuOpenTrigger += 1
+            }
+            isEditingText -> {
+                focusManager.clearFocus()
+            }
+            else -> {
+                performGoBackActive()
             }
         }
     }
@@ -792,24 +884,18 @@ private fun DualScreenBrowserApp(
 
     val gamepadActions = remember(activeTabId, tabs, dualScreenActive, gamepadTarget, spanMode) {
         object : GamepadActions {
-            override fun scrollActive(dy: Int) {
+            override fun scrollActive(dx: Int, dy: Int) {
                 if (spanMode && spanEngine.isRunning()) {
-                    spanEngine.scrollByY(dy)
+                    spanEngine.scrollBy(dx, dy)
                 } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
-                    presentation?.scrollByY(dy)
+                    presentation?.scrollBy(dx, dy)
                 } else {
-                    webViews[activeTabId]?.scrollBy(0, dy)
+                    webViews[activeTabId]?.scrollBy(dx, dy)
                 }
             }
 
             override fun goBackActive() {
-                if (spanMode && spanEngine.isRunning()) {
-                    spanEngine.goBack()
-                } else if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
-                    presentation?.goBackIfPossible()
-                } else {
-                    webViews[activeTabId]?.let { if (it.canGoBack()) it.goBack() }
-                }
+                performGoBackActive()
             }
 
             override fun goForwardActive() {
@@ -853,22 +939,30 @@ private fun DualScreenBrowserApp(
                 performSwapScreens()
             }
 
-            override fun toggleTargetScreen() {
+            override fun setTargetScreen(target: GamepadTargetScreen) {
+                if (spanMode) return
                 if (!dualScreenActive || presentation == null) {
                     gamepadTarget = GamepadTargetScreen.TOP
                     return
                 }
-                gamepadTarget = if (gamepadTarget == GamepadTargetScreen.TOP) {
+                gamepadTarget = target
+                val msgRes = if (gamepadTarget == GamepadTargetScreen.TOP) {
+                    topMenuFocusTrigger += 1
+                    R.string.toast_gamepad_target_top
+                } else {
+                    presentation?.focusOpenPopup()
+                    R.string.toast_gamepad_target_bottom
+                }
+                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+            }
+
+            override fun toggleTargetScreen() {
+                val next = if (gamepadTarget == GamepadTargetScreen.TOP) {
                     GamepadTargetScreen.BOTTOM
                 } else {
                     GamepadTargetScreen.TOP
                 }
-                val msgRes = if (gamepadTarget == GamepadTargetScreen.TOP) {
-                    R.string.toast_gamepad_target_top
-                } else {
-                    R.string.toast_gamepad_target_bottom
-                }
-                Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                setTargetScreen(next)
             }
 
             override fun toggleSpanMode() {
@@ -909,6 +1003,7 @@ private fun DualScreenBrowserApp(
                         topCursorX = w * 0.5f
                         topCursorY = h * 0.5f
                         topCursorVisible = true
+                        GamepadController.clearWebFocus(webViews[latestActiveTabId])
                     }
                     topCursorX = (topCursorX + dx).coerceIn(0f, w - 1f)
                     topCursorY = (topCursorY + dy).coerceIn(0f, h - 1f)
@@ -934,6 +1029,42 @@ private fun DualScreenBrowserApp(
                 down.recycle()
                 up.recycle()
                 return true
+            }
+
+            override fun moveWebFocus(keyCode: Int): Boolean {
+                if (spanMode && spanEngine.isRunning()) {
+                    return spanEngine.moveWebFocus(keyCode)
+                }
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    return presentation?.moveWebFocus(keyCode) == true
+                }
+                topCursorVisible = false
+                return GamepadController.moveWebFocus(webViews[latestActiveTabId], keyCode)
+            }
+
+            override fun clickWebFocus(): Boolean {
+                if (spanMode && spanEngine.isRunning()) {
+                    return spanEngine.clickWebFocus()
+                }
+                if (gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    return presentation?.clickWebFocus() == true
+                }
+                return GamepadController.clickWebFocus(webViews[latestActiveTabId])
+            }
+
+            override fun openMenu() {
+                if (!spanMode && gamepadTarget == GamepadTargetScreen.BOTTOM && dualScreenActive && presentation != null) {
+                    presentation?.toggleFloatingMenu()
+                } else {
+                    topMenuToggleTrigger += 1
+                }
+            }
+
+            override fun dispatchToBottomPopup(event: KeyEvent): Boolean {
+                if (spanMode || gamepadTarget != GamepadTargetScreen.BOTTOM) return false
+                val pres = presentation ?: return false
+                if (!pres.hasOpenPopup()) return false
+                return pres.dispatchKeyToOpenPopup(event)
             }
         }
     }
@@ -961,6 +1092,10 @@ private fun DualScreenBrowserApp(
                 AndroidView(
                     factory = { ctx ->
                     WebView(ctx).apply {
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                        )
                         settings.javaScriptEnabled = jsEnabled
                         settings.domStorageEnabled = true
                         settings.databaseEnabled = true
@@ -969,7 +1104,7 @@ private fun DualScreenBrowserApp(
                         settings.builtInZoomControls = true
                         settings.displayZoomControls = false
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        CookieManager.getInstance().setAcceptCookie(true)
+                        UrlResolver.enableWebCompat(this)
                     }
                 },
                 update = { container ->
@@ -997,7 +1132,18 @@ private fun DualScreenBrowserApp(
                                 request: WebResourceRequest?
                             ): Boolean {
                                 val uri = request?.url ?: return false
-                                return uri.scheme != "http" && uri.scheme != "https" && uri.scheme != "about"
+                                return UrlResolver.handleNonHttpUri(view, uri)
+                            }
+
+                            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                super.doUpdateVisitedHistory(view, url, isReload)
+                                if (!url.isNullOrBlank()) {
+                                    addressText = url
+                                    view?.tag = url
+                                    tabs = tabs.map {
+                                        if (it.id == activeTab.id) it.copy(url = url) else it
+                                    }
+                                }
                             }
 
                             override fun onPageFinished(view: WebView?, url: String?) {
@@ -1008,6 +1154,7 @@ private fun DualScreenBrowserApp(
                                 if (!url.isNullOrBlank()) {
                                     val pageTitle = view?.title.orEmpty()
                                     addressText = url
+                                    view?.tag = url
                                     tabs = tabs.map {
                                         if (it.id == activeTab.id) it.copy(url = url, title = pageTitle) else it
                                     }
@@ -1031,8 +1178,11 @@ private fun DualScreenBrowserApp(
                                 loadProgress = if (newProgress in 1..99) newProgress / 100f else 0f
                             }
                         }
-                        if (container.url != activeTab.url) {
-                            container.loadUrl(activeTab.url)
+                        if (container.tag != activeTab.url) {
+                            container.tag = activeTab.url
+                            if (container.url != activeTab.url) {
+                                container.loadUrl(activeTab.url)
+                            }
                         }
                     }
                 },
@@ -1064,7 +1214,12 @@ private fun DualScreenBrowserApp(
             // Draggable floating menu button with isolated recompose scope
             FloatingMenuButton(
                 isRainbow = currentTheme == ThorTheme.RAINBOW,
+                openMenuTrigger = topMenuOpenTrigger,
+                toggleMenuTrigger = topMenuToggleTrigger,
+                focusTrigger = topMenuFocusTrigger,
+                isGamepadTarget = spanMode || gamepadTarget == GamepadTargetScreen.TOP,
                 onStartPressed = { gamepadActions.toggleSpanMode() },
+                onForwardKeyEvent = onForwardKeyEvent,
                 extraPopupExpanded = showGamepadGuidePopup || findBarVisible,
                 onDismissExtraPopup = {
                     showGamepadGuidePopup = false
@@ -1178,6 +1333,7 @@ private fun DualScreenBrowserApp(
                         R.string.gamepad_key_x to R.string.gamepad_desc_x,
                         R.string.gamepad_key_y to R.string.gamepad_desc_y,
                         R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                        R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right,
                         R.string.gamepad_key_start to R.string.gamepad_desc_start
                     )
                     val rainbowChipColors = listOf(
@@ -1243,6 +1399,81 @@ private fun DualScreenBrowserApp(
                             }
                         }
                     }
+                    }
+                },
+                menuFooter = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val isRainbow = currentTheme == ThorTheme.RAINBOW
+                            val hints = listOf(
+                                Triple("A:", R.string.menu_hint_confirm, if (isRainbow) Color(ThorTheme.RAINBOW_GREEN) else MaterialTheme.colorScheme.primary),
+                                Triple("B:", R.string.menu_hint_back, if (isRainbow) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.primary)
+                            )
+                            hints.forEach { (keyLabel, descRes, keyColor) ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(
+                                        text = keyLabel,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = keyColor
+                                    )
+                                    Text(
+                                        text = stringResource(descRes),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.weight(1f))
+                            var exitFocused by remember { mutableStateOf(false) }
+                            val exitColor = Color(0xFFEF4444)
+                            val triggerExit = {
+                                presentation?.dismiss()
+                                spanEngine.stop()
+                                (context as? android.app.Activity)?.finishAndRemoveTask()
+                                Unit
+                            }
+                            Text(
+                                text = stringResource(R.string.action_exit_app),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = exitColor,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (exitFocused) exitColor.copy(alpha = 0.14f) else Color.Transparent)
+                                    .then(
+                                        if (exitFocused) {
+                                            Modifier.border(1.dp, exitColor.copy(alpha = 0.68f), RoundedCornerShape(6.dp))
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .onFocusChanged { exitFocused = it.isFocused }
+                                    .then(Modifier.onKeyEventCompat { keyEvent ->
+                                        if (keyEvent.key == Key.ButtonA &&
+                                            keyEvent.type == KeyEventType.KeyDown &&
+                                            keyEvent.nativeKeyEvent.repeatCount == 0
+                                        ) {
+                                            triggerExit()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    })
+                                    .clickable(onClick = triggerExit)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             ) { dismissMenu ->
@@ -1868,28 +2099,6 @@ private fun DualScreenBrowserApp(
                         activePanel = BrowserPanel.SETTINGS
                     }
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    val isRainbow = currentTheme == ThorTheme.RAINBOW
-                    StatusChip(
-                        label = "A ${stringResource(R.string.menu_hint_confirm)}",
-                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_GREEN) else MaterialTheme.colorScheme.primary
-                    )
-                    StatusChip(
-                        label = "B ${stringResource(R.string.menu_hint_back)}",
-                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_YELLOW) else MaterialTheme.colorScheme.primary
-                    )
-                    StatusChip(
-                        label = "Start ${stringResource(R.string.menu_hint_span)}",
-                        accentColor = if (isRainbow) Color(ThorTheme.RAINBOW_BLUE) else MaterialTheme.colorScheme.primary
-                    )
-                }
             }
         }
     }
@@ -2203,6 +2412,7 @@ private fun DualScreenBrowserApp(
                     R.string.gamepad_key_x to R.string.gamepad_desc_x,
                     R.string.gamepad_key_y to R.string.gamepad_desc_y,
                     R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                    R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right,
                     R.string.gamepad_key_start to R.string.gamepad_desc_start
                 )
                 val rainbowChipColors = listOf(
@@ -2634,8 +2844,12 @@ private fun ThorThemeSelector(
     }
 }
 
-private fun findSecondaryDisplay(dm: DisplayManager): Display? =
-    dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).firstOrNull()
+private fun findSecondaryDisplay(
+    dm: DisplayManager,
+    currentDisplayId: Int = Display.DEFAULT_DISPLAY
+): Display? =
+    dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+        .firstOrNull { it.displayId != currentDisplayId }
         ?: dm.displays.firstOrNull {
-            it.displayId != Display.DEFAULT_DISPLAY && (it.flags and Display.FLAG_PRIVATE) == 0
+            it.displayId != currentDisplayId && (it.flags and Display.FLAG_PRIVATE) == 0
         }

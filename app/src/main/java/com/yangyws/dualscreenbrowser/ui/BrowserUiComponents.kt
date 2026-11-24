@@ -66,6 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -74,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -106,6 +108,7 @@ fun TactileIconButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    var isFocused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed && enabled) 0.90f else 1f,
         animationSpec = tween(durationMillis = 110, easing = StrongEaseOut),
@@ -115,12 +118,13 @@ fun TactileIconButton(
     val containerColor = when {
         !enabled -> Color.Transparent
         active -> MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+        isFocused -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
         else -> Color.Transparent
     }
-    val border = if (active && enabled) {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f))
-    } else {
-        null
+    val border = when {
+        active && enabled -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f))
+        isFocused && enabled -> BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f))
+        else -> null
     }
 
     Surface(
@@ -133,6 +137,18 @@ fun TactileIconButton(
         border = border,
         modifier = modifier
             .size(size)
+            .onFocusChanged { isFocused = it.isFocused }
+            .onKeyEvent { keyEvent ->
+                if (enabled && keyEvent.key == Key.ButtonA &&
+                    keyEvent.type == KeyEventType.KeyDown &&
+                    keyEvent.nativeKeyEvent.repeatCount == 0
+                ) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -205,11 +221,33 @@ fun CompactMenuItem(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
             .height(34.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent)
+            .then(
+                if (isFocused) {
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.68f), RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                }
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.key == Key.ButtonA &&
+                    keyEvent.type == KeyEventType.KeyDown &&
+                    keyEvent.nativeKeyEvent.repeatCount == 0
+                ) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp)
     ) {
@@ -269,10 +307,16 @@ fun OverflowMenuButton(
 @Composable
 fun FloatingMenuButton(
     isRainbow: Boolean = false,
+    openMenuTrigger: Int = 0,
+    toggleMenuTrigger: Int = 0,
+    focusTrigger: Int = 0,
+    isGamepadTarget: Boolean = true,
     onStartPressed: (() -> Unit)? = null,
+    onForwardKeyEvent: ((android.view.KeyEvent) -> Boolean)? = null,
     extraPopupExpanded: Boolean = false,
     onDismissExtraPopup: () -> Unit = {},
     extraPopupContent: (@Composable () -> Unit)? = null,
+    menuFooter: (@Composable () -> Unit)? = null,
     menuContent: @Composable (dismiss: () -> Unit) -> Unit
 ) {
     val rainbowBrush = remember {
@@ -297,6 +341,16 @@ fun FloatingMenuButton(
         )
     }
     var expanded by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(openMenuTrigger) {
+        if (openMenuTrigger > 0) {
+            expanded = true
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(toggleMenuTrigger) {
+        if (toggleMenuTrigger > 0) {
+            expanded = !expanded
+        }
+    }
     val density = LocalDensity.current
     val btnSizePx = with(density) { 46.dp.toPx() }
     val marginPx = with(density) { 14.dp.toPx() }
@@ -439,24 +493,55 @@ fun FloatingMenuButton(
                                 modifier = Modifier
                                     .heightIn(max = maxMenuHeight)
                                     .onPreviewKeyEvent { keyEvent ->
-                                        if (keyEvent.key == Key.ButtonStart) {
-                                            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
-                                                expanded = false
-                                                onStartPressed?.invoke()
+                                        if (!isGamepadTarget) {
+                                            return@onPreviewKeyEvent onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                        }
+                                        if ((com.yangyws.dualscreenbrowser.browser.GamepadController.isSelectPressed ||
+                                                com.yangyws.dualscreenbrowser.browser.GamepadController.isStartPressed) &&
+                                            (keyEvent.key == Key.DirectionUp || keyEvent.key == Key.DirectionDown)
+                                        ) {
+                                            return@onPreviewKeyEvent onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                        }
+                                        when {
+                                            keyEvent.key == Key.ButtonStart -> {
+                                                onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
                                             }
-                                            true
-                                        } else {
-                                            false
+                                            keyEvent.key == Key.ButtonB || keyEvent.key == Key.Back || keyEvent.key == Key.Escape -> {
+                                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                                    expanded = false
+                                                }
+                                                true
+                                            }
+                                            keyEvent.key == Key.ButtonSelect -> {
+                                                onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                            }
+                                            else -> false
                                         }
                                     }
                             ) {
+                                val popupFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                                val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+                                var menuHasFocus by remember { mutableStateOf(false) }
+                                androidx.compose.runtime.LaunchedEffect(windowInfo.isWindowFocused, isGamepadTarget, focusTrigger) {
+                                    if (isGamepadTarget && (windowInfo.isWindowFocused || focusTrigger > 0) && !menuHasFocus) {
+                                        popupFocusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next)
+                                    }
+                                }
                                 Column(
                                     modifier = Modifier
                                         .width(304.dp)
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(vertical = 4.dp)
+                                        .onFocusChanged { menuHasFocus = it.hasFocus }
                                 ) {
-                                    menuContent { expanded = false }
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f, fill = false)
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        menuContent { expanded = false }
+                                    }
+                                    menuFooter?.invoke()
                                 }
                             }
                         }
@@ -478,14 +563,30 @@ fun FloatingMenuButton(
                                 modifier = Modifier
                                     .heightIn(max = maxMenuHeight)
                                     .onPreviewKeyEvent { keyEvent ->
-                                        if (keyEvent.key == Key.ButtonStart) {
-                                            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
-                                                expanded = false
-                                                onStartPressed?.invoke()
+                                        if (!isGamepadTarget) {
+                                            return@onPreviewKeyEvent onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                        }
+                                        if ((com.yangyws.dualscreenbrowser.browser.GamepadController.isSelectPressed ||
+                                                com.yangyws.dualscreenbrowser.browser.GamepadController.isStartPressed) &&
+                                            (keyEvent.key == Key.DirectionUp || keyEvent.key == Key.DirectionDown)
+                                        ) {
+                                            return@onPreviewKeyEvent onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                        }
+                                        when {
+                                            keyEvent.key == Key.ButtonStart -> {
+                                                onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
                                             }
-                                            true
-                                        } else {
-                                            false
+                                            keyEvent.key == Key.ButtonB || keyEvent.key == Key.Back || keyEvent.key == Key.Escape -> {
+                                                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                                    onDismissExtraPopup()
+                                                    expanded = true
+                                                }
+                                                true
+                                            }
+                                            keyEvent.key == Key.ButtonSelect -> {
+                                                onForwardKeyEvent?.invoke(keyEvent.nativeKeyEvent) == true
+                                            }
+                                            else -> false
                                         }
                                     }
                             ) {

@@ -36,6 +36,60 @@ object UserScriptManager {
         })();
     """
 
+    private const val VIEWPORT_UNIT_FIX_SCRIPT = """
+        (function() {
+            if (window.__dsbVhFixInstalled) return;
+            window.__dsbVhFixInstalled = true;
+            function probeZero(unit) {
+                var root = document.body || document.documentElement;
+                if (!root) return false;
+                var d = document.createElement('div');
+                d.style.cssText = 'position:fixed;height:100' + unit + ';visibility:hidden;pointer-events:none';
+                root.appendChild(d);
+                var h = d.getBoundingClientRect().height;
+                d.remove();
+                return h === 0 && window.innerHeight > 0;
+            }
+            function fixEl(el) {
+                if (!el || !el.getAttribute) return;
+                var s = el.getAttribute('style');
+                if (!s || s.indexOf('vh') === -1) return;
+                var ih = window.innerHeight;
+                if (ih <= 0) return;
+                var fixed = s.replace(/([0-9.]+)(d|s|l)?vh/gi, function(_, n) {
+                    return (parseFloat(n) * ih / 100) + 'px';
+                });
+                if (fixed !== s) el.setAttribute('style', fixed);
+            }
+            function install() {
+                if (!probeZero('dvh') && !probeZero('vh')) return;
+                document.querySelectorAll('[style*="vh"]').forEach(fixEl);
+                var root = document.body || document.documentElement;
+                if (root && !window.__dsbVhObs) {
+                    window.__dsbVhObs = new MutationObserver(function(muts) {
+                        for (var i = 0; i < muts.length; i++) {
+                            var m = muts[i];
+                            if (m.type === 'attributes' && m.target) fixEl(m.target);
+                            if (m.addedNodes) {
+                                for (var j = 0; j < m.addedNodes.length; j++) {
+                                    var n = m.addedNodes[j];
+                                    if (n.nodeType === 1) {
+                                        fixEl(n);
+                                        if (n.querySelectorAll) n.querySelectorAll('[style*="vh"]').forEach(fixEl);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    window.__dsbVhObs.observe(root, {
+                        attributes: true, attributeFilter: ['style'], childList: true, subtree: true
+                    });
+                }
+            }
+            install();
+        })();
+    """
+
     fun matchesUrl(pattern: String, url: String?): Boolean {
         if (url.isNullOrBlank()) return false
         val trimmed = pattern.trim()
@@ -51,6 +105,7 @@ object UserScriptManager {
         customScripts: List<UserScript>
     ) {
         if (webView == null || url.isNullOrBlank()) return
+        webView.evaluateJavascript(VIEWPORT_UNIT_FIX_SCRIPT, null)
         if (forceDark) {
             webView.evaluateJavascript(FORCE_DARK_SCRIPT, null)
         }
