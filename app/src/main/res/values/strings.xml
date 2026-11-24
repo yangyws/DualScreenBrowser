@@ -78,6 +78,7 @@
     <string name="action_span_mode">Span Mode</string>
     <string name="action_span_source_top">Span Source: Top Screen</string>
     <string name="action_span_source_bottom">Span Source: Bottom Screen</string>
+    <string name="action_recenter_span">Center</string>
     <string name="action_secondary_bar">Bottom Screen URL Bar</string>
     <string name="action_reopen_top">Reopen Top Screen</string>
     <string name="action_reopen_bottom">Reopen Bottom Screen</string>

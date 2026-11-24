@@ -60,11 +60,17 @@ class SpanEngine {
         private set
     var bottomWidthRatio: Float = 1f
         private set
+
+    @Volatile
+    var bottomPanOffsetRatio: Float = 0f
+        private set
+
     var totalHeight: Int = 0
         private set
 
     private val frameListeners = CopyOnWriteArrayList<(Bitmap) -> Unit>()
     private val cursorListeners = CopyOnWriteArrayList<() -> Unit>()
+    private val panListeners = CopyOnWriteArrayList<(Float) -> Unit>()
 
     @Volatile
     var cursorX: Float = 0f
@@ -84,6 +90,41 @@ class SpanEngine {
 
     fun removeCursorListener(listener: () -> Unit) {
         cursorListeners.remove(listener)
+    }
+
+    fun addPanListener(listener: (Float) -> Unit) {
+        panListeners.addIfAbsent(listener)
+        listener(bottomPanOffsetRatio)
+    }
+
+    fun removePanListener(listener: (Float) -> Unit) {
+        panListeners.remove(listener)
+    }
+
+    fun bottomRegionLeft(totalW: Int, sliceW: Int): Int {
+        val maxShift = ((totalW - sliceW) / 2f).coerceAtLeast(0f)
+        return (maxShift + bottomPanOffsetRatio * maxShift).toInt().coerceIn(0, (totalW - sliceW).coerceAtLeast(0))
+    }
+
+    fun panBottomByViewDelta(dxViewPx: Float, viewWidth: Int) {
+        if (viewWidth <= 0 || virtualWidth <= 0 || bottomWidthRatio >= 0.99f) return
+        val sliceW = virtualWidth * bottomWidthRatio
+        val maxShift = ((virtualWidth - sliceW) / 2f).coerceAtLeast(1f)
+        val deltaVirtualPx = -dxViewPx * (sliceW / viewWidth.toFloat())
+        val next = (bottomPanOffsetRatio + deltaVirtualPx / maxShift).coerceIn(-1f, 1f)
+        if (next != bottomPanOffsetRatio) {
+            bottomPanOffsetRatio = next
+            panListeners.forEach { it(next) }
+            cursorListeners.forEach { it() }
+        }
+    }
+
+    fun resetBottomPan() {
+        if (bottomPanOffsetRatio != 0f) {
+            bottomPanOffsetRatio = 0f
+            panListeners.forEach { it(0f) }
+            cursorListeners.forEach { it() }
+        }
     }
 
     fun moveCursorBy(dx: Float, dy: Float) {
@@ -323,15 +364,16 @@ class SpanEngine {
         val wv = virtualWebView ?: return false
         if (viewWidth <= 0 || viewHeight <= 0 || virtualWidth <= 0) return false
 
-        val regionLeft = if (isBottomViewport) {
-            ((virtualWidth - virtualWidth * bottomWidthRatio) / 2f).coerceAtLeast(0f)
-        } else {
-            0f
-        }
         val regionWidth = if (isBottomViewport) {
             (virtualWidth * bottomWidthRatio).coerceAtLeast(1f)
         } else {
             virtualWidth.toFloat()
+        }
+        val regionLeft = if (isBottomViewport) {
+            val maxShift = ((virtualWidth - regionWidth) / 2f).coerceAtLeast(0f)
+            (maxShift + bottomPanOffsetRatio * maxShift).coerceIn(0f, (virtualWidth - regionWidth).coerceAtLeast(0f))
+        } else {
+            0f
         }
         val regionTop = if (isBottomViewport) (topViewportHeight + hingeGapPx).toFloat() else 0f
         val regionHeight = if (isBottomViewport) bottomViewportHeight.toFloat() else topViewportHeight.toFloat()
@@ -390,6 +432,8 @@ class SpanEngine {
         frameThread = null
         runCatching { imageReader?.close() }
         imageReader = null
+        bottomPanOffsetRatio = 0f
+        panListeners.forEach { it(0f) }
         synchronized(bufferLock) {
             latestBitmap = null
             for (i in backBuffers.indices) {

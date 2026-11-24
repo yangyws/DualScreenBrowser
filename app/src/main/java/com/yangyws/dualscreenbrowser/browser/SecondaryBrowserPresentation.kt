@@ -122,6 +122,8 @@ class SecondaryBrowserPresentation(
     private var touchpadMoveHandle: ImageView? = null
     private var touchpadResizeHandle: ImageView? = null
     private var floatingMenuBtn: ImageButton? = null
+    private var recenterSpanBtn: TextView? = null
+    private var panListener: ((Float) -> Unit)? = null
     private var bottomMenuPopup: PopupWindow? = null
     private var bottomTabsPopup: PopupWindow? = null
     private var topBarView: LinearLayout? = null
@@ -478,6 +480,40 @@ class SecondaryBrowserPresentation(
             }
         )
 
+        val recenterFg = if (activeTheme.isLight) Color.parseColor("#111827") else Color.WHITE
+        val recenterBtn = TextView(context).apply {
+            text = "⟲ ${context.getString(R.string.action_recenter_span)}"
+            setTextColor(recenterFg)
+            textSize = 12f
+            setPadding(dp(12), dp(7), dp(12), dp(7))
+            background = createThemedCardDrawable(
+                fillColor = Color.argb(230, Color.red(activeTheme.surfaceColor), Color.green(activeTheme.surfaceColor), Color.blue(activeTheme.surfaceColor)),
+                cornerRadiusPx = dp(18).toFloat(),
+                strokeWidthPx = dp(2).toFloat(),
+                theme = activeTheme,
+                accentColor = Color.argb(200, Color.red(initialAccent), Color.green(initialAccent), Color.blue(initialAccent))
+            )
+            visibility = if (spanModeProvider() && abs(spanEngine.bottomPanOffsetRatio) > 0.01f) View.VISIBLE else View.GONE
+            setOnClickListener {
+                spanEngine.resetBottomPan()
+            }
+        }
+        recenterSpanBtn = recenterBtn
+        val listener: (Float) -> Unit = { ratio ->
+            recenterBtn.post {
+                recenterBtn.visibility = if (spanModeProvider() && abs(ratio) > 0.01f) View.VISIBLE else View.GONE
+            }
+        }
+        panListener = listener
+        spanEngine.addPanListener(listener)
+        contentStack.addView(
+            recenterBtn,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.BOTTOM or Gravity.START
+                setMargins(floatMargin, 0, 0, floatMargin)
+            }
+        )
+
         root.addView(topBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)))
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2)))
@@ -777,6 +813,14 @@ class SecondaryBrowserPresentation(
             topBarView?.setBackgroundColor(theme.surfaceColor)
             applyFloatingButtonStyle(expanded = bottomMenuPopup?.isShowing == true)
             floatingMenuBtn?.setColorFilter(fgColor)
+            recenterSpanBtn?.setTextColor(fgColor)
+            recenterSpanBtn?.background = createThemedCardDrawable(
+                fillColor = Color.argb(230, Color.red(theme.surfaceColor), Color.green(theme.surfaceColor), Color.blue(theme.surfaceColor)),
+                cornerRadiusPx = dp(18).toFloat(),
+                strokeWidthPx = dp(2).toFloat(),
+                theme = theme,
+                accentColor = Color.argb(200, Color.red(accent), Color.green(accent), Color.blue(accent))
+            )
             touchpadContainer?.background = padBg
             touchpadMoveHandle?.setColorFilter(rainbowSlotColor(1, accent))
             touchpadResizeHandle?.setColorFilter(rainbowSlotColor(3, accent))
@@ -2355,6 +2399,7 @@ class SecondaryBrowserPresentation(
             topBarView?.visibility = View.GONE
             dividerView?.visibility = View.GONE
             floatingMenuBtn?.visibility = floatVis
+            recenterSpanBtn?.visibility = if (spanActive && abs(spanEngine.bottomPanOffsetRatio) > 0.01f) View.VISIBLE else View.GONE
             spanViewport?.visibility = spanVis
             webContainer?.visibility = webVis
             webView?.visibility = webVis
@@ -2481,6 +2526,8 @@ class SecondaryBrowserPresentation(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        panListener?.let { spanEngine.removePanListener(it) }
+        panListener = null
         bottomMenuPopup?.dismiss()
         bottomMenuPopup = null
         bottomTabsPopup?.dismiss()
