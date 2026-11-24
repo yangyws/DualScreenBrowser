@@ -12,11 +12,11 @@
 
 | 上螢幕獨立模式（`1920×1080`） | 下螢幕獨立模式（`1240×1080`） |
 | :---: | :---: |
-| <img src="docs/screenshots/top_browser.png" alt="上螢幕瀏覽" width="440" /> | <img src="docs/screenshots/bottom_browser.png" alt="下螢幕瀏覽" width="320" /> |
+| <img src="docs/screenshots/top_browser.png" alt="上螢幕瀏覽" width="440" /> | <img src="docs/screenshots/bottom_browser.png" alt="下螢幕瀏覽" width="284" /> |
 
 | 上螢幕浮動選單與九宮格 | 跨螢幕拼接模式：下螢幕多指觸控板 |
 | :---: | :---: |
-| <img src="docs/screenshots/top_menu.png" alt="上螢幕浮動選單" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="320" /> |
+| <img src="docs/screenshots/top_menu.png" alt="上螢幕浮動選單" width="440" /> | <img src="docs/screenshots/span_bottom.png" alt="拼接模式觸控板" width="284" /> |
 
 | AYN Thor 主機配色主題 | 手把操作說明 |
 | :---: | :---: |
