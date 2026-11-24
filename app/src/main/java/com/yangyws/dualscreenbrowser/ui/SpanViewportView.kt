@@ -51,7 +51,7 @@ class SpanViewportView(
     }
 
     fun setColorCalibration(brightnessOffset: Int, warmthOffset: Int) {
-        if (!isBottomViewport || (brightnessOffset == 0 && warmthOffset == 0)) {
+        if (brightnessOffset == 0 && warmthOffset == 0) {
             paint.colorFilter = null
         } else {
             val base = 1f + brightnessOffset * 0.01f

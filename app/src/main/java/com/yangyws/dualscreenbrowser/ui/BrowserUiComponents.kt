@@ -165,6 +165,7 @@ fun TactileIconButton(
 fun StatusChip(
     label: String,
     accentColor: Color = MaterialTheme.colorScheme.primary,
+    iconRes: Int? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -173,15 +174,28 @@ fun StatusChip(
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.32f)),
         modifier = modifier
     ) {
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = accentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = accentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -702,23 +716,31 @@ fun SidePanelSheet(
                 fadeIn(tween(120, easing = StrongEaseOut)),
             exit = slideOutHorizontally(tween(110, easing = StrongEaseOut)) { it } +
                 fadeOut(tween(80, easing = StrongEaseOut)),
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(if (compactWidth) Alignment.BottomEnd else Alignment.CenterEnd)
         ) {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                shape = if (compactWidth) RoundedCornerShape(12.dp) else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
                 modifier = Modifier
+                    .then(
+                        if (compactWidth) {
+                            Modifier
+                                .padding(top = 8.dp, end = 14.dp, bottom = 92.dp)
+                                .width(304.dp)
+                        } else {
+                            Modifier
+                                .fillMaxWidth(0.58f)
+                                .widthIn(min = 300.dp, max = 460.dp)
+                        }
+                    )
                     .graphicsLayer {}
                     .fillMaxHeight()
-                    .fillMaxWidth(if (compactWidth) 0.44f else 0.58f)
-                    .widthIn(min = if (compactWidth) 260.dp else 300.dp, max = if (compactWidth) 360.dp else 460.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
+                        .then(if (compactWidth) Modifier else Modifier.statusBarsPadding().navigationBarsPadding())
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(

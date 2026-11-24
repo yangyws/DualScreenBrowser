@@ -389,8 +389,11 @@ private fun DualScreenBrowserApp(
     var spanSource by remember { mutableStateOf(prefs.spanSource) }
     var hingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
     var pendingHingeGapDp by remember { mutableIntStateOf(prefs.hingeGapDp) }
+    var topBrightness by remember { mutableIntStateOf(prefs.topBrightness) }
+    var topWarmth by remember { mutableIntStateOf(prefs.topWarmth) }
     var bottomBrightness by remember { mutableIntStateOf(prefs.bottomBrightness) }
     var bottomWarmth by remember { mutableIntStateOf(prefs.bottomWarmth) }
+    val topColorPaint = remember { android.graphics.Paint() }
     var bottomTouchpad by remember { mutableStateOf(prefs.bottomTouchpad) }
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
@@ -585,6 +588,7 @@ private fun DualScreenBrowserApp(
                     override fun currentHingeGapDp(): Int = latestHingeGapDp
                     override fun onHingeGapChanged(dp: Int) {
                         hingeGapDp = dp
+                        pendingHingeGapDp = dp
                         prefs.hingeGapDp = dp
                     }
                     override fun currentBottomBrightness(): Int = latestBottomBrightness
@@ -624,6 +628,11 @@ private fun DualScreenBrowserApp(
                     override fun onEnableCopyScriptChanged(enabled: Boolean) {
                         enableCopyScript = enabled
                         prefs.enableCopyScript = enabled
+                    }
+                    override fun adBlockedCount(): Int = adBlockedCount
+                    override fun userScriptsCount(): Int = userScripts.size
+                    override fun onOpenUserScripts() {
+                        activePanel = BrowserPanel.USERSCRIPTS
                     }
                 },
                 onForwardKeyEvent = onForwardKeyEvent,
@@ -672,6 +681,24 @@ private fun DualScreenBrowserApp(
 
     LaunchedEffect(bottomBrightness, bottomWarmth, presentation) {
         presentation?.updateBottomColor(bottomBrightness, bottomWarmth)
+    }
+
+    LaunchedEffect(topBrightness, topWarmth, activeTabId, topWebViewTrigger) {
+        val wv = webViews[activeTabId] ?: return@LaunchedEffect
+        if (topBrightness == 0 && topWarmth == 0) {
+            topColorPaint.colorFilter = null
+            wv.setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+        } else {
+            val base = 1f + topBrightness * 0.01f
+            val r = (base + topWarmth * 0.004f).coerceIn(0.5f, 1.5f)
+            val g = base.coerceIn(0.5f, 1.5f)
+            val b = (base - topWarmth * 0.005f).coerceIn(0.5f, 1.5f)
+            topColorPaint.colorFilter = android.graphics.ColorMatrixColorFilter(
+                android.graphics.ColorMatrix().apply { setScale(r, g, b, 1f) }
+            )
+            wv.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, topColorPaint)
+        }
+        wv.invalidate()
     }
 
     LaunchedEffect(spanMode, bottomTouchpad, presentation) {
@@ -1193,6 +1220,7 @@ private fun DualScreenBrowserApp(
             if (spanMode && dualScreenActive) {
                 AndroidView(
                     factory = { ctx -> SpanViewportView(ctx, spanEngine, isBottomViewport = false) },
+                    update = { view -> view.setColorCalibration(topBrightness, topWarmth) },
                     modifier = Modifier.fillMaxSize()
                 )
             } else if (topCursorVisible) {
@@ -1326,32 +1354,51 @@ private fun DualScreenBrowserApp(
                             )
                         }
                     } else {
-                        val guideMappings = listOf(
-                        R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
-                        R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
-                        R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
-                        R.string.gamepad_key_x to R.string.gamepad_desc_x,
-                        R.string.gamepad_key_y to R.string.gamepad_desc_y,
-                        R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                        R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right,
-                        R.string.gamepad_key_start to R.string.gamepad_desc_start
-                    )
-                    val rainbowChipColors = listOf(
-                        Color(ThorTheme.RAINBOW_RED),
-                        Color(ThorTheme.RAINBOW_BLUE),
-                        Color(ThorTheme.RAINBOW_YELLOW),
-                        Color(ThorTheme.RAINBOW_BLUE),
-                        Color(ThorTheme.RAINBOW_GREEN),
-                        Color(ThorTheme.RAINBOW_YELLOW),
-                        Color(ThorTheme.RAINBOW_RED),
-                        Color(ThorTheme.RAINBOW_GREEN)
-                    )
+                        val guideGroups = listOf(
+                            Triple(
+                                R.string.gamepad_group_nav,
+                                Color(ThorTheme.RAINBOW_BLUE),
+                                listOf(
+                                    R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+                                    R.string.gamepad_key_lstick to R.string.gamepad_desc_lstick,
+                                    R.string.gamepad_key_rstick to R.string.gamepad_desc_rstick,
+                                    R.string.gamepad_key_a to R.string.gamepad_desc_a,
+                                    R.string.gamepad_key_b to R.string.gamepad_desc_b
+                                )
+                            ),
+                            Triple(
+                                R.string.gamepad_group_browser,
+                                Color(ThorTheme.RAINBOW_GREEN),
+                                listOf(
+                                    R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+                                    R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+                                    R.string.gamepad_key_y to R.string.gamepad_desc_y
+                                )
+                            ),
+                            Triple(
+                                R.string.gamepad_group_screen,
+                                Color(ThorTheme.RAINBOW_YELLOW),
+                                listOf(
+                                    R.string.gamepad_key_x to R.string.gamepad_desc_x,
+                                    R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                                    R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right
+                                )
+                            ),
+                            Triple(
+                                R.string.gamepad_group_menu,
+                                Color(ThorTheme.RAINBOW_RED),
+                                listOf(
+                                    R.string.gamepad_key_start to R.string.gamepad_desc_start,
+                                    R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                                )
+                            )
+                        )
                     Column(
                         modifier = Modifier
                             .widthIn(min = 320.dp, max = 420.dp)
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1374,28 +1421,34 @@ private fun DualScreenBrowserApp(
                             )
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        guideMappings.forEachIndexed { index, (keyRes, descRes) ->
-                            val chipAccent = if (currentTheme == ThorTheme.RAINBOW) {
-                                rainbowChipColors[index % rainbowChipColors.size]
-                            } else {
-                                MaterialTheme.colorScheme.primary
+                        guideGroups.forEachIndexed { groupIdx, (groupTitleRes, groupColor, items) ->
+                            if (groupIdx > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                                    modifier = Modifier.padding(vertical = 2.dp)
+                                )
                             }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                StatusChip(
-                                    label = stringResource(keyRes),
-                                    accentColor = chipAccent
-                                )
-                                Text(
-                                    text = stringResource(descRes),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                            Text(
+                                text = stringResource(groupTitleRes),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = groupColor
+                            )
+                            items.forEach { (keyRes, descRes) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    GamepadGuideKeyChips(keyRes = keyRes, groupColor = groupColor)
+                                    Text(
+                                        text = stringResource(descRes),
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -1999,22 +2052,6 @@ private fun DualScreenBrowserApp(
                             }
                         )
                     }
-                    if (!spanMode) {
-                        CompactMenuItem(
-                            text = { Text(stringResource(R.string.action_swap_screens)) },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.SwapVert,
-                                    contentDescription = null,
-                                    tint = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            onClick = {
-                                dismissMenu()
-                                performSwapScreens()
-                            }
-                        )
-                    }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 if (secondaryDisplay == null || !dualScreenActive) {
@@ -2104,9 +2141,14 @@ private fun DualScreenBrowserApp(
     }
 
     // Docked Right Side Panel Sheet
-    val panelTitle = when (activePanel) {
+    var lastRenderedPanel by remember { mutableStateOf(activePanel) }
+    if (activePanel != BrowserPanel.NONE) {
+        lastRenderedPanel = activePanel
+    }
+    val displayPanel = if (activePanel != BrowserPanel.NONE) activePanel else lastRenderedPanel
+    val panelTitle = when (displayPanel) {
         BrowserPanel.NONE -> ""
-        BrowserPanel.TABS -> stringResource(R.string.action_tabs)
+        BrowserPanel.TABS -> "${stringResource(R.string.action_tabs)} (${tabs.size})"
         BrowserPanel.BOOKMARKS -> stringResource(R.string.action_bookmarks)
         BrowserPanel.HISTORY -> stringResource(R.string.action_history)
         BrowserPanel.USERSCRIPTS -> stringResource(R.string.userscripts_title)
@@ -2118,10 +2160,10 @@ private fun DualScreenBrowserApp(
         visible = activePanel != BrowserPanel.NONE,
         title = panelTitle,
         onDismiss = { activePanel = BrowserPanel.NONE },
-        dimBackground = activePanel != BrowserPanel.SETTINGS,
-        compactWidth = activePanel == BrowserPanel.SETTINGS,
+        dimBackground = displayPanel != BrowserPanel.SETTINGS && displayPanel != BrowserPanel.TABS,
+        compactWidth = displayPanel == BrowserPanel.SETTINGS || displayPanel == BrowserPanel.TABS,
         headerActions = {
-            if (activePanel == BrowserPanel.HISTORY && history.isNotEmpty()) {
+            if (displayPanel == BrowserPanel.HISTORY && history.isNotEmpty()) {
                 TextButton(onClick = {
                     clearedHistoryBackup = history
                     history = emptyList()
@@ -2132,23 +2174,32 @@ private fun DualScreenBrowserApp(
             }
         }
     ) {
-        when (activePanel) {
+        when (displayPanel) {
             BrowserPanel.NONE -> Unit
 
             BrowserPanel.TABS -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { openTab(incognito = false) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_new_tab), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Button(
+                        onClick = { openTab(incognito = false) },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 7.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("+ ${stringResource(R.string.action_new_tab)}", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { openTab(incognito = true) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.VisibilityOff, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_incognito), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    OutlinedButton(
+                        onClick = { openTab(incognito = true) },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 7.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.action_incognito), fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -2164,10 +2215,10 @@ private fun DualScreenBrowserApp(
                                 MaterialTheme.colorScheme.surfaceVariant
                             },
                             border = BorderStroke(
-                                1.dp,
-                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else MaterialTheme.colorScheme.outlineVariant
+                                if (isCurrent) 1.5.dp else 1.dp,
+                                if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                             ),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -2176,7 +2227,7 @@ private fun DualScreenBrowserApp(
                                     activePanel = BrowserPanel.NONE
                                 }
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
+                            Column(modifier = Modifier.padding(8.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -2405,57 +2456,79 @@ private fun DualScreenBrowserApp(
             }
 
             BrowserPanel.GAMEPAD_GUIDE -> {
-                val mappings = listOf(
-                    R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
-                    R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
-                    R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
-                    R.string.gamepad_key_x to R.string.gamepad_desc_x,
-                    R.string.gamepad_key_y to R.string.gamepad_desc_y,
-                    R.string.gamepad_key_select to R.string.gamepad_desc_select,
-                    R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right,
-                    R.string.gamepad_key_start to R.string.gamepad_desc_start
-                )
-                val rainbowChipColors = listOf(
-                    Color(ThorTheme.RAINBOW_RED),
-                    Color(ThorTheme.RAINBOW_BLUE),
-                    Color(ThorTheme.RAINBOW_YELLOW),
-                    Color(ThorTheme.RAINBOW_BLUE),
-                    Color(ThorTheme.RAINBOW_GREEN),
-                    Color(ThorTheme.RAINBOW_YELLOW),
-                    Color(ThorTheme.RAINBOW_RED),
-                    Color(ThorTheme.RAINBOW_GREEN)
+                val guideGroups = listOf(
+                    Triple(
+                        R.string.gamepad_group_nav,
+                        Color(ThorTheme.RAINBOW_BLUE),
+                        listOf(
+                            R.string.gamepad_key_dpad to R.string.gamepad_desc_dpad,
+                            R.string.gamepad_key_lstick to R.string.gamepad_desc_lstick,
+                            R.string.gamepad_key_rstick to R.string.gamepad_desc_rstick,
+                            R.string.gamepad_key_a to R.string.gamepad_desc_a,
+                            R.string.gamepad_key_b to R.string.gamepad_desc_b
+                        )
+                    ),
+                    Triple(
+                        R.string.gamepad_group_browser,
+                        Color(ThorTheme.RAINBOW_GREEN),
+                        listOf(
+                            R.string.gamepad_key_l1r1 to R.string.gamepad_desc_l1r1,
+                            R.string.gamepad_key_l2r2 to R.string.gamepad_desc_l2r2,
+                            R.string.gamepad_key_y to R.string.gamepad_desc_y
+                        )
+                    ),
+                    Triple(
+                        R.string.gamepad_group_screen,
+                        Color(ThorTheme.RAINBOW_YELLOW),
+                        listOf(
+                            R.string.gamepad_key_x to R.string.gamepad_desc_x,
+                            R.string.gamepad_key_select to R.string.gamepad_desc_select,
+                            R.string.gamepad_key_select_right to R.string.gamepad_desc_select_right
+                        )
+                    ),
+                    Triple(
+                        R.string.gamepad_group_menu,
+                        Color(ThorTheme.RAINBOW_RED),
+                        listOf(
+                            R.string.gamepad_key_start to R.string.gamepad_desc_start,
+                            R.string.gamepad_key_start_dpad to R.string.gamepad_desc_start_dpad
+                        )
+                    )
                 )
                 Column(
-                    verticalArrangement = Arrangement.SpaceEvenly,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    mappings.forEachIndexed { index, (keyRes, descRes) ->
-                        val chipAccent = if (currentTheme == ThorTheme.RAINBOW) {
-                            rainbowChipColors[index % rainbowChipColors.size]
-                        } else {
-                            MaterialTheme.colorScheme.primary
+                    guideGroups.forEachIndexed { groupIdx, (groupTitleRes, groupColor, items) ->
+                        if (groupIdx > 0) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            StatusChip(
-                                label = stringResource(keyRes),
-                                accentColor = chipAccent
-                            )
-                            Text(
-                                text = stringResource(descRes),
-                                fontSize = 12.5.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
+                        Text(
+                            text = stringResource(groupTitleRes),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = groupColor
+                        )
+                        items.forEach { (keyRes, descRes) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                GamepadGuideKeyChips(keyRes = keyRes, groupColor = groupColor)
+                                Text(
+                                    text = stringResource(descRes),
+                                    fontSize = 12.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -2482,8 +2555,15 @@ private fun DualScreenBrowserApp(
                             currentTheme = currentTheme,
                             customHue = customHue,
                             customPrimaryInt = customPrimaryInt,
-                            onThemeSelected = onThemeSelected,
-                            onCustomHueChanged = onCustomHueChanged,
+                            onThemeSelected = { selected ->
+                                onThemeSelected(selected)
+                                presentation?.updateTheme(selected, customPrimaryInt)
+                            },
+                            onCustomHueChanged = { hue ->
+                                onCustomHueChanged(hue)
+                                val nextCustomInt = android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.65f, 0.92f))
+                                presentation?.updateTheme(currentTheme, nextCustomInt)
+                            },
                             compact = true
                         )
                     }
@@ -2547,7 +2627,7 @@ private fun DualScreenBrowserApp(
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Bottom screen brightness & warmth calibration
+                    // Top screen brightness & warmth calibration
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2555,47 +2635,47 @@ private fun DualScreenBrowserApp(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_bottom_brightness), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.settings_top_brightness), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    stringResource(R.string.settings_bottom_brightness_desc, bottomBrightness),
+                                    stringResource(R.string.settings_bottom_brightness_desc, topBrightness),
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = TextStyle(fontFeatureSettings = "tnum")
                                 )
                             }
-                            if (bottomBrightness != 0 || bottomWarmth != 0) {
+                            if (topBrightness != 0 || topWarmth != 0) {
                                 TextButton(onClick = {
-                                    bottomBrightness = 0
-                                    bottomWarmth = 0
-                                    prefs.bottomBrightness = 0
-                                    prefs.bottomWarmth = 0
+                                    topBrightness = 0
+                                    topWarmth = 0
+                                    prefs.topBrightness = 0
+                                    prefs.topWarmth = 0
                                 }) {
                                     Text(stringResource(R.string.action_reset), fontSize = 12.sp)
                                 }
                             }
                         }
                         Slider(
-                            value = bottomBrightness.toFloat(),
+                            value = topBrightness.toFloat(),
                             onValueChange = {
                                 val v = it.toInt()
-                                bottomBrightness = v
-                                prefs.bottomBrightness = v
+                                topBrightness = v
+                                prefs.topBrightness = v
                             },
                             valueRange = -30f..30f
                         )
-                        Text(stringResource(R.string.settings_bottom_warmth), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.settings_top_warmth), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         Text(
-                            stringResource(R.string.settings_bottom_warmth_desc, bottomWarmth),
+                            stringResource(R.string.settings_bottom_warmth_desc, topWarmth),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = TextStyle(fontFeatureSettings = "tnum")
                         )
                         Slider(
-                            value = bottomWarmth.toFloat(),
+                            value = topWarmth.toFloat(),
                             onValueChange = {
                                 val v = it.toInt()
-                                bottomWarmth = v
-                                prefs.bottomWarmth = v
+                                topWarmth = v
+                                prefs.topWarmth = v
                             },
                             valueRange = -30f..30f
                         )
@@ -2840,6 +2920,54 @@ private fun ThorThemeSelector(
                     onHueChange = onCustomHueChanged
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GamepadGuideKeyChips(keyRes: Int, groupColor: Color) {
+    fun iconForKey(resId: Int): Int? = when (resId) {
+        R.string.gamepad_key_dpad, R.string.gamepad_key_dpad_updown -> R.drawable.ic_btn_dpad
+        R.string.gamepad_key_lstick, R.string.gamepad_key_rstick -> R.drawable.ic_btn_stick
+        R.string.gamepad_key_a, R.string.gamepad_key_b, R.string.gamepad_key_x, R.string.gamepad_key_y -> R.drawable.ic_btn_face
+        R.string.gamepad_key_l1r1 -> R.drawable.ic_btn_bumper
+        R.string.gamepad_key_l2r2 -> R.drawable.ic_btn_trigger
+        R.string.gamepad_key_select, R.string.gamepad_key_start -> R.drawable.ic_btn_pill
+        else -> null
+    }
+    when (keyRes) {
+        R.string.gamepad_key_select_right -> {
+            StatusChip(
+                label = stringResource(R.string.gamepad_key_select),
+                accentColor = groupColor,
+                iconRes = R.drawable.ic_btn_pill
+            )
+            Text("+", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusChip(
+                label = stringResource(R.string.gamepad_key_dpad_updown),
+                accentColor = Color(ThorTheme.RAINBOW_BLUE),
+                iconRes = R.drawable.ic_btn_dpad
+            )
+        }
+        R.string.gamepad_key_start_dpad -> {
+            StatusChip(
+                label = stringResource(R.string.gamepad_key_start),
+                accentColor = groupColor,
+                iconRes = R.drawable.ic_btn_pill
+            )
+            Text("+", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusChip(
+                label = stringResource(R.string.gamepad_key_dpad_updown),
+                accentColor = Color(ThorTheme.RAINBOW_BLUE),
+                iconRes = R.drawable.ic_btn_dpad
+            )
+        }
+        else -> {
+            StatusChip(
+                label = stringResource(keyRes),
+                accentColor = groupColor,
+                iconRes = iconForKey(keyRes)
+            )
         }
     }
 }

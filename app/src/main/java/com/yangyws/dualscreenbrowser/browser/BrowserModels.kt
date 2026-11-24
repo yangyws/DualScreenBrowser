@@ -186,6 +186,14 @@ class BrowserPrefs(context: Context) {
         get() = prefs.getInt("hinge_gap_dp", 12).coerceIn(0, 48)
         set(value) = prefs.edit().putInt("hinge_gap_dp", value.coerceIn(0, 48)).apply()
 
+    var topBrightness: Int
+        get() = prefs.getInt("top_brightness", 0).coerceIn(-30, 30)
+        set(value) = prefs.edit().putInt("top_brightness", value.coerceIn(-30, 30)).apply()
+
+    var topWarmth: Int
+        get() = prefs.getInt("top_warmth", 0).coerceIn(-30, 30)
+        set(value) = prefs.edit().putInt("top_warmth", value.coerceIn(-30, 30)).apply()
+
     var bottomBrightness: Int
         get() = prefs.getInt("bottom_brightness", 0).coerceIn(-30, 30)
         set(value) = prefs.edit().putInt("bottom_brightness", value.coerceIn(-30, 30)).apply()
