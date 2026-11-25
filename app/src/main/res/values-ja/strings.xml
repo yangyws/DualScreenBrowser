@@ -80,6 +80,10 @@
     <string name="action_span_mode">スパン連結</string>
     <string name="action_span_source_top">スパン元：上画面</string>
     <string name="action_span_source_bottom">スパン元：下画面</string>
+    <string name="action_span_pan_locked">固定（連動）</string>
+    <string name="action_span_pan_unlocked">独立移動</string>
+    <string name="action_span_pan_locked_short">固定</string>
+    <string name="action_span_pan_unlocked_short">独立</string>
     <string name="action_secondary_bar">下画面URLバー</string>
     <string name="action_reopen_top">上画面を再表示</string>
     <string name="action_reopen_bottom">下画面を再表示</string>

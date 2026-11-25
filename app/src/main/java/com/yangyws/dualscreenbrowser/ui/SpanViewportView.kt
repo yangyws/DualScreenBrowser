@@ -99,8 +99,10 @@ class SpanViewportView(
         val right = engine.virtualWidth.coerceAtMost(bmp.width)
         if (bottom <= top || right <= 0) return
 
+        canvas.drawColor(android.graphics.Color.BLACK)
         val srcLeft: Int
         val srcRight: Int
+        var topViewShiftX = 0f
         if (isBottomViewport && engine.bottomWidthRatio < 0.99f) {
             val sliceW = (right * engine.bottomWidthRatio).toInt().coerceIn(1, right)
             srcLeft = engine.bottomRegionLeft(right, sliceW)
@@ -108,17 +110,23 @@ class SpanViewportView(
         } else {
             srcLeft = 0
             srcRight = right
+            if (engine.isBottomPanLocked && engine.bottomWidthRatio < 0.99f) {
+                val sliceW = (right * engine.bottomWidthRatio).toInt().coerceIn(1, right)
+                val maxShift = ((right - sliceW) / 2f).coerceAtLeast(0f)
+                val shiftPx = engine.bottomPanOffsetRatio * maxShift
+                topViewShiftX = -shiftPx * (width.toFloat() / right.toFloat())
+            }
         }
 
         srcRect.set(srcLeft, top, srcRight, bottom)
-        dstRect.set(0f, 0f, width.toFloat(), height.toFloat())
+        dstRect.set(topViewShiftX, 0f, width.toFloat() + topViewShiftX, height.toFloat())
         canvas.drawBitmap(bmp, srcRect, dstRect, paint)
 
         if (engine.cursorVisible && srcRight > srcLeft && bottom > top) {
             val cx = engine.cursorX
             val cy = engine.cursorY
             if (cx >= srcLeft && cx <= srcRight && cy >= top && cy <= bottom) {
-                val drawX = ((cx - srcLeft) / (srcRight - srcLeft).toFloat()) * width.toFloat()
+                val drawX = ((cx - srcLeft) / (srcRight - srcLeft).toFloat()) * width.toFloat() + topViewShiftX
                 val drawY = ((cy - top) / (bottom - top).toFloat()) * height.toFloat()
                 val pointerSize = (resources.displayMetrics.density * 22f).coerceIn(36f, 64f)
                 drawArrowCursor(canvas, drawX, drawY, pointerSize)
@@ -135,7 +143,8 @@ class SpanViewportView(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (!isBottomViewport || engine.bottomWidthRatio >= 0.99f || event.pointerCount > 1) {
+        val allowHorizontalPan = engine.bottomWidthRatio < 0.99f && (isBottomViewport || engine.isBottomPanLocked)
+        if (!allowHorizontalPan || event.pointerCount > 1) {
             gestureMode = BottomGestureMode.NONE
             return engine.dispatchMappedTouch(event, width, height, isBottomViewport)
         }
@@ -159,7 +168,7 @@ class SpanViewportView(
                     } else if (kotlin.math.abs(dyTotal) > touchSlop) {
                         gestureMode = BottomGestureMode.VERTICAL_SCROLL
                         val synDown = MotionEvent.obtain(downTimeMs, event.eventTime, MotionEvent.ACTION_DOWN, downX, downY, 0)
-                        engine.dispatchMappedTouch(synDown, width, height, true)
+                        engine.dispatchMappedTouch(synDown, width, height, isBottomViewport)
                         synDown.recycle()
                     }
                 }
@@ -167,14 +176,14 @@ class SpanViewportView(
                     BottomGestureMode.PAN_HORIZONTAL -> {
                         val dx = event.x - lastX
                         lastX = event.x
-                        engine.panBottomByViewDelta(dx, width)
+                        engine.panBottomByViewDelta(dx, width, isBottomViewport)
                         invalidate()
                         return true
                     }
                     BottomGestureMode.VERTICAL_SCROLL -> {
-                        // Lock horizontal coordinate to downX so top screen only moves vertically at the same longitudinal position
+                        // Lock horizontal coordinate to downX so screen only moves vertically at the same longitudinal position
                         val lockedMove = MotionEvent.obtain(downTimeMs, event.eventTime, MotionEvent.ACTION_MOVE, downX, event.y, 0)
-                        engine.dispatchMappedTouch(lockedMove, width, height, true)
+                        engine.dispatchMappedTouch(lockedMove, width, height, isBottomViewport)
                         lockedMove.recycle()
                         return true
                     }
@@ -188,17 +197,17 @@ class SpanViewportView(
                     BottomGestureMode.PAN_HORIZONTAL -> true
                     BottomGestureMode.VERTICAL_SCROLL -> {
                         val lockedUp = MotionEvent.obtain(downTimeMs, event.eventTime, event.actionMasked, downX, event.y, 0)
-                        val res = engine.dispatchMappedTouch(lockedUp, width, height, true)
+                        val res = engine.dispatchMappedTouch(lockedUp, width, height, isBottomViewport)
                         lockedUp.recycle()
                         res
                     }
                     BottomGestureMode.NONE -> {
                         if (event.actionMasked == MotionEvent.ACTION_UP) {
                             val tapDown = MotionEvent.obtain(downTimeMs, event.eventTime, MotionEvent.ACTION_DOWN, downX, downY, 0)
-                            engine.dispatchMappedTouch(tapDown, width, height, true)
+                            engine.dispatchMappedTouch(tapDown, width, height, isBottomViewport)
                             tapDown.recycle()
                             val tapUp = MotionEvent.obtain(downTimeMs, event.eventTime, MotionEvent.ACTION_UP, event.x, event.y, 0)
-                            val res = engine.dispatchMappedTouch(tapUp, width, height, true)
+                            val res = engine.dispatchMappedTouch(tapUp, width, height, isBottomViewport)
                             tapUp.recycle()
                             res
                         } else {

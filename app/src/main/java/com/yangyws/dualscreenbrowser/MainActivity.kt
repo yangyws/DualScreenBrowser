@@ -398,6 +398,12 @@ private fun DualScreenBrowserApp(
     var clearedHistoryBackup by remember { mutableStateOf<List<HistoryItem>?>(null) }
     val addressFocusRequester = remember { FocusRequester() }
     val spanEngine = remember { SpanEngine() }
+    var bottomPanLocked by remember { mutableStateOf(spanEngine.isBottomPanLocked) }
+    DisposableEffect(spanEngine) {
+        val listener: (Boolean) -> Unit = { locked -> bottomPanLocked = locked }
+        spanEngine.addPanLockListener(listener)
+        onDispose { spanEngine.removePanLockListener(listener) }
+    }
     var topViewportSize by remember { mutableStateOf(IntSize.Zero) }
     var isEditingText by remember { mutableStateOf(false) }
     var findBarVisible by remember { mutableStateOf(false) }
@@ -1648,6 +1654,50 @@ private fun DualScreenBrowserApp(
                                     color = if (currentTheme == ThorTheme.RAINBOW) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
                                     style = TextStyle(fontFeatureSettings = "tnum")
                                 )
+                            }
+                        }
+                        if (spanMode && dualScreenActive) {
+                            Surface(
+                                onClick = {
+                                    spanEngine.toggleBottomPanLock()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (bottomPanLocked) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (bottomPanLocked) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+                                    }
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Lock,
+                                        contentDescription = stringResource(
+                                            if (bottomPanLocked) R.string.action_span_pan_locked else R.string.action_span_pan_unlocked
+                                        ),
+                                        tint = if (bottomPanLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(
+                                        text = stringResource(
+                                            if (bottomPanLocked) R.string.action_span_pan_locked_short else R.string.action_span_pan_unlocked_short
+                                        ),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (bottomPanLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

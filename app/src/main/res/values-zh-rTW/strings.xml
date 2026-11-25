@@ -80,7 +80,10 @@
     <string name="action_span_mode">跨螢幕拼接</string>
     <string name="action_span_source_top">拼接來源：上螢幕</string>
     <string name="action_span_source_bottom">拼接來源：下螢幕</string>
-    <string name="action_recenter_span">回歸置中</string>
+    <string name="action_span_pan_locked">固定（同步）</string>
+    <string name="action_span_pan_unlocked">不固定（獨立）</string>
+    <string name="action_span_pan_locked_short">固定</string>
+    <string name="action_span_pan_unlocked_short">獨立</string>
     <string name="action_secondary_bar">下螢幕網址列</string>
     <string name="action_reopen_top">重新開啟上螢幕</string>
     <string name="action_reopen_bottom">重新開啟下螢幕</string>
