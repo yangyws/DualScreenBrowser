@@ -2683,56 +2683,48 @@ private fun DualScreenBrowserApp(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Top screen brightness & warmth calibration
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_top_brightness), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                                Text(
-                                    stringResource(R.string.settings_bottom_brightness_desc, topBrightness),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = TextStyle(fontFeatureSettings = "tnum")
-                                )
-                            }
-                            if (topBrightness != 0 || topWarmth != 0) {
-                                TextButton(onClick = {
-                                    topBrightness = 0
-                                    topWarmth = 0
-                                    prefs.topBrightness = 0
-                                    prefs.topWarmth = 0
-                                }) {
-                                    Text(stringResource(R.string.action_reset), fontSize = 12.sp)
-                                }
-                            }
+                    ColorCalibrationSection(
+                        brightnessLabelRes = R.string.settings_top_brightness,
+                        warmthLabelRes = R.string.settings_top_warmth,
+                        brightness = topBrightness,
+                        warmth = topWarmth,
+                        onBrightnessChange = { v ->
+                            topBrightness = v
+                            prefs.topBrightness = v
+                        },
+                        onWarmthChange = { v ->
+                            topWarmth = v
+                            prefs.topWarmth = v
+                        },
+                        onReset = {
+                            topBrightness = 0
+                            topWarmth = 0
+                            prefs.topBrightness = 0
+                            prefs.topWarmth = 0
                         }
-                        Slider(
-                            value = topBrightness.toFloat(),
-                            onValueChange = {
-                                val v = it.toInt()
-                                topBrightness = v
-                                prefs.topBrightness = v
+                    )
+                    if (spanMode && dualScreenActive) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        // Bottom screen brightness & warmth calibration (synced with independent mode)
+                        ColorCalibrationSection(
+                            brightnessLabelRes = R.string.settings_bottom_brightness,
+                            warmthLabelRes = R.string.settings_bottom_warmth,
+                            brightness = bottomBrightness,
+                            warmth = bottomWarmth,
+                            onBrightnessChange = { v ->
+                                bottomBrightness = v
+                                prefs.bottomBrightness = v
                             },
-                            valueRange = -30f..30f
-                        )
-                        Text(stringResource(R.string.settings_top_warmth), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            stringResource(R.string.settings_bottom_warmth_desc, topWarmth),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(fontFeatureSettings = "tnum")
-                        )
-                        Slider(
-                            value = topWarmth.toFloat(),
-                            onValueChange = {
-                                val v = it.toInt()
-                                topWarmth = v
-                                prefs.topWarmth = v
+                            onWarmthChange = { v ->
+                                bottomWarmth = v
+                                prefs.bottomWarmth = v
                             },
-                            valueRange = -30f..30f
+                            onReset = {
+                                bottomBrightness = 0
+                                bottomWarmth = 0
+                                prefs.bottomBrightness = 0
+                                prefs.bottomWarmth = 0
+                            }
                         )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3027,6 +3019,57 @@ private fun GamepadGuideKeyChips(keyRes: Int, groupColor: Color) {
                 iconRes = iconForKey(keyRes)
             )
         }
+    }
+}
+
+@Composable
+private fun ColorCalibrationSection(
+    brightnessLabelRes: Int,
+    warmthLabelRes: Int,
+    brightness: Int,
+    warmth: Int,
+    onBrightnessChange: (Int) -> Unit,
+    onWarmthChange: (Int) -> Unit,
+    onReset: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(brightnessLabelRes), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.settings_bottom_brightness_desc, brightness),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = TextStyle(fontFeatureSettings = "tnum")
+                )
+            }
+            if (brightness != 0 || warmth != 0) {
+                TextButton(onClick = onReset) {
+                    Text(stringResource(R.string.action_reset), fontSize = 12.sp)
+                }
+            }
+        }
+        Slider(
+            value = brightness.toFloat(),
+            onValueChange = { onBrightnessChange(it.toInt()) },
+            valueRange = -30f..30f
+        )
+        Text(stringResource(warmthLabelRes), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            stringResource(R.string.settings_bottom_warmth_desc, warmth),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = TextStyle(fontFeatureSettings = "tnum")
+        )
+        Slider(
+            value = warmth.toFloat(),
+            onValueChange = { onWarmthChange(it.toInt()) },
+            valueRange = -30f..30f
+        )
     }
 }
 
